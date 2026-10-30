@@ -61,7 +61,11 @@ public class AssistSessionCleanupBackgroundService(
           }
         case AssistSessionStatus.WaitingForViewer when age > _waitingExpiry:
           {
-            if (await _sessionCache.RemoveAsync(session.SessionId, stoppingToken) is null)
+            if (await _sessionCache.TryRemoveAsync(
+                  session.SessionId,
+                  AssistSessionStatus.WaitingForViewer,
+                  session.StatusChangedAt,
+                  stoppingToken) is null)
             {
               break;
             }
@@ -73,7 +77,15 @@ public class AssistSessionCleanupBackgroundService(
           }
         case AssistSessionStatus.Active when age > _activeExpiry:
           {
-            _ = await _sessionCache.RemoveAsync(session.SessionId, stoppingToken);
+            if (await _sessionCache.TryRemoveAsync(
+                  session.SessionId,
+                  AssistSessionStatus.Active,
+                  session.StatusChangedAt,
+                  stoppingToken) is null)
+            {
+              break;
+            }
+
             await NotifyEnded(session.SessionId, "The session expired.", session);
             break;
           }

@@ -131,6 +131,30 @@ public class AssistSessionControllerTests
     await RunWithinTimeout(controller.DisposeAsync());
   }
 
+  [Fact]
+  public async Task RespondToConsent_SecondQueuedResponse_IsIgnored()
+  {
+    var hub = new FakeHubClient();
+    var controller = CreateController(hub);
+
+    Assert.True(await RunWithinTimeout(controller.ConnectAsync("server.example.com", CancellationToken.None)));
+    await RunWithinTimeout(controller.HandleConsentRequested(new(hub.LastSessionId, "Jane", null, Guid.NewGuid())));
+    await WaitForStateAsync(controller, AssistSessionState.PendingConsent);
+
+    // Queue accept and decline back-to-back without awaiting, as double-clicking the consent
+    // modal does. Only the first response may reach the server; a queued decline that lands
+    // after the server already activated the session would tear the new session down.
+    var accept = controller.RespondToConsentAsync(true);
+    var decline = controller.RespondToConsentAsync(false);
+    await RunWithinTimeout(accept);
+    await RunWithinTimeout(decline);
+
+    Assert.Equal(1, hub.ConsentResponseCallCount);
+    Assert.True(hub.LastConsentApproved);
+    Assert.Equal(AssistSessionState.PendingConsent, controller.State);
+    await RunWithinTimeout(controller.DisposeAsync());
+  }
+
   private static async Task ActivateSessionAsync(AssistSessionController controller, FakeHubClient hub)
   {
     await RunWithinTimeout(controller.HandleSessionStarted(
@@ -181,10 +205,12 @@ public class AssistSessionControllerTests
   {
     private Guid _lastSessionId = Guid.NewGuid();
 
+    public int ConsentResponseCallCount { get; private set; }
     public int CreateSessionCallCount { get; private set; }
     public int EndSessionCallCount { get; private set; }
     public bool HangCreateSession { get; init; }
     public bool IsConnected => true;
+    public bool LastConsentApproved { get; private set; }
     public Guid LastConsentNonce { get; private set; }
     public Guid LastSessionId => _lastSessionId;
 
@@ -241,6 +267,8 @@ public class AssistSessionControllerTests
       Guid consentNonce,
       CancellationToken cancellationToken)
     {
+      ConsentResponseCallCount++;
+      LastConsentApproved = approved;
       LastConsentNonce = consentNonce;
       return Task.FromResult(HubResult.Ok());
     }

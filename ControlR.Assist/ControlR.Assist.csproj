@@ -52,10 +52,14 @@
     <AvaloniaResource Include="Assets\**" />
   </ItemGroup>
 
-  <!-- XML doc comments ship as loose files with no runtime use. Same idea as the .pdb strip. -->
-  <ItemGroup>
-    <ResolvedFileToPublish Remove="@(ResolvedFileToPublish->WithMetadataValue('Extension', '.xml'))" />
-  </ItemGroup>
+  <!-- XML doc comments ship as loose files with no runtime use. Same pattern as the .pdb strip
+       in Directory.Build.targets: the removal must run after ComputeFilesToPublish populates
+       the item list. A static ItemGroup Remove sees an empty list and strips nothing. -->
+  <Target Name="TrimXmlDocsFromPublish" AfterTargets="ComputeFilesToPublish">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(Extension)' == '.xml'" />
+    </ItemGroup>
+  </Target>
 
   <ItemGroup>
     <EmbeddedResource Include="Resources\Strings\en-US.json" />
@@ -105,8 +109,13 @@
     Nothing in Assist's DI graph constructs the remote-control types yet, so the linker trims them and
     never analyzes them. Pass -p:AssistRootDesktopClient=true to root them and get their trim warnings,
     which is how the capture, encode, and platform interop paths get validated before Assist wires up a
-    real session. The default publish stays unrooted so those warnings cannot be quietly accepted.
+    real session. The switch also turns the trim pass on, since rooting without trimming analyzes
+    nothing. The default publish stays unrooted and untrimmed so those warnings cannot be quietly accepted.
   -->
+  <PropertyGroup Condition="'$(AssistRootDesktopClient)' == 'true'">
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>full</TrimMode>
+  </PropertyGroup>
   <ItemGroup Condition="'$(AssistRootDesktopClient)' == 'true'">
     <TrimmerRootAssembly Include="ControlR.DesktopClient.Common" />
     <TrimmerRootAssembly Include="ControlR.DesktopClient.Windows" />

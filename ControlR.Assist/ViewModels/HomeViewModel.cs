@@ -43,7 +43,7 @@ public sealed partial class HomeViewModel : ViewModelBase, IDisposable
   [ObservableProperty]
   public partial string? ConsentEmail { get; set; }
   public string ConsentPromptText =>
-    string.Format(Localization.ConsentPromptFormat, ConsentViewerName ?? Localization.UnknownViewerLabel);
+    SafeFormat.Insert(Localization.ConsentPromptFormat, ConsentViewerName ?? Localization.UnknownViewerLabel);
 
   [ObservableProperty]
   public partial string? ConsentViewerName { get; set; }

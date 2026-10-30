@@ -201,6 +201,40 @@ public class AssistSessionCacheTests
   }
 
   [Fact]
+  public async Task TryRemoveAsync_MatchingStatusAndTimestamp_RemovesSession()
+  {
+    var ct = TestContext.Current.CancellationToken;
+    var session = await _cache.CreateAsync("assist-conn-1", ct);
+
+    var removed = await _cache.TryRemoveAsync(
+      session.SessionId,
+      AssistSessionStatus.WaitingForViewer,
+      session.StatusChangedAt,
+      ct);
+
+    Assert.NotNull(removed);
+    Assert.Null(await _cache.TryGetAsync(session.SessionId, ct));
+  }
+
+  [Fact]
+  public async Task TryRemoveAsync_SessionTransitionedSinceSnapshot_ReturnsNullAndKeepsSession()
+  {
+    var ct = TestContext.Current.CancellationToken;
+    var session = await _cache.CreateAsync("assist-conn-1", ct);
+    _ = await _cache.TryBeginConsentAsync(session.SessionId, "viewer-conn-1", Guid.NewGuid(), "Jane", null, ct);
+
+    var removed = await _cache.TryRemoveAsync(
+      session.SessionId,
+      AssistSessionStatus.WaitingForViewer,
+      session.StatusChangedAt,
+      ct);
+
+    Assert.Null(removed);
+    var current = await _cache.TryGetAsync(session.SessionId, ct);
+    Assert.Equal(AssistSessionStatus.PendingConsent, current?.Status);
+  }
+
+  [Fact]
   public async Task TryReturnToWaiting_WhenPendingConsent_ClearsViewerInfo()
   {
     var ct = TestContext.Current.CancellationToken;

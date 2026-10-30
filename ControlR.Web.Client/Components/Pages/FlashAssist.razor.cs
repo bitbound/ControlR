@@ -89,8 +89,11 @@ public partial class FlashAssist : ComponentBase, IAsyncDisposable
     {
       try
       {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        _ = await AssistHub.Server.EndAssistSession(new(hubSessionId));
+        // The typed hub proxy cannot take a caller cancellation token, so bound the wait
+        // instead. A half-open connection must not stall DisposeAsync indefinitely.
+        _ = await AssistHub.Server
+          .EndAssistSession(new(hubSessionId))
+          .WaitAsync(TimeSpan.FromSeconds(5));
       }
       catch (Exception ex)
       {
@@ -173,9 +176,9 @@ public partial class FlashAssist : ComponentBase, IAsyncDisposable
     {
       try
       {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        _ = await AssistHub.Server.CancelAssistConsent(
-          new(pendingSessionId, _linkedConsentNonce ?? Guid.Empty));
+        _ = await AssistHub.Server
+          .CancelAssistConsent(new(pendingSessionId, _linkedConsentNonce ?? Guid.Empty))
+          .WaitAsync(TimeSpan.FromSeconds(5));
       }
       catch (Exception ex)
       {

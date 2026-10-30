@@ -78,6 +78,16 @@ public interface IAssistSessionCache
     string viewerConnectionId,
     CancellationToken cancellationToken = default);
 
+  /// <summary>
+  /// Removes the session only if it still matches the given status and status timestamp. Guards
+  /// cleanup paths that decided from a stale snapshot against deleting a since-transitioned session.
+  /// </summary>
+  Task<AssistSession?> TryRemoveAsync(
+    Guid sessionId,
+    AssistSessionStatus expectedStatus,
+    DateTimeOffset expectedStatusChangedAt,
+    CancellationToken cancellationToken = default);
+
   Task<AssistSession?> TryReturnToWaitingAsync(
     Guid sessionId,
     Guid consentNonce,
@@ -252,6 +262,28 @@ public sealed class AssistSessionCache(TimeProvider timeProvider, Func<string>? 
     CancellationToken cancellationToken = default)
   {
     return TryGetFirstAsync(x => x.ViewerConnectionId == viewerConnectionId, cancellationToken);
+  }
+
+  public Task<AssistSession?> TryRemoveAsync(
+    Guid sessionId,
+    AssistSessionStatus expectedStatus,
+    DateTimeOffset expectedStatusChangedAt,
+    CancellationToken cancellationToken = default)
+  {
+    cancellationToken.ThrowIfCancellationRequested();
+
+    lock (_sync)
+    {
+      if (!_sessions.TryGetValue(sessionId, out var session) ||
+          session.Status != expectedStatus ||
+          session.StatusChangedAt != expectedStatusChangedAt)
+      {
+        return Task.FromResult<AssistSession?>(null);
+      }
+
+      _sessions.Remove(sessionId);
+      return Task.FromResult<AssistSession?>(session);
+    }
   }
 
   public Task<AssistSession?> TryReturnToWaitingAsync(

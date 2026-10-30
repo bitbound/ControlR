@@ -17,16 +17,6 @@ public interface IPermissionAssignmentSeeder
     CancellationToken cancellationToken = default);
 
   /// <summary>
-  /// Seeds permissions that are intentionally absent from every preset (explicit-grant-only
-  /// capabilities) for principals that must start with them, such as the bootstrap admin.
-  /// </summary>
-  Task SeedPermissions(
-    Guid userId,
-    Guid tenantId,
-    IEnumerable<string> permissionNames,
-    CancellationToken cancellationToken = default);
-
-  /// <summary>
   /// Seeds the default permission baseline every interactive (non-external) user receives.
   /// Call sites must not inline the preset list. Growing the baseline is a change here plus
   /// the unreleased-migration parity update in RoleBackfillMigrationTests.
@@ -68,14 +58,6 @@ public class PermissionAssignmentSeeder(
     await SeedPermissionsCoreAsync(userId, tenantId, permissions, appliedPresets, cancellationToken)
       .ConfigureAwait(false);
   }
-
-  /// <inheritdoc/>
-  public Task SeedPermissions(
-    Guid userId,
-    Guid tenantId,
-    IEnumerable<string> permissionNames,
-    CancellationToken cancellationToken = default) =>
-    SeedPermissionsCoreAsync(userId, tenantId, permissionNames.ToList(), [], cancellationToken);
 
   /// <summary>
   /// Seeds the default permission baseline every interactive (non-external) user receives.

@@ -11,10 +11,12 @@ namespace ControlR.Assist.Views;
 public partial class HomeView : UserControl
 {
   private int _copyFeedbackId;
+  private HomeViewModel? _subscribedViewModel;
 
   public HomeView()
   {
     InitializeComponent();
+    DetachedFromVisualTree += (_, _) => UnsubscribeFromViewModel();
   }
 
   // SecondaryColor lives in the theme dictionaries, so the current theme variant must be passed.
@@ -24,10 +26,22 @@ public partial class HomeView : UserControl
   {
     base.OnDataContextChanged(e);
 
+    UnsubscribeFromViewModel();
+
     if (DataContext is HomeViewModel viewModel)
     {
+      _subscribedViewModel = viewModel;
       viewModel.PropertyChanged += OnViewModelPropertyChanged;
       RebuildViewerStatus();
+    }
+  }
+
+  private void UnsubscribeFromViewModel()
+  {
+    if (_subscribedViewModel is not null)
+    {
+      _subscribedViewModel.PropertyChanged -= OnViewModelPropertyChanged;
+      _subscribedViewModel = null;
     }
   }
 

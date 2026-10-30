@@ -106,10 +106,6 @@ public static class HostExtensions
       ]);
     await seeder.SeedUserBaseline(user.Id, user.TenantId);
 
-    // Explicit-grant-only capabilities the initial admin must start with. Deliberately not in
-    // any preset; the product owner wants these granted per user everywhere else.
-    await seeder.SeedPermissions(user.Id, user.TenantId, [PermissionNames.AssistSessionsConnect]);
-
     var claimResult = await userManager.AddClaimsAsync(user, [
       new Claim(UserClaimTypes.UserId, $"{user.Id}"),
       new Claim(UserClaimTypes.TenantId, $"{user.TenantId}")

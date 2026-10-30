@@ -95,6 +95,37 @@ public class AssistSessionCleanupServiceTests
       Times.Once);
   }
 
+  [Fact]
+  public async Task HandleElapsed_WaitingSessionTransitionedSinceSnapshot_IsNotRemovedOrNotified()
+  {
+    var stale = new AssistSession(
+      Guid.NewGuid(),
+      "123456789",
+      "token",
+      "assist-conn-1",
+      AssistSessionStatus.WaitingForViewer,
+      _timeProvider.GetUtcNow() - TimeSpan.FromMinutes(31),
+      _timeProvider.GetUtcNow() - TimeSpan.FromMinutes(31));
+
+    var cache = new Mock<IAssistSessionCache>();
+    _ = cache.Setup(c => c.SnapshotAsync(It.IsAny<CancellationToken>()))
+      .ReturnsAsync([stale]);
+    _ = cache.Setup(c => c.TryRemoveAsync(
+        stale.SessionId,
+        AssistSessionStatus.WaitingForViewer,
+        stale.StatusChangedAt,
+        It.IsAny<CancellationToken>()))
+      .ReturnsAsync((AssistSession?)null);
+
+    var service = new TestCleanupService(cache.Object, _hubContext.Object, _timeProvider);
+    await service.RunOnce(TestContext.Current.CancellationToken);
+
+    cache.Verify(
+      c => c.RemoveAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+      Times.Never);
+    _clientProxy.Verify(c => c.AssistSessionEnded(It.IsAny<AssistSessionEndedDto>()), Times.Never);
+  }
+
   private Task RunCleanup()
   {
     var service = new TestCleanupService(_cache, _hubContext.Object, _timeProvider);

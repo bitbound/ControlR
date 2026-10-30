@@ -14,22 +14,25 @@ public sealed class AssistInputGate
 }
 
 /// <summary>
-/// Drops viewer input commands while the customer turns on view-only. Block-input and privacy-screen
-/// requests are always dropped so a technician cannot lock the customer out of their own machine.
+/// While the customer turns on view-only, drops viewer input and clipboard commands so the session
+/// is truly view only. Block-input and privacy-screen requests are always dropped so a technician
+/// cannot lock the customer out of their own machine.
 /// </summary>
 public sealed class ViewerCommandGate(
   IRemoteControlViewerCommandHandler inner,
   AssistInputGate gate,
   ILogger<ViewerCommandGate> logger) : IRemoteControlViewerCommandHandler
 {
-  private static readonly HashSet<RemoteControlViewerDtoType> _inputDtoTypes =
+  private static readonly HashSet<RemoteControlViewerDtoType> _viewOnlyDroppedDtoTypes =
   [
     RemoteControlViewerDtoType.KeyEvent,
     RemoteControlViewerDtoType.MouseClick,
     RemoteControlViewerDtoType.MouseButtonEvent,
     RemoteControlViewerDtoType.MovePointer,
     RemoteControlViewerDtoType.TypeText,
-    RemoteControlViewerDtoType.WheelScroll
+    RemoteControlViewerDtoType.WheelScroll,
+    RemoteControlViewerDtoType.RequestClipboardText,
+    RemoteControlViewerDtoType.ClipboardText
   ];
 
   private static readonly HashSet<RemoteControlViewerDtoType> _neverAllowedDtoTypes =
@@ -46,7 +49,7 @@ public sealed class ViewerCommandGate(
       return Result.Ok();
     }
 
-    if (gate.IsViewOnly && _inputDtoTypes.Contains(wrapper.DtoType))
+    if (gate.IsViewOnly && _viewOnlyDroppedDtoTypes.Contains(wrapper.DtoType))
     {
       return Result.Ok();
     }

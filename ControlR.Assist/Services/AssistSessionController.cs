@@ -36,6 +36,7 @@ public sealed class AssistSessionController : IAsyncDisposable
 
   private Guid? _activeSessionId;
   private Uri? _connectedServerUri;
+  private Guid? _consentRespondedSessionId;
   private IHost? _sessionHost;
 
   public AssistSessionController(
@@ -469,7 +470,10 @@ public sealed class AssistSessionController : IAsyncDisposable
     }
 
     SetConsentPending(null, null, null, null);
-    StatusMessage = string.Format(Localization.StatusConnectedToViewer, dto.ViewerDisplayName);
+    var name = string.IsNullOrWhiteSpace(dto.ViewerDisplayName) ?
+      Localization.UnknownViewerLabel :
+      dto.ViewerDisplayName;
+    StatusMessage = SafeFormat.Insert(Localization.StatusConnectedToViewer, name);
     SetState(AssistSessionState.Active);
     RaiseStateChanged();
 
@@ -516,10 +520,16 @@ public sealed class AssistSessionController : IAsyncDisposable
 
   private async Task RespondToConsentCoreAsync(bool approved)
   {
-    if (PendingSessionId is not Guid sessionId)
+    // The first response for a pending session wins immediately. The consent modal stays up until
+    // the AssistSessionStarted push arrives, so without this a queued second click (accept then
+    // decline are separate commands) would reach the server, fail as "no longer pending", and
+    // tear down the session the customer just approved.
+    if (PendingSessionId is not Guid sessionId || _consentRespondedSessionId == sessionId)
     {
       return;
     }
+
+    _consentRespondedSessionId = sessionId;
 
     var consentNonce = PendingConsentNonce ?? Guid.Empty;
     var result = await InvokeHubAsync(ct => _hubClient.RespondToAssistConsent(sessionId, approved, consentNonce, ct));
@@ -542,6 +552,7 @@ public sealed class AssistSessionController : IAsyncDisposable
     PendingConsentViewerName = viewerName;
     PendingConsentEmail = email;
     PendingConsentNonce = consentNonce;
+    _consentRespondedSessionId = null;
   }
 
   private void SetState(AssistSessionState state, string? statusMessage = null)
@@ -596,6 +607,7 @@ public sealed class AssistSessionController : IAsyncDisposable
     catch (Exception ex)
     {
       _logger.LogError(ex, "Failed to start the assist session host.");
+      await StopSessionHostAsync().ConfigureAwait(false);
       StatusMessage = Localization.StatusSessionStartFailed;
       await EndCurrentSessionAsync().ConfigureAwait(false);
       await CreateSessionCoreAsync(CancellationToken.None).ConfigureAwait(false);
