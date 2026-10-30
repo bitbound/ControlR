@@ -29,12 +29,12 @@ on:
         description: "Use local artifact storage"
         required: false
         type: boolean
-        default: true
+        default: false
       use_self_hosted_runners:
         description: "Use self-hosted runners"
         required: false
         type: boolean
-        default: true
+        default: false
   workflow_call:
     inputs:
       docker_tag:
@@ -55,12 +55,12 @@ on:
         description: "Use local artifact storage"
         required: false
         type: boolean
-        default: true
+        default: false
       use_self_hosted_runners:
         description: "Use self-hosted runners"
         required: false
         type: boolean
-        default: true
+        default: false
 
 permissions:
   actions: read
