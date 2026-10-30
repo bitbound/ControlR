@@ -518,6 +518,11 @@ public partial class RemoteControlViewModel : ViewModelBase<RemoteControlView>, 
         return false;
       }
 
+      if (remoteControlSessionResult.Value?.UseRelayCommands == true)
+      {
+        session.EnableRelayCommands();
+      }
+
       var viewerRelayUri = RelayUriBuilder.Build(
         serverUri,
         AppConstants.WebSocketRelayPath,

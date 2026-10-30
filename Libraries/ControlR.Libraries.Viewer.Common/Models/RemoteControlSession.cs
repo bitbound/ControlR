@@ -42,6 +42,13 @@ public class RemoteControlSession
   public int TargetSystemSession { get; }
 
   /// <summary>
+  /// True when the agent confirmed the responder opened its gated relay command lane for this
+  /// session, so viewer DTOs ride the relay instead of the hub. The responder still authorizes
+  /// every command against its sealed policy.
+  /// </summary>
+  public bool UseRelayCommands { get; private set; }
+
+  /// <summary>
   /// Creates a session whose peer is an assist responder that talks to the relay directly. The
   /// session id must match the one the assist control plane issued so both halves pair up.
   /// </summary>
@@ -50,5 +57,10 @@ public class RemoteControlSession
   public void CreateNewSessionId()
   {
     SessionId = Guid.NewGuid();
+  }
+
+  public void EnableRelayCommands()
+  {
+    UseRelayCommands = true;
   }
 }

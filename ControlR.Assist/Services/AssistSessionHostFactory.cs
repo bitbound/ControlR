@@ -25,7 +25,8 @@ public sealed record AssistSessionRequest(
   Uri ServerUri,
   Guid SessionId,
   string AccessToken,
-  string? ViewerDisplayName);
+  string? ViewerDisplayName,
+  RemoteControlCommandPolicyDto? CommandPolicy);
 
 public interface IAssistSessionHostFactory
 {
@@ -56,7 +57,6 @@ public sealed class AssistSessionHostFactory(
       {
         Toaster = new LogToaster(_loggerFactory.CreateLogger<LogToaster>()),
         UserInteraction = new HeadlessUserInteractionService(),
-        DtoSender = new RelayOnlyDtoSender(),
         Consent = new AutoApproveConsentService(),
         Dispatcher = _dispatcher,
         AsyncLock = _asyncLock
@@ -64,14 +64,11 @@ public sealed class AssistSessionHostFactory(
       options =>
       {
         options.SessionId = request.SessionId;
+        options.CommandPolicy = request.CommandPolicy;
         options.RequireConsent = false;
         options.NotifyUser = false;
         options.ViewerName = request.ViewerDisplayName;
         options.ViewerConnectionId = null;
-
-        // The technician's browser is a legacy-style viewer for this session. It has no agent
-        // behind it, so it sends remote control DTOs on the relay instead of through the hub.
-        options.ViewerSupportsRemoteControlDtoHub = false;
         options.WebSocketUri = BuildResponderRelayUri(request);
       },
       options =>
@@ -96,20 +93,20 @@ public sealed class AssistSessionHostFactory(
       RelayTimeoutSeconds);
 
   // The customer keeps authority over the machine. The real command handler is wrapped so view-only
-  // drops input, and block-input/privacy-screen requests never reach it.
+  // drops input, and block-input/privacy-screen requests never reach it. The captured factory is the
+  // policy-gated handler from AddCommonRemoteControlServices, so the final chain is
+  // ViewerCommandGate -> command policy gate -> real handler.
   private static void WrapViewerCommandHandler(IServiceCollection services)
   {
     var descriptor = services.Last(x => x.ServiceType == typeof(IRemoteControlViewerCommandHandler));
-    var implementationType = descriptor.ImplementationType
-                             ?? throw new InvalidOperationException("Expected a concrete viewer command handler.");
+    var innerFactory = descriptor.ImplementationFactory
+                       ?? throw new InvalidOperationException("Expected a factory-registered viewer command handler.");
 
     services.Remove(descriptor);
     services.AddSingleton<AssistInputGate>();
     services.AddSingleton<IRemoteControlViewerCommandHandler>(provider =>
     {
-      var inner = (IRemoteControlViewerCommandHandler)ActivatorUtilities.CreateInstance(
-        provider,
-        implementationType);
+      var inner = (IRemoteControlViewerCommandHandler)innerFactory(provider);
 
       return new ViewerCommandGate(
         inner,
@@ -144,11 +141,5 @@ public sealed class AssistSessionHostFactory(
 
     public Task ShowToast(string title, string message, ToastIcon toastIcon, Action onClick, TimeSpan? closeAfter = null) =>
       ShowToast(title, message, toastIcon, closeAfter);
-  }
-  private sealed class RelayOnlyDtoSender : IRemoteControlDtoSender
-  {
-    public Task<bool> TrySendRemoteControlDto(string viewerConnectionId, RemoteControlDesktopWrapper wrapper) =>
-      // Assist sessions never take the hub DTO path. The responder writes everything to the relay.
-      Task.FromResult(true);
   }
 }

@@ -76,19 +76,19 @@ public partial class ViewerHub
   }
 
   [Obsolete("Use RequestRemoteControlSession3. (deprecated 2026-09-03, v0.28.x)")]
-  public Task<HubResult> RequestRemoteControlSession(
+  public async Task<HubResult> RequestRemoteControlSession(
     Guid deviceId,
     RemoteControlSessionRequestDto sessionRequestDto)
   {
-    return RequestRemoteControlSessionCore(
+    return await RequestRemoteControlSessionCore(
       sessionRequestDto with { DeviceId = deviceId },
       false);
   }
 
   [Obsolete("Use RequestRemoteControlSession3. (deprecated 2026-10-20, v0.30.x)")]
-  public Task<HubResult> RequestRemoteControlSession2(RemoteControlSessionRequestDto sessionRequestDto)
+  public async Task<HubResult> RequestRemoteControlSession2(RemoteControlSessionRequestDto sessionRequestDto)
   {
-    return RequestRemoteControlSessionCore(sessionRequestDto, false);
+    return await RequestRemoteControlSessionCore(sessionRequestDto, false);
   }
 
   [Obsolete("Use RequestVncSession2. (deprecated 2026-09-03, v0.28.x)")]

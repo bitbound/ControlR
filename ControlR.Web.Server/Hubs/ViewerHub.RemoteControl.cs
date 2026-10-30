@@ -179,7 +179,7 @@ public partial class ViewerHub
     }
   }
 
-  public Task<HubResult> RequestRemoteControlSession3(RemoteControlSessionRequestDto sessionRequestDto)
+  public Task<HubResult<RequestRemoteControlSessionResponseDto>> RequestRemoteControlSession3(RemoteControlSessionRequestDto sessionRequestDto)
   {
     return RequestRemoteControlSessionCore(sessionRequestDto, true);
   }
@@ -215,19 +215,7 @@ public partial class ViewerHub
     }
   }
 
-  private static string GetRemoteControlPermission(RemoteControlViewerDtoType dtoType) => dtoType switch
-  {
-    RemoteControlViewerDtoType.ClipboardText => PermissionNames.DeviceClipboardWrite,
-    RemoteControlViewerDtoType.RequestClipboardText => PermissionNames.DeviceClipboardRead,
-    RemoteControlViewerDtoType.ToggleBlockInput => PermissionNames.DeviceRemoteControlBlockInput,
-    RemoteControlViewerDtoType.TogglePrivacyScreen => PermissionNames.DeviceRemoteControlPrivacyScreen,
-    RemoteControlViewerDtoType.RequestKeyFrame
-      or RemoteControlViewerDtoType.UpdateCaptureSettings
-      or RemoteControlViewerDtoType.CloseRemoteControlSession => PermissionNames.DeviceRemoteControlConnect,
-    _ => PermissionNames.DeviceRemoteControlInteract
-  };
-
-  private async Task<HubResult> RequestRemoteControlSessionCore(
+  private async Task<HubResult<RequestRemoteControlSessionResponseDto>> RequestRemoteControlSessionCore(
     RemoteControlSessionRequestDto sessionRequestDto,
     bool viewerSupportsRemoteControlDtoHub)
   {
@@ -235,7 +223,7 @@ public partial class ViewerHub
     {
       if (!TryGetUserId(out var userId))
       {
-        return HubResult.Fail("Failed to get user ID.");
+        return HubResult.Fail<RequestRemoteControlSessionResponseDto>("Failed to get user ID.");
       }
 
       var remoteIp = Context.GetHttpContext()?.Connection.RemoteIpAddress?.ToString();
@@ -243,7 +231,7 @@ public partial class ViewerHub
       var displayNameResult = await GetDisplayName(userId);
       if (!displayNameResult.IsSuccess)
       {
-        return HubResult.Fail(displayNameResult.Reason ?? "Failed to resolve display name.");
+        return HubResult.Fail<RequestRemoteControlSessionResponseDto>(displayNameResult.Reason ?? "Failed to resolve display name.");
       }
 
       var displayName = displayNameResult.Value;
@@ -257,7 +245,7 @@ public partial class ViewerHub
 
       if (!CanUseDesktopSession(sessionRequestDto.DeviceId, sessionRequestDto.TargetSystemSession))
       {
-        return HubResult.Fail("The requested desktop session is not authorized.");
+        return HubResult.Fail<RequestRemoteControlSessionResponseDto>("The requested desktop session is not authorized.");
       }
 
       var device = await _appDb.Devices
@@ -267,12 +255,12 @@ public partial class ViewerHub
       if (device is null)
       {
         _logger.LogWarning("Device {DeviceId} not found.", sessionRequestDto.DeviceId);
-        return HubResult.Fail("Device not found.");
+        return HubResult.Fail<RequestRemoteControlSessionResponseDto>("Device not found.");
       }
 
       if (Context.User is not { } user)
       {
-        return HubResult.Fail("Unauthorized.");
+        return HubResult.Fail<RequestRemoteControlSessionResponseDto>("Unauthorized.");
       }
 
       var allowedPermissions = await TryGetRemoteControlPermissions(
@@ -287,13 +275,13 @@ public partial class ViewerHub
           "Unauthorized remote control session attempted by user: {UserName}.  Device: {DeviceId}.",
           Context.UserIdentifier,
           sessionRequestDto.DeviceId);
-        return HubResult.Fail("Unauthorized.");
+        return HubResult.Fail<RequestRemoteControlSessionResponseDto>("Unauthorized.");
       }
 
       if (!device.IsOnline || string.IsNullOrWhiteSpace(device.ConnectionId))
       {
         _logger.LogWarning("Device {DeviceId} is not online.", sessionRequestDto.DeviceId);
-        return HubResult.Fail("Device is not currently online.", OperationFailureCode.DeviceOffline);
+        return HubResult.Fail<RequestRemoteControlSessionResponseDto>("Device is not currently online.", OperationFailureCode.DeviceOffline);
       }
 
       var notifyUser = await _effectiveUserPreferencesResolver.GetNotifyUserOnSessionStart(
@@ -301,32 +289,42 @@ public partial class ViewerHub
         userId,
         Context.ConnectionAborted);
 
+      var commandPolicy = RemoteControlCommandPolicyDto.Create(
+        sessionRequestDto.SessionId,
+        RemoteControlCommandPermissions.GetAllowedDtoTypes(allowedPermissions));
+
       sessionRequestDto = sessionRequestDto with
       {
         NotifyUserOnSessionStart = notifyUser,
         ViewerConnectionId = Context.ConnectionId,
         ViewerName = displayName,
-        ViewerSupportsRemoteControlDtoHub = viewerSupportsRemoteControlDtoHub
+        ViewerSupportsRemoteControlDtoHub = viewerSupportsRemoteControlDtoHub,
+        CommandPolicy = commandPolicy
       };
 
       var result = await _agentHub.Clients
         .Client(device.ConnectionId)
         .CreateRemoteControlSession(sessionRequestDto);
 
-      if (result.IsSuccess)
+      if (!result.IsSuccess)
       {
-        RemoteControlSessionBindings.TryAdd(
-          new SessionBindingKey(sessionRequestDto.DeviceId, sessionRequestDto.SessionId),
-          0);
+        return HubResult.Fail<RequestRemoteControlSessionResponseDto>(
+          result.Reason ?? "The agent failed to start the remote control session.",
+          result.FailureCode);
       }
 
-      return result;
+      RemoteControlSessionBindings.TryAdd(
+        new SessionBindingKey(sessionRequestDto.DeviceId, sessionRequestDto.SessionId),
+        0);
+
+      var useRelayCommands = result.Value?.ResponderCommandsOnRelay == true;
+      return HubResult.Ok(new RequestRemoteControlSessionResponseDto(useRelayCommands));
     }
     catch (Exception ex)
     {
       const string reason = "An error occurred while requesting the remote control session.";
       _logger.LogError(ex, reason);
-      return HubResult.Fail(reason);
+      return HubResult.Fail<RequestRemoteControlSessionResponseDto>(reason);
     }
   }
 
@@ -339,7 +337,7 @@ public partial class ViewerHub
       return HubResult.Fail<string>("Unauthorized.");
     }
 
-    var permission = GetRemoteControlPermission(request.Wrapper.DtoType);
+    var permission = RemoteControlCommandPermissions.GetRequiredPermission(request.Wrapper.DtoType);
     var cache = RemoteControlAuthorizations;
     if (!cache.TryGetValue(request.DeviceId, out var allowedPermissions))
     {

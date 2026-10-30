@@ -28,10 +28,10 @@ public class TestAgentHubClient : IAgentHubClient
     return HubResult.Ok().AsTaskResult();
   }
 
-  public Task<HubResult> CreateRemoteControlSession(RemoteControlSessionRequestDto dto)
+  public Task<HubResult<CreateRemoteControlSessionResponseDto>> CreateRemoteControlSession(RemoteControlSessionRequestDto dto)
   {
     Console.WriteLine($"Creating streaming session with ID: {dto.SessionId}, Viewer: {dto.ViewerName}");
-    return Task.FromResult(HubResult.Ok());
+    return Task.FromResult(HubResult.Ok(new CreateRemoteControlSessionResponseDto(false)));
   }
 
   public Task<HubResult> CreateTerminalSession(Guid terminalSessionId, string viewerConnectionId)

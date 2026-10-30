@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Security.Claims;
 using System.Threading.RateLimiting;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
+using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Api.Contracts.Hubs.Clients;
 using ControlR.Web.Server.Authn;
 using ControlR.Web.Server.Data;
@@ -356,7 +357,13 @@ public class AssistHubTests(ITestOutputHelper testOutput)
       Times.Once);
     clients.Assist.Verify(
       c => c.AssistSessionStarted(It.Is<AssistSessionStartedDto>(dto =>
-        dto.SessionId == session.SessionId && dto.ViewerEmail == "jane@example.com")),
+        dto.SessionId == session.SessionId &&
+        dto.ViewerEmail == "jane@example.com" &&
+        dto.CommandPolicy != null &&
+        dto.CommandPolicy.IsBoundTo(session.SessionId) &&
+        dto.CommandPolicy.AllowedDtoTypes.Contains(RemoteControlViewerDtoType.KeyEvent) &&
+        !dto.CommandPolicy.AllowedDtoTypes.Contains(RemoteControlViewerDtoType.ToggleBlockInput) &&
+        !dto.CommandPolicy.AllowedDtoTypes.Contains(RemoteControlViewerDtoType.TogglePrivacyScreen))),
       Times.Once);
   }
 

@@ -1,3 +1,4 @@
+using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Api.Contracts.Enums;
 
 namespace ControlR.DesktopClient.Common.Options;
@@ -5,6 +6,13 @@ namespace ControlR.DesktopClient.Common.Options;
 public class RemoteControlSessionOptions
 {
   private Uri? _webSocketUri;
+
+  /// <summary>
+  /// The server-sealed set of viewer command kinds this session may accept on the relay command
+  /// lane. The responder gate enforces it. Null when the session was started by a server that
+  /// predates command policies.
+  /// </summary>
+  public RemoteControlCommandPolicyDto? CommandPolicy { get; set; }
 
   public CaptureEncoderType EncoderType { get; set; } = CaptureEncoderType.Image;
   public bool NotifyUser { get; set; }

@@ -1,3 +1,5 @@
+using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
+
 namespace ControlR.Libraries.Api.Contracts.Dtos.IpcDtos;
 
 [MessagePackObject(keyAsPropertyName: true)]
@@ -11,4 +13,11 @@ public record RemoteControlRequestIpcDto(
   bool RequireConsent,
   string? ViewerConnectionId,
   string? ViewerName,
-  bool ViewerSupportsRemoteControlDtoHub);
+  bool ViewerSupportsRemoteControlDtoHub)
+{
+  /// <summary>
+  /// The sealed command set the session host must enforce on the relay command lane. Null when the
+  /// agent predates command policies.
+  /// </summary>
+  public RemoteControlCommandPolicyDto? CommandPolicy { get; init; }
+}

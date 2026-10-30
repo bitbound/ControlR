@@ -29,7 +29,7 @@ public partial interface IViewerHub
 
   Task<HubResult> RequestRemoteControlPermission2(RequestRemoteControlPermissionRequestDto request);
 
-  Task<HubResult> RequestRemoteControlSession3(RemoteControlSessionRequestDto sessionRequestDto);
+  Task<HubResult<RequestRemoteControlSessionResponseDto>> RequestRemoteControlSession3(RemoteControlSessionRequestDto sessionRequestDto);
 
   Task<HubResult> RequestVncSession2(VncSessionRequestDto sessionRequestDto);
 

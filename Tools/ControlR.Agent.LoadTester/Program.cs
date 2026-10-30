@@ -78,7 +78,7 @@ await Parallel.ForAsync(startCount, startCount + agentCount, parallelOptions, as
         return Task.CompletedTask;
       };
 
-      connection.On<RemoteControlSessionRequestDto, HubResult>(
+      connection.On<RemoteControlSessionRequestDto, HubResult<CreateRemoteControlSessionResponseDto>>(
         nameof(IAgentHubClient.CreateRemoteControlSession),
         agentHubClient.CreateRemoteControlSession);
 

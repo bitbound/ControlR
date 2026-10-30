@@ -41,6 +41,7 @@ public class LinuxRemoteControlHostBuilderFactory(
       options =>
       {
         options.SessionId = requestDto.SessionId;
+        options.CommandPolicy = requestDto.CommandPolicy;
         options.NotifyUser = requestDto.NotifyUserOnSessionStart;
         options.RequireConsent = requestDto.RequireConsent;
         options.ViewerName = requestDto.ViewerName;

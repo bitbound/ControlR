@@ -139,7 +139,7 @@ internal class AgentHubClient(
     }
   }
 
-  public async Task<HubResult> CreateRemoteControlSession(RemoteControlSessionRequestDto dto)
+  public async Task<HubResult<CreateRemoteControlSessionResponseDto>> CreateRemoteControlSession(RemoteControlSessionRequestDto dto)
   {
     try
     {
@@ -149,7 +149,7 @@ internal class AgentHubClient(
         _logger.LogWarning(
           "Remote control session rejected because the installed desktop client is invalid. Reason: {Reason}",
           installationVerificationResult.Reason);
-        return HubResult.Fail(installationVerificationResult.Reason ?? "Desktop client is not installed.");
+        return HubResult.Fail<CreateRemoteControlSessionResponseDto>(installationVerificationResult.Reason ?? "Desktop client is not installed.");
       }
 
       _logger.LogInformation(
@@ -165,7 +165,7 @@ internal class AgentHubClient(
         _logger.LogWarning(
           "No IPC server found for process ID {ProcessId}.  Cannot create remote control session.",
           dto.TargetProcessId);
-        return HubResult.Fail($"Process with ID {dto.TargetProcessId} is no longer running.");
+        return HubResult.Fail<CreateRemoteControlSessionResponseDto>($"Process with ID {dto.TargetProcessId} is no longer running.");
       }
 
       var remoteControlPermissionState = await EnsureDesktopClientPermissionGranted(
@@ -179,7 +179,7 @@ internal class AgentHubClient(
           "Remote control session rejected for process ID {ProcessId}. Reason: {Reason}",
           dto.TargetProcessId,
           remoteControlPermissionState.Reason ?? "Unknown reason");
-        return HubResult.Fail(remoteControlPermissionState.Reason ?? "Remote control permission is not granted on the desktop client.");
+        return HubResult.Fail<CreateRemoteControlSessionResponseDto>(remoteControlPermissionState.Reason ?? "Remote control permission is not granted on the desktop client.");
       }
 
       var ipcDto = new RemoteControlRequestIpcDto(
@@ -192,9 +192,12 @@ internal class AgentHubClient(
         dto.RequireConsent,
         dto.ViewerConnectionId,
         dto.ViewerName,
-        dto.ViewerSupportsRemoteControlDtoHub);
+        dto.ViewerSupportsRemoteControlDtoHub)
+      {
+        CommandPolicy = dto.CommandPolicy,
+      };
 
-      var result = await ipcServer.Server.Client.ReceiveRemoteControlRequest(ipcDto);
+      var result = await ReceiveSessionSetupAsync(ipcServer.Server.Client, ipcDto);
       _logger.LogInformation(
         "Remote control session created successfully for process ID {ProcessId}.",
         dto.TargetProcessId);
@@ -204,21 +207,23 @@ internal class AgentHubClient(
         _logger.LogInformation(
           "Remote control session established on target process {ProcessId}.",
           dto.TargetProcessId);
-      }
-      else
-      {
-        _logger.LogError(
-          "Failed to create remote control session on target process {ProcessId}. Reason: {Error}",
-          dto.TargetProcessId,
-          result.Reason ?? "Unknown error");
+
+        var relayCommandsGated = result.Value?.RelayCommandsGated == true;
+        return HubResult.Ok(new CreateRemoteControlSessionResponseDto(relayCommandsGated));
       }
 
-      return result.ToHubResult();
+      _logger.LogError(
+        "Failed to create remote control session on target process {ProcessId}. Reason: {Error}",
+        dto.TargetProcessId,
+        result.Reason ?? "Unknown error");
+
+      return HubResult.Fail<CreateRemoteControlSessionResponseDto>(
+        result.Reason ?? "Failed to create remote control session on the desktop client.");
     }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Error while creating remote control session.");
-      return HubResult.Fail("An error occurred on the agent while creating remote control session.");
+      return HubResult.Fail<CreateRemoteControlSessionResponseDto>("An error occurred on the agent while creating remote control session.");
     }
   }
 
@@ -975,6 +980,38 @@ internal class AgentHubClient(
       response.Reason ?? "None");
 
     return response;
+  }
+
+  /// <summary>
+  /// Starts the session host on the desktop client. Prefers the v2 IPC method, which reports
+  /// whether the responder opened a gated relay command lane. A desktop client that predates v2
+  /// throws (or yields no value), so the agent falls back to v1 and the session keeps using the
+  /// hub command path.
+  /// </summary>
+  private async Task<Result<RemoteControlSessionSetupIpcDto>> ReceiveSessionSetupAsync(
+    IDesktopClientRpcService client,
+    RemoteControlRequestIpcDto ipcDto)
+  {
+    try
+    {
+      var v2Result = await client.ReceiveRemoteControlRequest2(ipcDto);
+      if (v2Result is not null)
+      {
+        return v2Result;
+      }
+    }
+    catch (Exception ex)
+    {
+      _logger.LogInformation(
+        ex,
+        "Desktop client on process {ProcessId} did not service ReceiveRemoteControlRequest2. Falling back to v1.",
+        ipcDto.TargetProcessId);
+    }
+
+    var v1Result = await client.ReceiveRemoteControlRequest(ipcDto);
+    return v1Result.IsSuccess
+      ? Result.Ok(new RemoteControlSessionSetupIpcDto(false))
+      : Result.Fail<RemoteControlSessionSetupIpcDto>(v1Result.Reason ?? "Failed to start the remote control session host.");
   }
 
   private async Task SendFileStream(Guid streamId, string fileSystemPath, bool isTempFile)

@@ -530,7 +530,8 @@ public sealed class AssistSessionCoordinator : IAsyncDisposable
       serverUri,
       dto.SessionId,
       dto.AccessToken,
-      dto.ViewerDisplayName)).ConfigureAwait(false);
+      dto.ViewerDisplayName,
+      dto.CommandPolicy)).ConfigureAwait(false);
   }
 
   private async Task<THubResult> InvokeHubAsync<THubResult>(

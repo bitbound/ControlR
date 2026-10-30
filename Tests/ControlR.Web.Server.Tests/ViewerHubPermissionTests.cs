@@ -224,7 +224,7 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
     var (hub, agentClient) = CreateHub(testApp, user, tenant.Id);
     agentClient
       .Setup(client => client.CreateRemoteControlSession(It.IsAny<RemoteControlSessionRequestDto>()))
-      .ReturnsAsync(HubResult.Ok());
+      .ReturnsAsync(HubResult.Ok(new CreateRemoteControlSessionResponseDto(false)));
 
     var result = await hub.RequestRemoteControlSession2(request);
 
@@ -254,7 +254,7 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
     var (hub, agentClient) = CreateHub(testApp, user, tenant.Id);
     agentClient
       .Setup(client => client.CreateRemoteControlSession(It.IsAny<RemoteControlSessionRequestDto>()))
-      .ReturnsAsync(HubResult.Ok());
+      .ReturnsAsync(HubResult.Ok(new CreateRemoteControlSessionResponseDto(false)));
 
     var result = await hub.RequestRemoteControlSession3(request);
 
@@ -263,6 +263,72 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
       It.Is<RemoteControlSessionRequestDto>(forwarded =>
         forwarded.ViewerSupportsRemoteControlDtoHub &&
         forwarded.ViewerConnectionId == hub.Context.ConnectionId)), Times.Once);
+  }
+
+  [Fact]
+  public async Task RequestRemoteControlSession3_ReportsRelayCommandsWhenAgentGateIsOpen()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.Services.CreateTestTenant();
+    var user = await testApp.Services.CreateTestUser(tenant.Id);
+    var device = await testApp.Services.CreateTestDevice(tenant.Id);
+    await SeedAssignment(testApp, user.Id, device.Id, tenant.Id, PermissionNames.DeviceRemoteControlConnect);
+    var request = new RemoteControlSessionRequestDto(
+      Guid.NewGuid(),
+      new Uri("wss://localhost/remote-control"),
+      1,
+      100,
+      device.Id,
+      false,
+      false);
+
+    var (hub, agentClient) = CreateHub(testApp, user, tenant.Id);
+    agentClient
+      .Setup(client => client.CreateRemoteControlSession(It.IsAny<RemoteControlSessionRequestDto>()))
+      .ReturnsAsync(HubResult.Ok(new CreateRemoteControlSessionResponseDto(true)));
+
+    var result = await hub.RequestRemoteControlSession3(request);
+
+    Assert.True(result.IsSuccess);
+    Assert.True(result.Value?.UseRelayCommands);
+  }
+
+  [Fact]
+  public async Task RequestRemoteControlSession3_SealsFrozenCommandPolicyOntoAgentRequest()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+    var tenant = await testApp.Services.CreateTestTenant();
+    var user = await testApp.Services.CreateTestUser(tenant.Id);
+    var device = await testApp.Services.CreateTestDevice(tenant.Id);
+    await SeedAssignment(testApp, user.Id, device.Id, tenant.Id, PermissionNames.DeviceRemoteControlConnect);
+    await SeedAssignment(testApp, user.Id, device.Id, tenant.Id, PermissionNames.DeviceRemoteControlInteract);
+    var request = new RemoteControlSessionRequestDto(
+      Guid.NewGuid(),
+      new Uri("wss://localhost/remote-control"),
+      1,
+      100,
+      device.Id,
+      false,
+      false);
+
+    var (hub, agentClient) = CreateHub(testApp, user, tenant.Id);
+    agentClient
+      .Setup(client => client.CreateRemoteControlSession(It.IsAny<RemoteControlSessionRequestDto>()))
+      .ReturnsAsync(HubResult.Ok(new CreateRemoteControlSessionResponseDto(false)));
+
+    var result = await hub.RequestRemoteControlSession3(request);
+
+    Assert.True(result.IsSuccess);
+
+    // The responder never opened a gated relay lane, so the viewer must stay on the hub path.
+    Assert.False(result.Value?.UseRelayCommands);
+
+    agentClient.Verify(client => client.CreateRemoteControlSession(
+      It.Is<RemoteControlSessionRequestDto>(forwarded =>
+        forwarded.CommandPolicy != null &&
+        forwarded.CommandPolicy.IsBoundTo(request.SessionId) &&
+        forwarded.CommandPolicy.AllowedDtoTypes.Contains(RemoteControlViewerDtoType.KeyEvent) &&
+        !forwarded.CommandPolicy.AllowedDtoTypes.Contains(RemoteControlViewerDtoType.ClipboardText))), Times.Once);
   }
 
   [Fact]
@@ -285,7 +351,7 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
     var (hub, agentClient) = CreateHub(testApp, user, tenant.Id);
     agentClient
       .Setup(client => client.CreateRemoteControlSession(It.IsAny<RemoteControlSessionRequestDto>()))
-      .ReturnsAsync(HubResult.Ok());
+      .ReturnsAsync(HubResult.Ok(new CreateRemoteControlSessionResponseDto(false)));
 
     var result = await hub.RequestRemoteControlSession2(request);
 
@@ -316,7 +382,7 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
     var (hub, agentClient) = CreateHub(testApp, user, tenant.Id);
     agentClient
       .Setup(client => client.CreateRemoteControlSession(It.IsAny<RemoteControlSessionRequestDto>()))
-      .ReturnsAsync(HubResult.Ok());
+      .ReturnsAsync(HubResult.Ok(new CreateRemoteControlSessionResponseDto(false)));
 
     var result = await hub.RequestRemoteControlSession(device.Id, request);
 
@@ -787,6 +853,7 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
       new PrincipalDescriptor(PrincipalType.User, userId, tenantId, "test")));
     await db.SaveChangesAsync(TestContext.Current.CancellationToken);
   }
+
   private static async Task<Guid> StartSessionAsync(
     ViewerHub hub,
     Mock<IAgentHubClient> agentClient,
@@ -794,7 +861,7 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
   {
     agentClient
       .Setup(client => client.CreateRemoteControlSession(It.IsAny<RemoteControlSessionRequestDto>()))
-      .ReturnsAsync(HubResult.Ok());
+      .ReturnsAsync(HubResult.Ok(new CreateRemoteControlSessionResponseDto(false)));
 
     var sessionRequest = new RemoteControlSessionRequestDto(
       Guid.NewGuid(),
@@ -810,7 +877,6 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
 
     return sessionRequest.SessionId;
   }
-
 
   private sealed class TestHubCallerContext : HubCallerContext
   {

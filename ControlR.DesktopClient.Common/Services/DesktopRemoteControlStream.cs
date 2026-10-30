@@ -102,10 +102,16 @@ internal sealed class DesktopRemoteControlStream(
       Messenger.Register<SendToastToViewerMessage>(this, HandleSendToastToViewerMessage);
       OnClosed(HandleConnectionClosed);
 
-      // A viewer that can receive commands over the hub gets them there, where the server authorizes
-      // each one.  Leaving this handler registered for such a session would let anything the relay
-      // delivers run unauthenticated, since the relay carries no permission check.
-      if (!_startupOptions.Value.ViewerSupportsRemoteControlDtoHub)
+      // A viewer that can receive commands over the hub gets them over the hub when no command
+      // policy is in play. A relay carries no permission check of its own, so this lane is only
+      // opened for legacy pre-hub viewers (the transport they speak) and for sessions whose
+      // server-sealed command policy is valid, where CommandPolicyViewerCommandHandler gates every
+      // inbound command. A relay drop is an optimization. A relay allow is never a grant. The
+      // responder gate is authority. The bound check must match ReceiveRemoteControlRequest2.
+      var commandPolicyBound =
+        _startupOptions.Value.CommandPolicy?.IsBoundTo(_startupOptions.Value.SessionId) == true;
+
+      if (!_startupOptions.Value.ViewerSupportsRemoteControlDtoHub || commandPolicyBound)
       {
         _relayDtoRegistration = RegisterMessageHandler(this, HandleRelayDto);
       }
@@ -191,9 +197,10 @@ internal sealed class DesktopRemoteControlStream(
 
   private async Task HandleRelayDto(RemoteControlDesktopWrapper wrapper)
   {
-    // Only reached for a viewer that predates the hub command path.  The relay has no return channel,
-    // so such a viewer never learns whether its commands landed.  The relay transport is typed for
-    // event wrappers, so retag the message as the command kind the legacy viewer sent.
+    // Reached by pre-hub viewers and by sessions whose sealed command policy opened this lane.
+    // The relay has no return channel, so these viewers never learn whether their commands
+    // landed. The relay transport is typed for event wrappers, so retag the message as the
+    // command kind the viewer sent. The handler chain enforces the command policy.
     var commandWrapper = new RemoteControlViewerWrapper
     {
       DtoType = (RemoteControlViewerDtoType)(int)wrapper.DtoType,
