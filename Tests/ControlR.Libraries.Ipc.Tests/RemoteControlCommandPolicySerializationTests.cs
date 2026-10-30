@@ -60,11 +60,11 @@ public class RemoteControlCommandPolicySerializationTests
 
     Assert.Null(restored.CommandPolicy);
     Assert.Equal(legacy.SessionId, restored.SessionId);
-    Assert.True(restored.ViewerSupportsRemoteControlDtoHub);
   }
 
   /// <summary>
-  /// The session request shape as it existed before command policies: same keys, no policy.
+  /// The session request shape as it existed before command policies: same keys minus the policy,
+  /// including the hub transport flag that no longer exists on the current record.
   /// </summary>
   [MessagePackObject(keyAsPropertyName: true, AllowPrivate = true)]
   internal sealed record LegacyRemoteControlRequestPayload(

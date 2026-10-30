@@ -13,7 +13,6 @@ namespace ControlR.DesktopClient.Linux.Services;
 public class LinuxRemoteControlHostBuilderFactory(
   IOptionsMonitor<DesktopClientOptions> desktopClientOptions,
   IUserInteractionService userInteractionService,
-  IRemoteControlDtoSender remoteControlDtoSender,
   IAsyncLock asyncLock,
   IToaster toaster,
   IUiDispatcher dispatcher) : IRemoteControlHostBuilderFactory
@@ -21,7 +20,6 @@ public class LinuxRemoteControlHostBuilderFactory(
   private readonly IAsyncLock _asyncLock = asyncLock;
   private readonly IOptionsMonitor<DesktopClientOptions> _desktopClientOptions = desktopClientOptions;
   private readonly IUiDispatcher _dispatcher = dispatcher;
-  private readonly IRemoteControlDtoSender _remoteControlDtoSender = remoteControlDtoSender;
   private readonly IToaster _toaster = toaster;
   private readonly IUserInteractionService _userInteractionService = userInteractionService;
 
@@ -34,7 +32,6 @@ public class LinuxRemoteControlHostBuilderFactory(
       {
         Toaster = _toaster,
         UserInteraction = _userInteractionService,
-        DtoSender = _remoteControlDtoSender,
         Dispatcher = _dispatcher,
         AsyncLock = _asyncLock
       },
@@ -46,7 +43,6 @@ public class LinuxRemoteControlHostBuilderFactory(
         options.RequireConsent = requestDto.RequireConsent;
         options.ViewerName = requestDto.ViewerName;
         options.ViewerConnectionId = requestDto.ViewerConnectionId;
-        options.ViewerSupportsRemoteControlDtoHub = requestDto.ViewerSupportsRemoteControlDtoHub;
         options.WebSocketUri = requestDto.WebsocketUri;
       },
       options =>

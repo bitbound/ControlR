@@ -11,7 +11,7 @@ public interface IAgentHubClient
   Task<HubResult> CloseChatSession(Guid sessionId, int targetProcessId);
   Task CloseTerminalSession(Guid terminalSessionId);
   Task<HubResult> CreateDirectory(CreateDirectoryHubDto dto);
-  Task<HubResult<CreateRemoteControlSessionResponseDto>> CreateRemoteControlSession(RemoteControlSessionRequestDto dto);
+  Task<HubResult> CreateRemoteControlSession(RemoteControlSessionRequestDto dto);
   Task<HubResult> CreateTerminalSession(Guid terminalSessionId, string viewerConnectionId);
   Task<HubResult> CreateVncSession(VncSessionRequestDto sessionRequestDto);
   Task<HubResult> DeleteFile(FileDeleteHubDto dto);
@@ -22,7 +22,6 @@ public interface IAgentHubClient
   Task<HubResult<PwshCompletionsResponseDto>> GetPwshCompletions(PwshCompletionsRequestDto request);
   Task<HubResult<GetRootDrivesResponseDto>> GetRootDrives(GetRootDrivesRequestDto requestDto);
   Task<HubResult> InvokeCtrlAltDel(InvokeCtrlAltDelRequestDto requestDto);
-  Task<HubResult> InvokeRemoteControlDto(SendRemoteControlDtoToAgentRequestDto request);
   Task InvokeWakeDevice(WakeDeviceDto dto);
   Task ReceiveAgentUpdateTrigger();
   Task ReceivePowerStateChange(PowerStateChangeType changeType);
@@ -31,7 +30,6 @@ public interface IAgentHubClient
   Task<HubResult> RequestDesktopPreview(DesktopPreviewRequestDto dto);
   Task<HubResult> RequestRemoteControlPermission(int targetProcessId);
   Task<HubResult> SendChatMessage(ChatMessageHubDto dto);
-  Task SendRemoteControlDto(SendRemoteControlDtoToAgentRequestDto request);
   Task<HubResult> StreamDirectoryContents(DirectoryContentsStreamRequestHubDto dto);
   Task<HubResult> StreamFileContents(StreamFileContentsRequestHubDto dto);
   Task<HubResult> StreamSubdirectories(SubdirectoriesStreamRequestHubDto dto);

@@ -12,8 +12,7 @@ public record RemoteControlRequestIpcDto(
   bool NotifyUserOnSessionStart,
   bool RequireConsent,
   string? ViewerConnectionId,
-  string? ViewerName,
-  bool ViewerSupportsRemoteControlDtoHub)
+  string? ViewerName)
 {
   /// <summary>
   /// The sealed command set the session host must enforce on the relay command lane. Null when the

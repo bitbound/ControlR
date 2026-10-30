@@ -32,7 +32,6 @@ internal sealed class DesktopRemoteControlStream(
   IDesktopCapturerFactory desktopCapturerFactory,
   IMemoryProvider memoryProvider,
   IDisplayManager displayManager,
-  IRemoteControlDtoSender remoteControlDtoSender,
   IRemoteControlViewerCommandHandler viewerCommandHandler,
   IWaiter waiter,
   IOptions<RemoteControlSessionOptions> startupOptions,
@@ -45,14 +44,13 @@ internal sealed class DesktopRemoteControlStream(
   private readonly IDisplayManager _displayManager = displayManager;
   private readonly ILogger<DesktopRemoteControlStream> _logger = logger;
   private readonly TimeSpan _metricsWindow = TimeSpan.FromSeconds(3);
-  private readonly IRemoteControlDtoSender _remoteControlDtoSender = remoteControlDtoSender;
   private readonly ISessionConsentService _sessionConsentService = sessionConsentService;
   private readonly IOptions<RemoteControlSessionOptions> _startupOptions = startupOptions;
   private readonly IToaster _toaster = toaster;
   private readonly IRemoteControlViewerCommandHandler _viewerCommandHandler = viewerCommandHandler;
 
   /// <summary>
-  /// Relay DTO handling, which a viewer older than v0.30.x still relies on for every DTO kind.
+  /// Relay handling for the viewer's remote control commands, retagged for the command handler.
   /// </summary>
   private IDisposable? _relayDtoRegistration;
 
@@ -60,12 +58,15 @@ internal sealed class DesktopRemoteControlStream(
   {
     try
     {
-      var dto = new SessionDisconnectRequestedDto();
-      var wrapper = RemoteControlDesktopWrapper.Create(dto, RemoteControlDesktopDtoType.SessionDisconnectRequested);
-      if (!await SendDto(wrapper, _appLifetime.ApplicationStopping).ConfigureAwait(false))
+      if (!IsConnected)
       {
         await Close();
+        return;
       }
+
+      var dto = new SessionDisconnectRequestedDto();
+      var wrapper = RemoteControlDesktopWrapper.Create(dto, RemoteControlDesktopDtoType.SessionDisconnectRequested);
+      await SendDto(wrapper, _appLifetime.ApplicationStopping).ConfigureAwait(false);
     }
     catch (Exception ex)
     {
@@ -102,19 +103,10 @@ internal sealed class DesktopRemoteControlStream(
       Messenger.Register<SendToastToViewerMessage>(this, HandleSendToastToViewerMessage);
       OnClosed(HandleConnectionClosed);
 
-      // A viewer that can receive commands over the hub gets them over the hub when no command
-      // policy is in play. A relay carries no permission check of its own, so this lane is only
-      // opened for legacy pre-hub viewers (the transport they speak) and for sessions whose
-      // server-sealed command policy is valid, where CommandPolicyViewerCommandHandler gates every
-      // inbound command. A relay drop is an optimization. A relay allow is never a grant. The
-      // responder gate is authority. The bound check must match ReceiveRemoteControlRequest2.
-      var commandPolicyBound =
-        _startupOptions.Value.CommandPolicy?.IsBoundTo(_startupOptions.Value.SessionId) == true;
-
-      if (!_startupOptions.Value.ViewerSupportsRemoteControlDtoHub || commandPolicyBound)
-      {
-        _relayDtoRegistration = RegisterMessageHandler(this, HandleRelayDto);
-      }
+      // Remote control commands from the viewer always arrive on the relay. A relay drop is an
+      // optimization. A relay allow is never a grant. The responder's command policy gate, which
+      // fails closed when the server-sealed policy is missing or unbound, is the authority.
+      _relayDtoRegistration = RegisterMessageHandler(this, HandleRelayDto);
 
       await _displayManager.ReloadDisplays();
 
@@ -311,36 +303,11 @@ internal sealed class DesktopRemoteControlStream(
     }
   }
 
-  private async Task<bool> SendDto(RemoteControlDesktopWrapper wrapper, CancellationToken cancellationToken)
+  private async Task SendDto(RemoteControlDesktopWrapper wrapper, CancellationToken cancellationToken)
   {
-    if (wrapper.DtoType.IsScreenFrame())
-    {
-      await Send(wrapper, cancellationToken);
-      return true;
-    }
-
-    if (!_startupOptions.Value.ViewerSupportsRemoteControlDtoHub)
-    {
-      await Send(wrapper, cancellationToken);
-      return true;
-    }
-
-    if (string.IsNullOrWhiteSpace(_startupOptions.Value.ViewerConnectionId))
-    {
-      _logger.LogWarning("Viewer connection ID is missing.  Dropping {DtoType} DTO.", wrapper.DtoType);
-      return false;
-    }
-
-    var sent = await _remoteControlDtoSender.TrySendRemoteControlDto(
-      _startupOptions.Value.ViewerConnectionId,
-      wrapper);
-
-    if (!sent)
-    {
-      _logger.LogWarning("No DTO sender is connected.  Dropping {DtoType} DTO.", wrapper.DtoType);
-    }
-
-    return sent;
+    // Every desktop-issued DTO rides the relay back to the viewer, both screen frames and command
+    // results.
+    await Send(wrapper, cancellationToken);
   }
 
   private Timer StartMetricsTimer(CancellationToken cancellationToken)

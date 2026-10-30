@@ -28,10 +28,10 @@ public class TestAgentHubClient : IAgentHubClient
     return HubResult.Ok().AsTaskResult();
   }
 
-  public Task<HubResult<CreateRemoteControlSessionResponseDto>> CreateRemoteControlSession(RemoteControlSessionRequestDto dto)
+  public Task<HubResult> CreateRemoteControlSession(RemoteControlSessionRequestDto dto)
   {
     Console.WriteLine($"Creating streaming session with ID: {dto.SessionId}, Viewer: {dto.ViewerName}");
-    return Task.FromResult(HubResult.Ok(new CreateRemoteControlSessionResponseDto(false)));
+    return Task.FromResult(HubResult.Ok());
   }
 
   public Task<HubResult> CreateTerminalSession(Guid terminalSessionId, string viewerConnectionId)
@@ -115,12 +115,6 @@ public class TestAgentHubClient : IAgentHubClient
     return Task.FromResult(HubResult.Ok());
   }
 
-  public Task<HubResult> InvokeRemoteControlDto(SendRemoteControlDtoToAgentRequestDto request)
-  {
-    Console.WriteLine($"Received DTO of type: {request.Wrapper.DtoType}");
-    return Task.FromResult(HubResult.Ok());
-  }
-
   public Task InvokeWakeDevice(WakeDeviceDto dto)
   {
     Console.WriteLine("Received wake device request.");
@@ -167,12 +161,6 @@ public class TestAgentHubClient : IAgentHubClient
   {
     Console.WriteLine($"Sending chat message from {dto.SenderName} ({dto.SenderEmail}): {dto.Message}");
     return Task.FromResult(HubResult.Ok());
-  }
-
-  public Task SendRemoteControlDto(SendRemoteControlDtoToAgentRequestDto request)
-  {
-    Console.WriteLine($"Received DTO of type: {request.Wrapper.DtoType}");
-    return Task.CompletedTask;
   }
 
   public Task<HubResult> StreamDirectoryContents(DirectoryContentsStreamRequestHubDto dto)

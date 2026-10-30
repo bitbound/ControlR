@@ -1,6 +1,5 @@
 using ControlR.Libraries.Api.Contracts.Dtos.IpcDtos;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
-using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Shared.Primitives;
 using StreamJsonRpc;
 using PolyType;
@@ -17,9 +16,7 @@ public partial interface IDesktopClientRpcService
     Task<DesktopSessionInfoResponseIpcDto> GetDesktopSessionInfo();
     Task InvokeCtrlAltDel(InvokeCtrlAltDelRequestDto dto);
     Task ReceiveChatMessage(ChatMessageIpcDto dto);
-    Task<Result> ReceiveRemoteControlDto(Guid sessionId, RemoteControlViewerWrapper dto);
     Task<Result> ReceiveRemoteControlRequest(RemoteControlRequestIpcDto dto);
-    Task<Result<RemoteControlSessionSetupIpcDto>> ReceiveRemoteControlRequest2(RemoteControlRequestIpcDto dto);
     Task<CheckOsPermissionsResponseIpcDto> RequestRemoteControlPermission(RequestRemoteControlPermissionIpcDto dto);
     Task ShutdownDesktopClient(ShutdownCommandDto dto);
 }

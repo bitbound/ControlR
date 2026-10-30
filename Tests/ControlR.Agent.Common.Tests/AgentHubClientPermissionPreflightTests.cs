@@ -63,42 +63,7 @@ public class AgentHubClientPermissionPreflightTests
   }
 
   [Fact]
-  public async Task CreateRemoteControlSession_FallsBackToV1Setup_WhenV2Unsupported()
-  {
-    var targetProcessId = 4247;
-    var desktopClientRpc = new Mock<IDesktopClientRpcService>();
-    desktopClientRpc
-      .Setup(x => x.CheckOsPermissions(It.IsAny<CheckOsPermissionsIpcDto>()))
-      .ReturnsAsync(new CheckOsPermissionsResponseIpcDto(true, null));
-    desktopClientRpc
-      .Setup(x => x.ReceiveRemoteControlRequest2(It.IsAny<RemoteControlRequestIpcDto>()))
-      .ThrowsAsync(new InvalidOperationException("Desktop client predates v2."));
-    desktopClientRpc
-      .Setup(x => x.ReceiveRemoteControlRequest(It.IsAny<RemoteControlRequestIpcDto>()))
-      .ReturnsAsync(Result.Ok());
-
-    var ipcServer = new Mock<IIpcServer>();
-    ipcServer.SetupGet(x => x.Client).Returns(desktopClientRpc.Object);
-
-    var serverStore = CreateIpcServerStore(targetProcessId, ipcServer.Object);
-    var sut = CreateSut(serverStore.Object);
-
-    var result = await sut.CreateRemoteControlSession(new RemoteControlSessionRequestDto(
-      SessionId: Guid.NewGuid(),
-      WebsocketUri: new Uri("wss://localhost:5001"),
-      TargetSystemSession: 1,
-      TargetProcessId: targetProcessId,
-      DeviceId: Guid.NewGuid(),
-      NotifyUserOnSessionStart: false,
-      RequireConsent: false));
-
-    Assert.True(result.IsSuccess);
-    Assert.False(result.Value?.ResponderCommandsOnRelay);
-    desktopClientRpc.Verify(x => x.ReceiveRemoteControlRequest(It.IsAny<RemoteControlRequestIpcDto>()), Times.Once);
-  }
-
-  [Fact]
-  public async Task CreateRemoteControlSession_PrefersV2SetupAndReportsGateState()
+  public async Task CreateRemoteControlSession_ForwardsSealedPolicyToSetup()
   {
     var targetProcessId = 4243;
     var sessionId = Guid.NewGuid();
@@ -111,8 +76,8 @@ public class AgentHubClientPermissionPreflightTests
       .Setup(x => x.CheckOsPermissions(It.IsAny<CheckOsPermissionsIpcDto>()))
       .ReturnsAsync(new CheckOsPermissionsResponseIpcDto(true, null));
     desktopClientRpc
-      .Setup(x => x.ReceiveRemoteControlRequest2(It.IsAny<RemoteControlRequestIpcDto>()))
-      .ReturnsAsync(Result.Ok(new RemoteControlSessionSetupIpcDto(true)));
+      .Setup(x => x.ReceiveRemoteControlRequest(It.IsAny<RemoteControlRequestIpcDto>()))
+      .ReturnsAsync(Result.Ok());
 
     var ipcServer = new Mock<IIpcServer>();
     ipcServer.SetupGet(x => x.Client).Returns(desktopClientRpc.Object);
@@ -135,84 +100,16 @@ public class AgentHubClientPermissionPreflightTests
     });
 
     Assert.True(result.IsSuccess);
-    Assert.True(result.Value?.ResponderCommandsOnRelay);
-
     desktopClientRpc.Verify(
-      x => x.ReceiveRemoteControlRequest2(It.Is<RemoteControlRequestIpcDto>(dto =>
+      x => x.ReceiveRemoteControlRequest(It.Is<RemoteControlRequestIpcDto>(dto =>
         dto.SessionId == sessionId && dto.CommandPolicy == commandPolicy)),
       Times.Once);
-    desktopClientRpc.Verify(x => x.ReceiveRemoteControlRequest(It.IsAny<RemoteControlRequestIpcDto>()), Times.Never);
   }
 
-  [Fact]
-  public async Task InvokeRemoteControlDto_DesktopFails_ReturnsFailure()
-  {
-    var targetProcessId = 4246;
-    var desktopClientRpc = new Mock<IDesktopClientRpcService>();
-    desktopClientRpc
-      .Setup(x => x.ReceiveRemoteControlDto(It.IsAny<Guid>(), It.IsAny<RemoteControlViewerWrapper>()))
-      .ReturnsAsync(Result.Fail("No remote control session found."));
-    var ipcServer = new Mock<IIpcServer>();
-    ipcServer.SetupGet(x => x.Client).Returns(desktopClientRpc.Object);
 
-    var serverStore = CreateIpcServerStore(targetProcessId, ipcServer.Object);
-    var sut = CreateSut(serverStore.Object);
-    var result = await sut.InvokeRemoteControlDto(new SendRemoteControlDtoToAgentRequestDto(
-      Guid.NewGuid(),
-      targetProcessId,
-      Guid.NewGuid(),
-      RemoteControlViewerWrapper.Create(new TypeTextDto("hello"), RemoteControlViewerDtoType.TypeText)));
 
-    Assert.False(result.IsSuccess);
-    Assert.Equal("No remote control session found.", result.Reason);
-  }
 
-  [Fact]
-  public async Task InvokeRemoteControlDto_ForwardsToDesktopClient()
-  {
-    var targetProcessId = 4244;
-    var sessionId = Guid.NewGuid();
-    var desktopClientRpc = new Mock<IDesktopClientRpcService>();
-    desktopClientRpc
-      .Setup(x => x.ReceiveRemoteControlDto(It.IsAny<Guid>(), It.IsAny<RemoteControlViewerWrapper>()))
-      .ReturnsAsync(Result.Ok());
-    var ipcServer = new Mock<IIpcServer>();
-    ipcServer.SetupGet(x => x.Client).Returns(desktopClientRpc.Object);
 
-    var serverStore = CreateIpcServerStore(targetProcessId, ipcServer.Object);
-    var sut = CreateSut(serverStore.Object);
-    var wrapper = RemoteControlViewerWrapper.Create(new TypeTextDto("hello"), RemoteControlViewerDtoType.TypeText);
-
-    var result = await sut.InvokeRemoteControlDto(new SendRemoteControlDtoToAgentRequestDto(
-      Guid.NewGuid(),
-      targetProcessId,
-      sessionId,
-      wrapper));
-
-    Assert.True(result.IsSuccess);
-    desktopClientRpc.Verify(
-      x => x.ReceiveRemoteControlDto(sessionId, wrapper),
-      Times.Once);
-  }
-
-  [Fact]
-  public async Task InvokeRemoteControlDto_UnknownProcess_ReturnsFailure()
-  {
-    var serverStore = new Mock<IIpcServerStore>();
-    IpcServerRecord? serverRecord = null;
-    serverStore
-      .Setup(x => x.TryGetServer(It.IsAny<int>(), out serverRecord))
-      .Returns(false);
-
-    var sut = CreateSut(serverStore.Object);
-    var result = await sut.InvokeRemoteControlDto(new SendRemoteControlDtoToAgentRequestDto(
-      Guid.NewGuid(),
-      TargetProcessId: 4245,
-      SessionId: Guid.NewGuid(),
-      Wrapper: RemoteControlViewerWrapper.Create(new TypeTextDto("hello"), RemoteControlViewerDtoType.TypeText)));
-
-    Assert.False(result.IsSuccess);
-  }
 
   [Fact]
   public async Task RequestDesktopPreview_FailsBeforeForwarding_WhenPreflightIsDenied()

@@ -162,7 +162,6 @@ public class HubDtoProtocolRoundTripTests
       {
         ViewerConnectionId = "conn-1",
         ViewerName = "jared",
-        ViewerSupportsRemoteControlDtoHub = true,
       };
     }
 

@@ -48,7 +48,6 @@ public interface IViewerRemoteControlStream : IManagedRelayStream
 public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteControlStream
 {
   private readonly ILogger<ViewerRemoteControlStream> _logger;
-  private readonly IHubConnection<IViewerHub> _viewerHub;
   private MovePointerDto? _pendingPointerMove;
   private int _pointerMovePumpRunning;
   private RemoteControlSession? _session;
@@ -59,12 +58,10 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
     IMemoryProvider memoryProvider,
     IWaiter waiter,
     IStreamMetrics streamMetrics,
-    IHubConnection<IViewerHub> viewerHub,
     ILogger<ViewerRemoteControlStream> logger)
     : base(timeProvider, messenger, memoryProvider, waiter, streamMetrics, logger)
   {
     _logger = logger;
-    _viewerHub = viewerHub;
 
     messenger.Register<DtoReceivedMessage<RemoteControlDesktopWrapper>>(this, HandleRemoteControlDtoReceived);
   }
@@ -276,15 +273,6 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
       });
   }
 
-  private static SendRemoteControlDtoToAgentRequestDto CreateRequest(
-    RemoteControlSession session,
-    RemoteControlViewerWrapper wrapper) =>
-    new(
-      session.Device.Id,
-      session.TargetProcessId,
-      session.SessionId,
-      wrapper);
-
   private Task HandleRemoteControlDtoReceived(object subscriber, DtoReceivedMessage<RemoteControlDesktopWrapper> message)
   {
     return InvokeMessageHandlers(message.Dto);
@@ -292,25 +280,14 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
 
   private async Task<HubResult> InvokeDto(RemoteControlViewerWrapper wrapper, CancellationToken cancellationToken)
   {
-    if (_session is not { } session)
-    {
-      return HubResult.Fail("Remote control session has not been initialized.");
-    }
-
-    if (session.IsRelayDirect || session.UseRelayCommands)
-    {
-      // The relay carries no return channel, so the command is fire-and-forget. Any result the
-      // responder produces arrives as a desktop wrapper through the normal message handlers.
-      await SendDto(wrapper, cancellationToken);
-      return HubResult.Ok();
-    }
-
-    await _viewerHub.WaitForConnected(cancellationToken);
-
-    var request = CreateRequest(session, wrapper);
-    return await _viewerHub.Server
-      .InvokeRemoteControlDtoOnAgent(request)
-      .WaitAsync(cancellationToken);
+    // The relay carries no return channel, so the command is fire-and-forget. Any result the
+    // responder produces arrives as a desktop wrapper through the normal message handlers.
+    return await TryInvoke(
+      async () =>
+      {
+        await SendDto(wrapper, cancellationToken);
+        return HubResult.Ok();
+      });
   }
 
   private async Task PumpPointerMovesAsync(CancellationToken cancellationToken)
@@ -343,32 +320,20 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
 
   private async Task SendDto(RemoteControlViewerWrapper wrapper, CancellationToken cancellationToken)
   {
-    if (_session is not { } session)
+    if (_session is not { })
     {
       throw new InvalidOperationException("Remote control session has not been initialized.");
     }
 
-    if (session.IsRelayDirect || session.UseRelayCommands)
+    // The relay is typed on the desktop wrapper. The responder retags the message back to the
+    // viewer command kind when it reads the payload.
+    var relayWrapper = new RemoteControlDesktopWrapper
     {
-      // The relay is typed on the desktop wrapper. A responder running without the hub command
-      // path retags the message back to the viewer command kind when it reads the payload.
-      var relayWrapper = new RemoteControlDesktopWrapper
-      {
-        DtoType = (RemoteControlDesktopDtoType)(int)wrapper.DtoType,
-        Payload = wrapper.Payload,
-        SendTimestamp = wrapper.SendTimestamp
-      };
-      await Send(relayWrapper, cancellationToken);
-      return;
-    }
-
-    // The typed proxy awaits a completion message for any Task-returning method, so the
-    // fire-and-forget path has to go through Send() instead of the Server property.
-    var request = CreateRequest(session, wrapper);
-    await _viewerHub.Send(
-      nameof(IViewerHub.SendRemoteControlDtoToAgent),
-      [request],
-      cancellationToken);
+      DtoType = (RemoteControlDesktopDtoType)(int)wrapper.DtoType,
+      Payload = wrapper.Payload,
+      SendTimestamp = wrapper.SendTimestamp
+    };
+    await Send(relayWrapper, cancellationToken);
   }
 
   private async Task<HubResult> TryInvoke(Func<Task<HubResult>> func, [CallerMemberName] string callerName = "")

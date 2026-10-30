@@ -168,13 +168,18 @@ public class EndToEndTests(ITestOutputHelper testOutputHelper) : IAsyncLifetime
   }
 
   [Fact]
-  public async Task ServerCanSendRemoteControlDtoToClient()
+  public async Task ServerCanSendRemoteControlRequestToClient()
   {
-    var tcs = new TaskCompletionSource<RemoteControlViewerWrapper>();
+    var tcs = new TaskCompletionSource<RemoteControlRequestIpcDto>();
+    var sessionId = Guid.NewGuid();
+    var commandPolicy = RemoteControlCommandPolicyDto.Create(
+      sessionId,
+      [RemoteControlViewerDtoType.TypeText]);
+
     var mockClientService = new Mock<IDesktopClientRpcService>();
     mockClientService
-      .Setup(m => m.ReceiveRemoteControlDto(It.IsAny<Guid>(), It.IsAny<RemoteControlViewerWrapper>()))
-      .Returns<Guid, RemoteControlViewerWrapper>((_, dto) =>
+      .Setup(m => m.ReceiveRemoteControlRequest(It.IsAny<RemoteControlRequestIpcDto>()))
+      .Returns<RemoteControlRequestIpcDto>((dto) =>
       {
         tcs.SetResult(dto);
         return Task.FromResult(Result.Ok());
@@ -204,12 +209,27 @@ public class EndToEndTests(ITestOutputHelper testOutputHelper) : IAsyncLifetime
     server.Start();
     client.Start();
 
-    var wrapper = RemoteControlViewerWrapper.Create(new TypeTextDto("hello"), RemoteControlViewerDtoType.TypeText);
-    await server.Client.ReceiveRemoteControlDto(Guid.NewGuid(), wrapper);
+    var request = new RemoteControlRequestIpcDto(
+      sessionId,
+      new Uri("wss://relay.example.com/remote-control"),
+      TargetSystemSession: 1,
+      TargetProcessId: 4242,
+      DeviceId: Guid.NewGuid(),
+      NotifyUserOnSessionStart: false,
+      RequireConsent: false,
+      ViewerConnectionId: "conn-1",
+      ViewerName: "jared")
+    {
+      CommandPolicy = commandPolicy,
+    };
+    await server.Client.ReceiveRemoteControlRequest(request);
 
     var received = await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
-    Assert.Equal(RemoteControlViewerDtoType.TypeText, received.DtoType);
-    Assert.Equal("hello", received.GetPayload<TypeTextDto>().Text);
+    Assert.Equal(sessionId, received.SessionId);
+    Assert.Equal("jared", received.ViewerName);
+    Assert.NotNull(received.CommandPolicy);
+    Assert.True(received.CommandPolicy!.IsBoundTo(sessionId));
+    Assert.Equal(commandPolicy.AllowedDtoTypes, received.CommandPolicy!.AllowedDtoTypes);
 
     cts?.Cancel();
     cts?.Dispose();

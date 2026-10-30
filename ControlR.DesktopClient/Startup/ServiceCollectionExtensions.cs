@@ -67,7 +67,6 @@ internal static class ServiceCollectionExtensions
       .AddSingleton<IChatSessionManager, ChatSessionManager>()
       .AddSingleton<IpcClientManager>()
       .AddSingleton<IIpcClientAccessor>(sp => sp.GetRequiredService<IpcClientManager>())
-      .AddSingleton<IRemoteControlDtoSender, AgentRemoteControlDtoSender>()
       .AddSingleton<IToaster, Toaster>()
       .AddSingleton<IUiDispatcher, UiDispatcher>()
       .AddSingleton<IImageUtility, ImageUtility>()

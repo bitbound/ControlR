@@ -22,8 +22,6 @@ public sealed record RemoteControlHostDependencies
 
   public required IUserInteractionService UserInteraction { get; init; }
 
-  public required IRemoteControlDtoSender DtoSender { get; init; }
-
   public IUiDispatcher? Dispatcher { get; init; }
 
   public IAsyncLock? AsyncLock { get; init; }

@@ -81,14 +81,13 @@ public partial class ViewerHub
     RemoteControlSessionRequestDto sessionRequestDto)
   {
     return await RequestRemoteControlSessionCore(
-      sessionRequestDto with { DeviceId = deviceId },
-      false);
+      sessionRequestDto with { DeviceId = deviceId });
   }
 
   [Obsolete("Use RequestRemoteControlSession3. (deprecated 2026-10-20, v0.30.x)")]
   public async Task<HubResult> RequestRemoteControlSession2(RemoteControlSessionRequestDto sessionRequestDto)
   {
-    return await RequestRemoteControlSessionCore(sessionRequestDto, false);
+    return await RequestRemoteControlSessionCore(sessionRequestDto);
   }
 
   [Obsolete("Use RequestVncSession2. (deprecated 2026-09-03, v0.28.x)")]
