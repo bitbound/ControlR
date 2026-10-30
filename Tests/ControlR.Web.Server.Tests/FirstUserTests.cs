@@ -1,3 +1,4 @@
+using ControlR.Web.Server.Authz.Permissions;
 using ControlR.Web.Server.Data;
 using ControlR.Web.Server.Services.Users;
 using ControlR.Web.Server.Startup;
@@ -54,6 +55,52 @@ public class FirstUserTests(ITestOutputHelper output)
     Assert.Contains(PermissionNames.DeviceRead, permissions);
     Assert.Contains(PermissionNames.AgentInstall, permissions);
     Assert.Contains(PermissionNames.InstallerKeySelfRead, permissions);
+  }
+
+  [Fact]
+  public async Task FirstServerAccount_IsGrantedEveryCatalogPermission()
+  {
+    var config = new Dictionary<string, string?>
+    {
+      ["AppOptions:DisableEmailSending"] = "true",
+      ["AppOptions:EnablePublicRegistration"] = "true"
+    };
+
+    await using var testApp = await TestAppBuilder.CreateTestApp(
+      output,
+      extraConfiguration: config,
+      useInMemoryDatabase: false);
+
+    using var scope = testApp.CreateScope();
+    var userCreator = scope.ServiceProvider.GetRequiredService<IUserCreator>();
+
+    var result = await userCreator.CreateUser(
+      AdminEmail,
+      AdminPassword,
+      returnUrl: null,
+      isPublicRegistration: true,
+      cancellationToken: TestContext.Current.CancellationToken);
+
+    Assert.True(result.Succeeded);
+    var user = result.User;
+    Assert.NotNull(user);
+
+    await using var appDb = scope.ServiceProvider.GetRequiredService<AppDb>();
+    var granted = await appDb.PermissionAssignments
+      .Where(x =>
+        x.PrincipalId == user.Id &&
+        x.PrincipalKind == PermissionPrincipalKind.User &&
+        x.Effect == PermissionEffect.Allow &&
+        x.IsEnabled)
+      .Select(x => x.PermissionName)
+      .Distinct()
+      .ToListAsync(TestContext.Current.CancellationToken);
+
+    var missing = PermissionCatalog.All.Keys.Except(granted).ToArray();
+
+    Assert.True(
+      missing.Length == 0,
+      $"The first server account is missing permissions: {string.Join(", ", missing)}");
   }
 
   [Fact]

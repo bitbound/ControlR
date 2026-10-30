@@ -62,21 +62,6 @@ public class AssistSessionCleanupServiceTests
   }
 
   [Fact]
-  public async Task HandleElapsed_WaitingExpired_NotifiesAssistEnded()
-  {
-    var session = await _cache.CreateAsync("assist-conn-1", TestContext.Current.CancellationToken);
-    _timeProvider.Advance(TimeSpan.FromMinutes(31));
-
-    await RunCleanup();
-
-    Assert.Null(await _cache.TryGetAsync(session.SessionId, TestContext.Current.CancellationToken));
-    _clientProxy.Verify(
-      c => c.AssistSessionEnded(It.Is<AssistSessionEndedDto>(dto =>
-        dto.SessionId == session.SessionId && dto.Reason.Contains("expired"))),
-      Times.Once);
-  }
-
-  [Fact]
   public async Task HandleElapsed_ConsentNotYetExpired_KeepsPendingConsentAndSendsNothing()
   {
     var session = await _cache.CreateAsync("assist-conn-1", TestContext.Current.CancellationToken);
@@ -93,6 +78,21 @@ public class AssistSessionCleanupServiceTests
     _clientProxy.Verify(
       c => c.AssistConsentTimedOut(It.IsAny<AssistConsentTimedOutDto>()),
       Times.Never);
+  }
+
+  [Fact]
+  public async Task HandleElapsed_WaitingExpired_NotifiesAssistEnded()
+  {
+    var session = await _cache.CreateAsync("assist-conn-1", TestContext.Current.CancellationToken);
+    _timeProvider.Advance(TimeSpan.FromMinutes(31));
+
+    await RunCleanup();
+
+    Assert.Null(await _cache.TryGetAsync(session.SessionId, TestContext.Current.CancellationToken));
+    _clientProxy.Verify(
+      c => c.AssistSessionEnded(It.Is<AssistSessionEndedDto>(dto =>
+        dto.SessionId == session.SessionId && dto.Reason.Contains("expired"))),
+      Times.Once);
   }
 
   private Task RunCleanup()

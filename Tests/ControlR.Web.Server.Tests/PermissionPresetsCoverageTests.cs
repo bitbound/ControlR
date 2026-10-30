@@ -5,13 +5,6 @@ namespace ControlR.Web.Server.Tests;
 
 public class PermissionPresetsCoverageTests
 {
-  /// <summary>
-  /// Permissions the product owner requires to be granted explicitly per user. They are absent
-  /// from every preset on purpose, so the coverage guard below excludes them.
-  /// </summary>
-  private static readonly HashSet<string> _explicitGrantOnlyPermissions =
-    new(StringComparer.Ordinal) { PermissionNames.AssistSessionsConnect };
-
   [Fact]
   public void AgentInstaller_ContainsOnlyDeploymentWorkflowPermissions()
   {
@@ -38,7 +31,7 @@ public class PermissionPresetsCoverageTests
       .ToHashSet();
 
     var uncovered = permissionNameFields
-      .Where(name => !_explicitGrantOnlyPermissions.Contains(name) && !allPresetPermissions.Contains(name))
+      .Where(name => !allPresetPermissions.Contains(name))
       .ToArray();
 
     Assert.True(

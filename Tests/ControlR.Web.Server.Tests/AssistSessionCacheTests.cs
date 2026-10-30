@@ -55,6 +55,19 @@ public class AssistSessionCacheTests
   }
 
   [Fact]
+  public async Task Create_WhenGlobalCapacityReached_ThrowsCapacityException()
+  {
+    var ct = TestContext.Current.CancellationToken;
+    for (var i = 0; i < AssistSessionCache.MaxTrackedSessions; i++)
+    {
+      _ = await _cache.CreateAsync($"assist-conn-{i}", ct);
+    }
+
+    await Assert.ThrowsAsync<AssistSessionCapacityExceededException>(
+      () => _cache.CreateAsync("assist-conn-overflow", ct));
+  }
+
+  [Fact]
   public async Task RemoveByAssistConnectionId_WithMultipleSessions_RemovesOnlyMatchingSessions()
   {
     var ct = TestContext.Current.CancellationToken;
@@ -110,6 +123,15 @@ public class AssistSessionCacheTests
   }
 
   [Fact]
+  public async Task TryActivate_WhenWaitingForViewer_ReturnsNull()
+  {
+    var ct = TestContext.Current.CancellationToken;
+    var session = await _cache.CreateAsync("assist-conn-1", ct);
+
+    Assert.Null(await _cache.TryActivateAsync(session.SessionId, Guid.NewGuid(), ct));
+  }
+
+  [Fact]
   public async Task TryActivate_WithStaleConsentNonce_ReturnsNull()
   {
     var ct = TestContext.Current.CancellationToken;
@@ -121,12 +143,19 @@ public class AssistSessionCacheTests
   }
 
   [Fact]
-  public async Task TryActivate_WhenWaitingForViewer_ReturnsNull()
+  public async Task TryBeginConsent_AfterRePromptMints_ReplacesNonce()
   {
     var ct = TestContext.Current.CancellationToken;
     var session = await _cache.CreateAsync("assist-conn-1", ct);
+    var first = await _cache.TryBeginConsentAsync(session.SessionId, "viewer-conn-1", Guid.NewGuid(), "First", null, ct);
+    _ = await _cache.TryReturnToWaitingAsync(session.SessionId, first!.ConsentNonce!.Value, ct);
 
-    Assert.Null(await _cache.TryActivateAsync(session.SessionId, Guid.NewGuid(), ct));
+    var second = await _cache.TryBeginConsentAsync(session.SessionId, "viewer-conn-2", Guid.NewGuid(), "Second", null, ct);
+
+    Assert.NotNull(second);
+    Assert.NotEqual(first.ConsentNonce, second.ConsentNonce);
+    Assert.Null(await _cache.TryActivateAsync(session.SessionId, first.ConsentNonce!.Value, ct));
+    Assert.NotNull(await _cache.TryActivateAsync(session.SessionId, second.ConsentNonce!.Value, ct));
   }
 
   [Fact]
@@ -198,34 +227,5 @@ public class AssistSessionCacheTests
 
     Assert.Null(await _cache.TryReturnToWaitingAsync(session.SessionId, Guid.NewGuid(), ct));
     Assert.Equal(AssistSessionStatus.PendingConsent, (await _cache.TryGetAsync(session.SessionId, ct))?.Status);
-  }
-
-  [Fact]
-  public async Task TryBeginConsent_AfterRePromptMints_ReplacesNonce()
-  {
-    var ct = TestContext.Current.CancellationToken;
-    var session = await _cache.CreateAsync("assist-conn-1", ct);
-    var first = await _cache.TryBeginConsentAsync(session.SessionId, "viewer-conn-1", Guid.NewGuid(), "First", null, ct);
-    _ = await _cache.TryReturnToWaitingAsync(session.SessionId, first!.ConsentNonce!.Value, ct);
-
-    var second = await _cache.TryBeginConsentAsync(session.SessionId, "viewer-conn-2", Guid.NewGuid(), "Second", null, ct);
-
-    Assert.NotNull(second);
-    Assert.NotEqual(first.ConsentNonce, second.ConsentNonce);
-    Assert.Null(await _cache.TryActivateAsync(session.SessionId, first.ConsentNonce!.Value, ct));
-    Assert.NotNull(await _cache.TryActivateAsync(session.SessionId, second.ConsentNonce!.Value, ct));
-  }
-
-  [Fact]
-  public async Task Create_WhenGlobalCapacityReached_ThrowsCapacityException()
-  {
-    var ct = TestContext.Current.CancellationToken;
-    for (var i = 0; i < AssistSessionCache.MaxTrackedSessions; i++)
-    {
-      _ = await _cache.CreateAsync($"assist-conn-{i}", ct);
-    }
-
-    await Assert.ThrowsAsync<AssistSessionCapacityExceededException>(
-      () => _cache.CreateAsync("assist-conn-overflow", ct));
   }
 }

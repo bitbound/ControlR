@@ -44,15 +44,20 @@ public sealed class AssistSessionCapacityExceededException : Exception
 public interface IAssistSessionCache
 {
   Task<AssistSession> CreateAsync(string assistConnectionId, CancellationToken cancellationToken = default);
+
   Task<AssistSession?> RemoveAsync(Guid sessionId, CancellationToken cancellationToken = default);
+
   Task<IReadOnlyList<AssistSession>> RemoveByAssistConnectionIdAsync(
     string assistConnectionId,
     CancellationToken cancellationToken = default);
+
   Task<IReadOnlyList<AssistSession>> SnapshotAsync(CancellationToken cancellationToken = default);
+
   Task<AssistSession?> TryActivateAsync(
     Guid sessionId,
     Guid consentNonce,
     CancellationToken cancellationToken = default);
+
   Task<AssistSession?> TryBeginConsentAsync(
     Guid sessionId,
     string viewerConnectionId,
@@ -60,14 +65,19 @@ public interface IAssistSessionCache
     string displayName,
     string? email,
     CancellationToken cancellationToken = default);
+    
   Task<AssistSession?> TryGetAsync(Guid sessionId, CancellationToken cancellationToken = default);
+
   Task<AssistSession?> TryGetByAssistConnectionIdAsync(
     string assistConnectionId,
     CancellationToken cancellationToken = default);
+
   Task<AssistSession?> TryGetByCodeAsync(string code, CancellationToken cancellationToken = default);
+
   Task<AssistSession?> TryGetByViewerConnectionIdAsync(
     string viewerConnectionId,
     CancellationToken cancellationToken = default);
+
   Task<AssistSession?> TryReturnToWaitingAsync(
     Guid sessionId,
     Guid consentNonce,
@@ -75,10 +85,14 @@ public interface IAssistSessionCache
 }
 
 /// <summary>
+/// <para>
 /// In-memory <see cref="IAssistSessionCache"/>. The lock serializes state transitions within this
 /// process only.
+/// </para>
+/// <para>
 /// TODO: HybridCache. Move this state behind HybridCache when Redis and horizontal scalability
 /// land. The lock will not serialize sessions across nodes, and the code-uniqueness lookup in
+/// </para>
 /// <see cref="CreateAsync"/> will need to pair with the distributed lock work to be race-free.
 /// </summary>
 public sealed class AssistSessionCache(TimeProvider timeProvider, Func<string>? codeGenerator = null) : IAssistSessionCache
