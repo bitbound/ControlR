@@ -9,6 +9,8 @@ namespace ControlR.Assist.Views;
 
 public partial class MainWindow : Window
 {
+  private bool _exitConfirmed;
+
   // The parameterless overload exists so the XAML loader can reach this window by avares URI.
   public MainWindow()
   {
@@ -26,6 +28,26 @@ public partial class MainWindow : Window
 
   // SecondaryColor lives in the theme dictionaries, so the current theme variant must be passed.
   private IBrush? SecondaryBrush => this.TryFindResource("SecondaryColor", ActualThemeVariant, out var resource) ? resource as IBrush : null;
+
+  protected override async void OnClosing(WindowClosingEventArgs e)
+  {
+    var sessionInProgress = Home.IsConsentPending || Home.IsSessionActive;
+
+    if (sessionInProgress && !_exitConfirmed)
+    {
+      e.Cancel = true;
+
+      if (await ((MainWindowViewModel)DataContext!).ConfirmExitAsync())
+      {
+        _exitConfirmed = true;
+        Close();
+      }
+
+      return;
+    }
+
+    base.OnClosing(e);
+  }
 
   private void OnHomePropertyChanged(object? sender, PropertyChangedEventArgs e)
   {
@@ -79,6 +101,10 @@ public partial class MainWindow : Window
     if (pending)
     {
       RebuildConsentText();
+
+      // Activate() does not restore a minimized window, and the customer may have minimized
+      // Assist after the technician entered the code.
+      WindowState = WindowState.Normal;
       Activate();
     }
   }

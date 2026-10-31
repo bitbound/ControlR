@@ -36,15 +36,6 @@ public partial class HomeView : UserControl
     }
   }
 
-  private void UnsubscribeFromViewModel()
-  {
-    if (_subscribedViewModel is not null)
-    {
-      _subscribedViewModel.PropertyChanged -= OnViewModelPropertyChanged;
-      _subscribedViewModel = null;
-    }
-  }
-
   private async void OnCopyCodeClick(object? sender, RoutedEventArgs e)
   {
     if (DataContext is not HomeViewModel { Code: { } code } || TopLevel.GetTopLevel(this)?.Clipboard is not { } clipboard)
@@ -96,5 +87,14 @@ public partial class HomeView : UserControl
     inlines.Add(new Run($" ({viewModel.ActiveViewerEmail})") { Foreground = SecondaryBrush });
     inlines.Add(new Run(suffix));
     ViewerStatusText.Inlines = inlines;
+  }
+
+  private void UnsubscribeFromViewModel()
+  {
+    if (_subscribedViewModel is not null)
+    {
+      _subscribedViewModel.PropertyChanged -= OnViewModelPropertyChanged;
+      _subscribedViewModel = null;
+    }
   }
 }

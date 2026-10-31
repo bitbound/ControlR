@@ -24,6 +24,7 @@
   "ConfirmButtonText": "Confirm",
   "ConfirmDisconnectMessage": "Disconnect from the server?",
   "ConfirmEndSessionMessage": "End the support session?",
+  "ConfirmExitMessage": "A support session is in progress. End it and exit?",
   "ConnectButtonText": "Connect",
   "ConnectToLabel": "You'll connect to",
   "ConnectionTimedOut": "The connection attempt timed out. Check your connection and try again.",

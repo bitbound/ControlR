@@ -27,6 +27,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
   public HomeViewModel Home { get; }
   public string WindowTitle => $"{BrandingConstants.BrandName}  |  {Localization.AssistWindowTitle}";
 
+  public Task<bool> ConfirmExitAsync() => ShowConfirmAsync(Localization.ConfirmExitMessage);
+
   [RelayCommand]
   private void AcceptConfirm() => ResolveConfirm(approved: true);
 

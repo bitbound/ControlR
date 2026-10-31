@@ -45,6 +45,7 @@ public static class Localization
   public static string ConfirmButtonText => GetString();
   public static string ConfirmDisconnectMessage => GetString();
   public static string ConfirmEndSessionMessage => GetString();
+  public static string ConfirmExitMessage => GetString();
   public static string ConnectButtonText => GetString();
   public static string ConnectionTimedOut => GetString();
   public static string ConnectToLabel => GetString();

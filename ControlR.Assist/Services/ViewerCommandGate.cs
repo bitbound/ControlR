@@ -23,6 +23,12 @@ public sealed class ViewerCommandGate(
   AssistInputGate gate,
   ILogger<ViewerCommandGate> logger) : IRemoteControlViewerCommandHandler
 {
+  private static readonly HashSet<RemoteControlViewerDtoType> _neverAllowedDtoTypes =
+  [
+    RemoteControlViewerDtoType.ToggleBlockInput,
+    RemoteControlViewerDtoType.TogglePrivacyScreen
+  ];
+
   private static readonly HashSet<RemoteControlViewerDtoType> _viewOnlyDroppedDtoTypes =
   [
     RemoteControlViewerDtoType.KeyEvent,
@@ -33,12 +39,6 @@ public sealed class ViewerCommandGate(
     RemoteControlViewerDtoType.WheelScroll,
     RemoteControlViewerDtoType.RequestClipboardText,
     RemoteControlViewerDtoType.ClipboardText
-  ];
-
-  private static readonly HashSet<RemoteControlViewerDtoType> _neverAllowedDtoTypes =
-  [
-    RemoteControlViewerDtoType.ToggleBlockInput,
-    RemoteControlViewerDtoType.TogglePrivacyScreen
   ];
 
   public async Task<Result> Handle(RemoteControlViewerWrapper wrapper)
