@@ -72,7 +72,7 @@ public class AssistSessionCleanupBackgroundService(
 
             // Tell the assist app its code expired instead of dropping it silently. The app mints
             // a fresh session on the notification so the customer is never left on a dead code.
-            await NotifyEnded(session.SessionId, "Your access code expired. Reconnect to get a new one.", session);
+            await NotifyEnded(session, AssistSessionEndedReason.AccessCodeExpired);
             break;
           }
         case AssistSessionStatus.Active when age > _activeExpiry:
@@ -86,24 +86,24 @@ public class AssistSessionCleanupBackgroundService(
               break;
             }
 
-            await NotifyEnded(session.SessionId, "The session expired.", session);
+            await NotifyEnded(session, AssistSessionEndedReason.SessionExpired);
             break;
           }
       }
     }
   }
 
-  private async Task NotifyEnded(Guid sessionId, string reason, AssistSession session)
+  private async Task NotifyEnded(AssistSession session, AssistSessionEndedReason reason)
   {
     if (session.ViewerConnectionId is { Length: > 0 } viewerConnectionId)
     {
       await _assistHub.Clients
         .Client(viewerConnectionId)
-        .AssistSessionEnded(new(sessionId, reason));
+        .AssistSessionEnded(new(session.SessionId, reason));
     }
 
     await _assistHub.Clients
       .Client(session.AssistConnectionId)
-      .AssistSessionEnded(new(sessionId, reason));
+      .AssistSessionEnded(new(session.SessionId, reason));
   }
 }

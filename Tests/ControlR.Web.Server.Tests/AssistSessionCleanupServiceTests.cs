@@ -39,10 +39,12 @@ public class AssistSessionCleanupServiceTests
 
     Assert.Null(await _cache.TryGetAsync(session.SessionId, TestContext.Current.CancellationToken));
     _viewerClientProxy.Verify(
-      c => c.AssistSessionEnded(It.Is<AssistSessionEndedDto>(dto => dto.SessionId == session.SessionId)),
+      c => c.AssistSessionEnded(It.Is<AssistSessionEndedDto>(dto =>
+        dto.SessionId == session.SessionId && dto.Reason == AssistSessionEndedReason.SessionExpired)),
       Times.Once);
     _assistClientProxy.Verify(
-      c => c.AssistSessionEnded(It.Is<AssistSessionEndedDto>(dto => dto.SessionId == session.SessionId)),
+      c => c.AssistSessionEnded(It.Is<AssistSessionEndedDto>(dto =>
+        dto.SessionId == session.SessionId && dto.Reason == AssistSessionEndedReason.SessionExpired)),
       Times.Once);
   }
 
@@ -102,7 +104,7 @@ public class AssistSessionCleanupServiceTests
     Assert.Null(await _cache.TryGetAsync(session.SessionId, TestContext.Current.CancellationToken));
     _assistClientProxy.Verify(
       c => c.AssistSessionEnded(It.Is<AssistSessionEndedDto>(dto =>
-        dto.SessionId == session.SessionId && dto.Reason.Contains("expired"))),
+        dto.SessionId == session.SessionId && dto.Reason == AssistSessionEndedReason.AccessCodeExpired)),
       Times.Once);
   }
 

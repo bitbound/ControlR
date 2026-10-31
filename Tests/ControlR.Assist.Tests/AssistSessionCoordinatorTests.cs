@@ -2,6 +2,7 @@ using ControlR.Assist.Services;
 using ControlR.Libraries.Api.Contracts.Dtos;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Libraries.Api.Contracts.Hubs;
+using ControlR.Libraries.Avalonia.Theming;
 using ControlR.Libraries.Signalr.Client;
 using Microsoft.AspNetCore.Http.Connections.Client;
 using Microsoft.AspNetCore.SignalR.Client;
@@ -20,7 +21,7 @@ public class AssistSessionCoordinatorTests
 
     Assert.True(await RunWithinTimeout(controller.ConnectAsync("server.example.com", CancellationToken.None)));
     hub.OnEndSession = sessionId =>
-      controller.HandleSessionEnded(new(sessionId, "The session was ended by the remote user."));
+      controller.HandleSessionEnded(new(sessionId, AssistSessionEndedReason.EndedByPeer));
 
     await ActivateSessionAsync(controller, hub);
 
@@ -102,8 +103,14 @@ public class AssistSessionCoordinatorTests
     await RunWithinTimeout(controller.DisposeAsync());
   }
 
-  [Fact]
-  public async Task HandleSessionEnded_KeepsTheEndReasonInStatusMessage()
+  [Theory]
+  [InlineData(AssistSessionEndedReason.EndedByPeer, "The technician ended the session.")]
+  [InlineData(AssistSessionEndedReason.PeerDisconnected, "The technician disconnected.")]
+  [InlineData(AssistSessionEndedReason.AccessCodeExpired, "Your access code expired. Reconnect to get a new one.")]
+  [InlineData(AssistSessionEndedReason.SessionExpired, "The support session expired.")]
+  public async Task HandleSessionEnded_UsesTheLocalizedMessageForTheReason(
+    AssistSessionEndedReason reason,
+    string expectedMessage)
   {
     var hub = new FakeHubClient();
     var controller = CreateController(hub);
@@ -112,11 +119,10 @@ public class AssistSessionCoordinatorTests
     await ActivateSessionAsync(controller, hub);
     await WaitForStateAsync(controller, AssistSessionState.Active);
 
-    const string reason = "The session was ended by the remote user.";
     await RunWithinTimeout(controller.HandleSessionEnded(new(hub.LastSessionId, reason)));
     await WaitForStateAsync(controller, AssistSessionState.Ready);
 
-    Assert.Equal(reason, controller.StatusMessage);
+    Assert.Equal(expectedMessage, controller.StatusMessage);
     await RunWithinTimeout(controller.DisposeAsync());
   }
 
@@ -299,8 +305,20 @@ public class AssistSessionCoordinatorTests
 
   private sealed class FakeSettingsService : IAssistSettingsService
   {
+    public string? GetLanguage() => null;
+
     public AssistAppSettings GetSettings() => new();
 
+    public AvaloniaThemeMode GetThemeMode() => AvaloniaThemeMode.System;
+
     public Task SaveAsync(AssistAppSettings settings, CancellationToken cancellationToken) => Task.CompletedTask;
+
+    public void SetLanguage(string? language)
+    {
+    }
+
+    public void SetThemeMode(AvaloniaThemeMode mode)
+    {
+    }
   }
 }

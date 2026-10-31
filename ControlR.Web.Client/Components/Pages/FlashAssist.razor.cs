@@ -79,6 +79,16 @@ public partial class FlashAssist : ComponentBase, IAsyncDisposable
     return base.OnInitializedAsync();
   }
 
+  private static string GetEndReasonMessage(AssistSessionEndedReason reason) =>
+    reason switch
+    {
+      AssistSessionEndedReason.EndedByPeer => "The session was ended by the remote user.",
+      AssistSessionEndedReason.PeerDisconnected => "The remote user disconnected.",
+      AssistSessionEndedReason.AccessCodeExpired => "The access code expired.",
+      AssistSessionEndedReason.SessionExpired => "The session expired.",
+      _ => "The session ended."
+    };
+
   private async Task CleanupSession(bool sendCloseStreamingSession, bool endHubSession)
   {
     RemoteControlState.ConnectionClosedRegistration?.Dispose();
@@ -169,7 +179,7 @@ public partial class FlashAssist : ComponentBase, IAsyncDisposable
     await InvokeAsync(() =>
     {
       _state = AssistPageState.CodeEntry;
-      _statusMessage = dto.Reason;
+      _statusMessage = GetEndReasonMessage(dto.Reason);
       _statusSeverity = Severity.Info;
       StateHasChanged();
     });
@@ -277,26 +287,6 @@ public partial class FlashAssist : ComponentBase, IAsyncDisposable
     });
   }
 
-  private async Task HandleHubConnectionStateChanged(object subscriber, HubConnectionStateChangedMessage message)
-  {
-    // The relay stream only exists once the session is active, so a hub drop during the consent
-    // wait would otherwise leave the page spinning over a request the server has abandoned.
-    if (_state != AssistPageState.WaitingForConsent || message.NewState == HubConnectionState.Connected)
-    {
-      return;
-    }
-
-    await CleanupSession(sendCloseStreamingSession: false, endHubSession: false);
-
-    await InvokeAsync(() =>
-    {
-      _state = AssistPageState.CodeEntry;
-      _statusMessage = "The connection to the server was lost.";
-      _statusSeverity = Severity.Warning;
-      StateHasChanged();
-    });
-  }
-
   private async Task HandleDisconnectRequested()
   {
     await CleanupSession(sendCloseStreamingSession: true, endHubSession: true);
@@ -323,39 +313,33 @@ public partial class FlashAssist : ComponentBase, IAsyncDisposable
     });
   }
 
-  private async Task InitializeCaptureSettings()
+  private async Task HandleHubConnectionStateChanged(object subscriber, HubConnectionStateChangedMessage message)
   {
-    var preferences = await UserPreferences.GetPreferences();
-    RemoteControlState.CaptureCursor = preferences.CaptureCursor;
-    RemoteControlState.EnableDirectX = preferences.EnableDirectX;
-    RemoteControlState.EncodingFormat = preferences.EncodingFormat;
-    RemoteControlState.IsAutoQualityEnabled = preferences.IsAutoQualityEnabled;
-    RemoteControlState.ManualQuality = preferences.ManualQuality;
-    RemoteControlState.AutoQualityLowerThresholdMbps = preferences.AutoQualityLowerThresholdMbps;
-    RemoteControlState.AutoQualityMaximum = preferences.AutoQualityMaximum;
-    RemoteControlState.AutoQualityMinimum = preferences.AutoQualityMinimum;
-    RemoteControlState.AutoQualityUpperThresholdMbps = preferences.AutoQualityUpperThresholdMbps;
-    RemoteControlState.IsMaxBandwidthEnabled = preferences.IsMaxBandwidthEnabled;
-    RemoteControlState.MaxBandwidthMbps = preferences.MaxBandwidthMbps;
+    // The relay stream only exists once the session is active, so a hub drop during the consent
+    // wait would otherwise leave the page spinning over a request the server has abandoned.
+    if (_state != AssistPageState.WaitingForConsent || message.NewState == HubConnectionState.Connected)
+    {
+      return;
+    }
+
+    await CleanupSession(sendCloseStreamingSession: false, endHubSession: false);
+
+    await InvokeAsync(() =>
+    {
+      _state = AssistPageState.CodeEntry;
+      _statusMessage = "The connection to the server was lost.";
+      _statusSeverity = Severity.Warning;
+      StateHasChanged();
+    });
   }
+
+  private async Task InitializeCaptureSettings() =>
+    RemoteControlState.ApplyPreferences(await UserPreferences.GetPreferences());
 
   private async Task SendCaptureSettings()
   {
     using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-    await RemoteControlStream.SendCaptureSettings(
-      new UpdateCaptureSettingsDto(
-        RemoteControlState.CaptureCursor,
-        RemoteControlState.EnableDirectX,
-        RemoteControlState.IsAutoQualityEnabled,
-        RemoteControlState.ManualQuality,
-        RemoteControlState.AutoQualityLowerThresholdMbps,
-        RemoteControlState.AutoQualityMaximum,
-        RemoteControlState.AutoQualityMinimum,
-        RemoteControlState.AutoQualityUpperThresholdMbps,
-        RemoteControlState.IsMaxBandwidthEnabled,
-        RemoteControlState.MaxBandwidthMbps,
-        RemoteControlState.EncodingFormat),
-      cts.Token);
+    await RemoteControlStream.SendCaptureSettings(RemoteControlState.ToCaptureSettingsDto(), cts.Token);
   }
 
   private async Task StartRemoteControlAsync(Guid sessionId, string accessToken)

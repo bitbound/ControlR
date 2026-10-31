@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using Avalonia.Threading;
 using ControlR.Assist.Services;
 using ControlR.Libraries.Branding;
@@ -13,6 +14,8 @@ public sealed partial class HomeViewModel : ViewModelBase, IDisposable
   private readonly AssistSessionCoordinator _controller;
   private readonly ILogger<HomeViewModel> _logger;
   private readonly INavigationService _navigationService;
+  private readonly IAssistSettingsService _settingsService;
+
   private string? _activeViewerEmail;
   private string? _activeViewerName;
   private string? _pendingViewerEmail;
@@ -27,8 +30,10 @@ public sealed partial class HomeViewModel : ViewModelBase, IDisposable
     _controller = controller;
     _navigationService = navigationService;
     _logger = logger;
+    _settingsService = settingsService;
     ServerUrl = BrandingConstants.ControlrServerUrl?.ToString() ?? settingsService.GetSettings().ServerUrl;
     UrlConfirmed = BrandingConstants.ControlrServerUrl is not null;
+    RefreshSavedServers();
     _controller.StateChanged += HandleStateChanged;
     RefreshFromController();
   }
@@ -71,6 +76,11 @@ public sealed partial class HomeViewModel : ViewModelBase, IDisposable
   /// </summary>
   public Func<string, Task<bool>>? RequestConfirmationAsync { get; set; }
 
+  /// <summary>
+  /// Servers this app has connected to successfully, most recent first.
+  /// </summary>
+  public ObservableCollection<string> SavedServerUrls { get; } = [];
+
   [ObservableProperty]
   public partial string? ServerUrl { get; set; }
   public bool ShowCode =>
@@ -90,12 +100,10 @@ public sealed partial class HomeViewModel : ViewModelBase, IDisposable
   public bool ShowConsentEmail =>
     !string.IsNullOrWhiteSpace(ConsentEmail)
     && !string.Equals(ConsentEmail, ConsentViewerName, StringComparison.OrdinalIgnoreCase);
-
   public bool ShowIdleStatus =>
     State is not (AssistSessionState.Disconnected or AssistSessionState.Connecting)
       && !string.IsNullOrWhiteSpace(StatusMessage)
       && !ShowConnectedStatus;
-
   public bool ShowStatusAlert => State == AssistSessionState.Disconnected && !string.IsNullOrWhiteSpace(StatusMessage);
   public bool ShowStepCard => ShowUrlEntry || ShowConnectAction || IsBusy;
   public bool ShowTrustNotice => State == AssistSessionState.Disconnected;
@@ -237,6 +245,8 @@ public sealed partial class HomeViewModel : ViewModelBase, IDisposable
 
   private void RefreshFromController()
   {
+    var stateChanged = State != _controller.State;
+
     State = _controller.State;
     Code = FormatCode(_controller.Code);
     StatusMessage = _controller.StatusMessage;
@@ -260,6 +270,12 @@ public sealed partial class HomeViewModel : ViewModelBase, IDisposable
     _activeViewerName = State == AssistSessionState.Active ? _pendingViewerName : null;
     _activeViewerEmail = State == AssistSessionState.Active ? _pendingViewerEmail : null;
 
+    // A successful connect is the only thing that grows the history outside this view model.
+    if (stateChanged)
+    {
+      RefreshSavedServers();
+    }
+
     OnPropertyChanged(nameof(IsBusy));
     OnPropertyChanged(nameof(IsConsentPending));
     OnPropertyChanged(nameof(IsConnectedToServer));
@@ -274,9 +290,42 @@ public sealed partial class HomeViewModel : ViewModelBase, IDisposable
     OnPropertyChanged(nameof(ShowConsentEmail));
   }
 
+  private void RefreshSavedServers()
+  {
+    SavedServerUrls.Clear();
+
+    foreach (var url in _settingsService.GetSettings().ServerUrlHistory ?? [])
+    {
+      SavedServerUrls.Add(url);
+    }
+  }
+
+  [RelayCommand]
+  private void RemoveSavedServer(string? url)
+  {
+    if (string.IsNullOrWhiteSpace(url))
+    {
+      return;
+    }
+
+    var settings = _settingsService.GetSettings();
+    AssistSettingsService.ForgetUrl(settings, url);
+    _ = _settingsService.SaveAsync(settings, CancellationToken.None);
+
+    if (string.Equals(ServerUrl, url, StringComparison.OrdinalIgnoreCase))
+    {
+      ServerUrl = null;
+    }
+
+    RefreshSavedServers();
+  }
+
   [RelayCommand]
   private void SetViewOnly() => _controller.SetViewOnly(IsViewOnly);
 
   [RelayCommand]
   private void ShowAbout() => _navigationService.NavigateTo<AboutViewModel>();
+
+  [RelayCommand]
+  private void ShowSettings() => _navigationService.NavigateTo<SettingsViewModel>();
 }

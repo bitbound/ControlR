@@ -17,7 +17,8 @@ public sealed class ViewLocator : IDataTemplate
     new Dictionary<Type, Func<Control>>
     {
       [typeof(HomeViewModel)] = () => new HomeView(),
-      [typeof(AboutViewModel)] = () => new AboutView()
+      [typeof(AboutViewModel)] = () => new AboutView(),
+      [typeof(SettingsViewModel)] = () => new SettingsView()
     }.ToImmutableDictionary();
 
   public Control? Build(object? param)

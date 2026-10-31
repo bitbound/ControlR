@@ -1,4 +1,5 @@
 using Avalonia;
+using ControlR.Assist.Services;
 
 namespace ControlR.Assist;
 
@@ -34,6 +35,20 @@ internal sealed class Program
   }
 
   [STAThread]
-  public static int Main(string[] args) =>
-    BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+  public static int Main(string[] args)
+  {
+    UsePersistedCulture();
+    return BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+  }
+
+  // Localized text binds once when Avalonia loads each view, so the saved language has to be in
+  // place before any XAML loads. With nothing saved the app stays in the system language.
+  private static void UsePersistedCulture()
+  {
+    var language = AssistSettingsService.ReadSavedLanguage();
+    if (!string.IsNullOrWhiteSpace(language))
+    {
+      Localization.SetCulture(language);
+    }
+  }
 }

@@ -110,7 +110,8 @@ public class AssistHubTests(ITestOutputHelper testOutput)
     Assert.True(result.IsSuccess);
     Assert.Null(await cache.TryGetAsync(session.SessionId, TestContext.Current.CancellationToken));
     clients.Viewer.Verify(
-      c => c.AssistSessionEnded(It.Is<AssistSessionEndedDto>(dto => dto.SessionId == session.SessionId)),
+      c => c.AssistSessionEnded(It.Is<AssistSessionEndedDto>(dto =>
+        dto.SessionId == session.SessionId && dto.Reason == AssistSessionEndedReason.EndedByPeer)),
       Times.Once);
   }
 
@@ -251,7 +252,8 @@ public class AssistHubTests(ITestOutputHelper testOutput)
 
     Assert.Null(await cache.TryGetAsync(session.SessionId, TestContext.Current.CancellationToken));
     clients.Viewer.Verify(
-      c => c.AssistSessionEnded(It.Is<AssistSessionEndedDto>(dto => dto.SessionId == session.SessionId)),
+      c => c.AssistSessionEnded(It.Is<AssistSessionEndedDto>(dto =>
+        dto.SessionId == session.SessionId && dto.Reason == AssistSessionEndedReason.PeerDisconnected)),
       Times.Once);
     clients.Assist.Verify(
       c => c.AssistSessionEnded(It.IsAny<AssistSessionEndedDto>()),
@@ -294,7 +296,8 @@ public class AssistHubTests(ITestOutputHelper testOutput)
 
     Assert.Null(await cache.TryGetAsync(session.SessionId, TestContext.Current.CancellationToken));
     clients.Assist.Verify(
-      c => c.AssistSessionEnded(It.Is<AssistSessionEndedDto>(dto => dto.SessionId == session.SessionId)),
+      c => c.AssistSessionEnded(It.Is<AssistSessionEndedDto>(dto =>
+        dto.SessionId == session.SessionId && dto.Reason == AssistSessionEndedReason.PeerDisconnected)),
       Times.Once);
     clients.Viewer.Verify(
       c => c.AssistSessionEnded(It.IsAny<AssistSessionEndedDto>()),

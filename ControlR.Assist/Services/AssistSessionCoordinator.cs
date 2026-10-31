@@ -196,6 +196,16 @@ public sealed class AssistSessionCoordinator : IAsyncDisposable
     RaiseStateChanged();
   }
 
+  private static string GetEndReasonMessage(AssistSessionEndedReason reason) =>
+    reason switch
+    {
+      AssistSessionEndedReason.EndedByPeer => Localization.StatusEndedByTechnician,
+      AssistSessionEndedReason.PeerDisconnected => Localization.StatusTechnicianDisconnected,
+      AssistSessionEndedReason.AccessCodeExpired => Localization.StatusAccessCodeExpired,
+      AssistSessionEndedReason.SessionExpired => Localization.StatusSessionExpired,
+      _ => Localization.StatusSessionEnded
+    };
+
   private static bool IsPlausibleHost(string host)
   {
     if (host.Length == 0)
@@ -457,7 +467,7 @@ public sealed class AssistSessionCoordinator : IAsyncDisposable
 
     await StopSessionHostAsync().ConfigureAwait(false);
     SetConsentPending(null, null, null, null);
-    await CreateSessionCoreAsync(CancellationToken.None, dto.Reason).ConfigureAwait(false);
+    await CreateSessionCoreAsync(CancellationToken.None, GetEndReasonMessage(dto.Reason)).ConfigureAwait(false);
     RaiseStateChanged();
   }
 

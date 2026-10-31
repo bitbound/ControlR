@@ -1,0 +1,64 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:ControlR.Assist.ViewModels"
+             xmlns:local="using:ControlR.Assist"
+             xmlns:controls="using:ControlR.Libraries.Avalonia.Controls"
+             mc:Ignorable="d"
+             d:DesignWidth="640"
+             d:DesignHeight="560"
+             x:Class="ControlR.Assist.Views.SettingsView"
+             x:DataType="vm:SettingsViewModel">
+
+  <ScrollViewer>
+    <StackPanel Spacing="16">
+
+      <StackPanel Spacing="4">
+        <controls:ThemeButton HorizontalAlignment="Left"
+                              Padding="8,4"
+                              Variant="Text"
+                              Content="{x:Static local:Localization.AboutBackButtonText}"
+                              Command="{Binding BackCommand}" />
+        <TextBlock Classes="h1 Primary"
+                   Text="{x:Static local:Localization.Settings}" />
+      </StackPanel>
+
+      <StackPanel Spacing="8">
+        <TextBlock Text="{x:Static local:Localization.ThemeLabel}" FontWeight="SemiBold" />
+
+        <RadioButton GroupName="Theme"
+                     Content="{x:Static local:Localization.SystemTheme}"
+                     IsChecked="{Binding IsSystemModeChecked}" />
+
+        <RadioButton GroupName="Theme"
+                     Content="{x:Static local:Localization.LightTheme}"
+                     IsChecked="{Binding IsLightModeChecked}" />
+
+        <RadioButton GroupName="Theme"
+                     Content="{x:Static local:Localization.DarkTheme}"
+                     IsChecked="{Binding IsDarkModeChecked}" />
+      </StackPanel>
+
+      <StackPanel Spacing="8">
+        <TextBlock Text="{x:Static local:Localization.LanguageLabel}" FontWeight="SemiBold" />
+
+        <ComboBox ItemsSource="{Binding AvailableLanguages}"
+                  SelectedItem="{Binding SelectedLanguage}"
+                  HorizontalAlignment="Left"
+                  MinWidth="220">
+          <ComboBox.ItemTemplate>
+            <DataTemplate x:DataType="local:LocalizationLanguage">
+              <TextBlock Text="{Binding DisplayName}" />
+            </DataTemplate>
+          </ComboBox.ItemTemplate>
+        </ComboBox>
+
+        <TextBlock Classes="Small Secondary"
+                   TextWrapping="Wrap"
+                   Text="{x:Static local:Localization.LanguageRestartNote}" />
+      </StackPanel>
+
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

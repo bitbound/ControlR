@@ -274,21 +274,8 @@ public partial class RemoteControl : ViewportAwareComponent
     await InvokeAsync(StateHasChanged);
   }
 
-  private async Task InitializeCaptureSettings()
-  {
-    var preferences = await UserPreferences.GetPreferences();
-    RemoteControlState.CaptureCursor = preferences.CaptureCursor;
-    RemoteControlState.EnableDirectX = preferences.EnableDirectX;
-    RemoteControlState.EncodingFormat = preferences.EncodingFormat;
-    RemoteControlState.IsAutoQualityEnabled = preferences.IsAutoQualityEnabled;
-    RemoteControlState.ManualQuality = preferences.ManualQuality;
-    RemoteControlState.AutoQualityLowerThresholdMbps = preferences.AutoQualityLowerThresholdMbps;
-    RemoteControlState.AutoQualityMaximum = preferences.AutoQualityMaximum;
-    RemoteControlState.AutoQualityMinimum = preferences.AutoQualityMinimum;
-    RemoteControlState.AutoQualityUpperThresholdMbps = preferences.AutoQualityUpperThresholdMbps;
-    RemoteControlState.IsMaxBandwidthEnabled = preferences.IsMaxBandwidthEnabled;
-    RemoteControlState.MaxBandwidthMbps = preferences.MaxBandwidthMbps;
-  }
+  private async Task InitializeCaptureSettings() =>
+    RemoteControlState.ApplyPreferences(await UserPreferences.GetPreferences());
 
   private async Task PreviewSession(DesktopSession desktopSession)
   {
@@ -400,20 +387,7 @@ public partial class RemoteControl : ViewportAwareComponent
   private async Task SendCaptureSettings()
   {
     using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-    await RemoteControlStream.SendCaptureSettings(
-      new UpdateCaptureSettingsDto(
-        RemoteControlState.CaptureCursor,
-        RemoteControlState.EnableDirectX,
-        RemoteControlState.IsAutoQualityEnabled,
-        RemoteControlState.ManualQuality,
-        RemoteControlState.AutoQualityLowerThresholdMbps,
-        RemoteControlState.AutoQualityMaximum,
-        RemoteControlState.AutoQualityMinimum,
-        RemoteControlState.AutoQualityUpperThresholdMbps,
-        RemoteControlState.IsMaxBandwidthEnabled,
-        RemoteControlState.MaxBandwidthMbps,
-        RemoteControlState.EncodingFormat),
-      cts.Token);
+    await RemoteControlStream.SendCaptureSettings(RemoteControlState.ToCaptureSettingsDto(), cts.Token);
   }
 
   private async Task<bool> StartRemoteControl(DesktopSession desktopSession, bool quiet)

@@ -115,7 +115,7 @@ public class AssistHub(
       }
 
       _ = await _sessionCache.RemoveAsync(request.SessionId, Context.ConnectionAborted);
-      await NotifyOtherSide(session, "The session was ended by the remote user.");
+      await NotifyOtherSide(session, AssistSessionEndedReason.EndedByPeer);
 
       return HubResult.Ok();
     }
@@ -231,7 +231,7 @@ public class AssistHub(
       {
         if (session.ViewerConnectionId is { Length: > 0 })
         {
-          await NotifyViewer(session, "The remote user disconnected.");
+          await NotifyViewer(session, AssistSessionEndedReason.PeerDisconnected);
         }
       }
 
@@ -262,7 +262,7 @@ public class AssistHub(
 
         if (await _sessionCache.RemoveAsync(session.SessionId, cleanupToken) is not null)
         {
-          await NotifyAssist(session, "The technician disconnected.");
+          await NotifyAssist(session, AssistSessionEndedReason.PeerDisconnected);
         }
       }
     }
@@ -397,14 +397,14 @@ public class AssistHub(
       userId.ToString() == viewerUserId;
   }
 
-  private async Task NotifyAssist(AssistSession session, string reason)
+  private async Task NotifyAssist(AssistSession session, AssistSessionEndedReason reason)
   {
     await Clients
       .Client(session.AssistConnectionId)
       .AssistSessionEnded(new(session.SessionId, reason));
   }
 
-  private async Task NotifyOtherSide(AssistSession session, string reason)
+  private async Task NotifyOtherSide(AssistSession session, AssistSessionEndedReason reason)
   {
     if (Context.ConnectionId == session.AssistConnectionId)
     {
@@ -418,7 +418,7 @@ public class AssistHub(
     await NotifyAssist(session, reason);
   }
 
-  private async Task NotifyViewer(AssistSession session, string reason)
+  private async Task NotifyViewer(AssistSession session, AssistSessionEndedReason reason)
   {
     if (session.ViewerConnectionId is not { Length: > 0 } viewerConnectionId)
     {

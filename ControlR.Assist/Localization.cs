@@ -51,33 +51,51 @@ public static class Localization
   public static string ConnectToLabel => GetString();
   public static string ConsentPromptFormat => GetString();
   public static string CopyCodeTooltip => GetString();
+
+  /// <summary>
+  /// The culture the strings above are currently resolved from.
+  /// </summary>
+  public static string CurrentCulture => _currentCulture;
+  public static string DarkTheme => GetString();
   public static string DeclineButtonText => GetString();
   public static string DisconnectButtonText => GetString();
   public static string EndSessionButtonText => GetString();
   public static string HomeTagline => GetString();
   public static string LanguageDisplayName => GetString();
+  public static string LanguageLabel => GetString();
+  public static string LanguageRestartNote => GetString();
+  public static string LightTheme => GetString();
   public static string LinkLicenseText => GetString();
   public static string NewCodeButtonText => GetString();
   public static string NewCodeCooldownFormat => GetString();
   public static string NextButtonText => GetString();
+  public static string RemoveSavedServerTooltip => GetString();
+  public static string SavedServersLabel => GetString();
   public static string ServerUrlHelp => GetString();
   public static string ServerUrlLabel => GetString();
   public static string ServerUrlWatermark => GetString();
   public static string SessionActiveCaption => GetString();
+  public static string Settings => GetString();
+  public static string StatusAccessCodeExpired => GetString();
   public static string StatusConnectedToViewer => GetString();
   public static string StatusConnecting => GetString();
   public static string StatusConnectionLost => GetString();
   public static string StatusConsentCancelled => GetString();
   public static string StatusConsentResponseFailed => GetString();
   public static string StatusConsentTimedOut => GetString();
+  public static string StatusEndedByTechnician => GetString();
   public static string StatusFailedToConnect => GetString();
   public static string StatusInvalidUrl => GetString();
   public static string StatusReconnected => GetString();
   public static string StatusSessionCreateFailed => GetString();
   public static string StatusSessionEnded => GetString();
+  public static string StatusSessionExpired => GetString();
   public static string StatusSessionStartFailed => GetString();
+  public static string StatusTechnicianDisconnected => GetString();
   public static string StatusUnexpectedError => GetString();
   public static string StatusUnreachable => GetString();
+  public static string SystemTheme => GetString();
+  public static string ThemeLabel => GetString();
   public static string TrustNoticeText => GetString();
   public static string UnknownViewerLabel => GetString();
   public static string Version => GetString();

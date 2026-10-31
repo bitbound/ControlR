@@ -21,6 +21,7 @@ public static class ServiceCollectionExtensions
     // overloads, which build an expression tree the linker has to guess at.
     services.AddSingleton<AboutViewModel>();
     services.AddSingleton<HomeViewModel>();
+    services.AddSingleton<SettingsViewModel>();
     services.AddSingleton<MainWindowViewModel>();
     services.AddSingleton<MainWindow>(provider => new MainWindow(provider.GetRequiredService<MainWindowViewModel>()));
 
@@ -38,6 +39,7 @@ public static class ServiceCollectionExtensions
     });
 
     services.AddSingleton<IAssistSettingsService, AssistSettingsService>();
+    services.AddSingleton<IThemeProvider, ThemeProvider>();
     services.AddSingleton<IAssistSessionHostFactory, AssistSessionHostFactory>();
 
     // The session host cannot build its platform services without these, and they live in the app
