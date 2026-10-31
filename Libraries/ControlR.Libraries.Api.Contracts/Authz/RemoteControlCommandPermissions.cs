@@ -3,9 +3,8 @@ using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 namespace ControlR.Libraries.Api.Contracts.Authz;
 
 /// <summary>
-/// Single source of truth for which device permission a viewer command requires. The server's hub
-/// command gate and the responder-side command policy are both derived from this map so the two
-/// enforcement points cannot drift.
+/// Single source of truth for which device permission a viewer command requires, so an
+/// enforcement point reading this map cannot drift from the grant model.
 /// </summary>
 public static class RemoteControlCommandPermissions
 {

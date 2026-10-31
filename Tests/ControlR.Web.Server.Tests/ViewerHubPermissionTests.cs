@@ -17,7 +17,6 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -123,14 +122,8 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
     Assert.True(withPrivacyScreen.Value.CanTogglePrivacyScreen);
   }
 
-
-
-
-
-
-
   [Fact]
-  public async Task RequestRemoteControlSession3_SealsFrozenCommandPolicyOntoAgentRequest()
+  public async Task RequestRemoteControlSession3_ForwardsSessionIdentityToAgent()
   {
     await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
     var tenant = await testApp.Services.CreateTestTenant();
@@ -155,13 +148,11 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
     var result = await hub.RequestRemoteControlSession3(request);
 
     Assert.True(result.IsSuccess);
-
     agentClient.Verify(client => client.CreateRemoteControlSession(
       It.Is<RemoteControlSessionRequestDto>(forwarded =>
-        forwarded.CommandPolicy != null &&
-        forwarded.CommandPolicy.IsBoundTo(request.SessionId) &&
-        forwarded.CommandPolicy.AllowedDtoTypes.Contains(RemoteControlViewerDtoType.KeyEvent) &&
-        !forwarded.CommandPolicy.AllowedDtoTypes.Contains(RemoteControlViewerDtoType.ClipboardText))), Times.Once);
+        forwarded.SessionId == request.SessionId &&
+        forwarded.DeviceId == device.Id &&
+        forwarded.ViewerConnectionId == hub.Context.ConnectionId)), Times.Once);
   }
 
   [Fact]
@@ -346,12 +337,6 @@ public class ViewerHubPermissionTests(ITestOutputHelper testOutput)
       message.DeviceId == device.Id &&
       message.ViewerConnectionId == hub.Context.ConnectionId)), Times.Once);
   }
-
-
-
-
-
-
 
   [Fact]
   public async Task SubscribeToDeviceHeartbeats2_OverBatchLimit_ReturnsFailure()

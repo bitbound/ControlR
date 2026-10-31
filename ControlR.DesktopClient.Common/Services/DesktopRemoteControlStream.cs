@@ -103,9 +103,7 @@ internal sealed class DesktopRemoteControlStream(
       Messenger.Register<SendToastToViewerMessage>(this, HandleSendToastToViewerMessage);
       OnClosed(HandleConnectionClosed);
 
-      // Remote control commands from the viewer always arrive on the relay. A relay drop is an
-      // optimization. A relay allow is never a grant. The responder's command policy gate, which
-      // fails closed when the server-sealed policy is missing or unbound, is the authority.
+      // Remote control commands from the viewer always arrive on the relay.
       _relayDtoRegistration = RegisterMessageHandler(this, HandleRelayDto);
 
       await _displayManager.ReloadDisplays();
@@ -189,10 +187,9 @@ internal sealed class DesktopRemoteControlStream(
 
   private async Task HandleRelayDto(RemoteControlDesktopWrapper wrapper)
   {
-    // Reached by pre-hub viewers and by sessions whose sealed command policy opened this lane.
     // The relay has no return channel, so these viewers never learn whether their commands
     // landed. The relay transport is typed for event wrappers, so retag the message as the
-    // command kind the viewer sent. The handler chain enforces the command policy.
+    // command kind the viewer sent.
     var commandWrapper = new RemoteControlViewerWrapper
     {
       DtoType = (RemoteControlViewerDtoType)(int)wrapper.DtoType,

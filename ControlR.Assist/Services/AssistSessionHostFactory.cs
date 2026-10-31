@@ -2,7 +2,6 @@ using ControlR.DesktopClient.Common;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.ServiceInterfaces.Toaster;
 using ControlR.DesktopClient.Common.Services;
-using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Avalonia.Services;
 using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Constants;
@@ -25,8 +24,7 @@ public sealed record AssistSessionRequest(
   Uri ServerUri,
   Guid SessionId,
   string AccessToken,
-  string? ViewerDisplayName,
-  RemoteControlCommandPolicyDto? CommandPolicy);
+  string? ViewerDisplayName);
 
 public interface IAssistSessionHostFactory
 {
@@ -64,7 +62,6 @@ public sealed class AssistSessionHostFactory(
       options =>
       {
         options.SessionId = request.SessionId;
-        options.CommandPolicy = request.CommandPolicy;
         options.RequireConsent = false;
         options.NotifyUser = false;
         options.ViewerName = request.ViewerDisplayName;
@@ -93,20 +90,20 @@ public sealed class AssistSessionHostFactory(
       RelayTimeoutSeconds);
 
   // The customer keeps authority over the machine. The real command handler is wrapped so view-only
-  // drops input, and block-input/privacy-screen requests never reach it. The captured factory is the
-  // policy-gated handler from AddCommonRemoteControlServices, so the final chain is
-  // ViewerCommandGate -> command policy gate -> real handler.
+  // drops input, and block-input/privacy-screen requests never reach it.
   private static void WrapViewerCommandHandler(IServiceCollection services)
   {
     var descriptor = services.Last(x => x.ServiceType == typeof(IRemoteControlViewerCommandHandler));
-    var innerFactory = descriptor.ImplementationFactory
-                       ?? throw new InvalidOperationException("Expected a factory-registered viewer command handler.");
+    var implementationType = descriptor.ImplementationType
+                             ?? throw new InvalidOperationException("Expected a concrete viewer command handler.");
 
     services.Remove(descriptor);
     services.AddSingleton<AssistInputGate>();
     services.AddSingleton<IRemoteControlViewerCommandHandler>(provider =>
     {
-      var inner = (IRemoteControlViewerCommandHandler)innerFactory(provider);
+      var inner = (IRemoteControlViewerCommandHandler)ActivatorUtilities.CreateInstance(
+        provider,
+        implementationType);
 
       return new ViewerCommandGate(
         inner,

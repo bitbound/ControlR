@@ -2,35 +2,8 @@ using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 
 namespace ControlR.Web.Server.Tests;
 
-public class RemoteControlCommandPolicyTests
+public class RemoteControlCommandPermissionsTests
 {
-  [Fact]
-  public void Create_SortsDedupesAndSealsTheAllowedSet()
-  {
-    var sessionId = Guid.NewGuid();
-
-    var policy = RemoteControlCommandPolicyDto.Create(
-      sessionId,
-      [
-        RemoteControlViewerDtoType.TypeText,
-        RemoteControlViewerDtoType.KeyEvent,
-        RemoteControlViewerDtoType.TypeText,
-      ]);
-
-    Assert.Equal(sessionId, policy.SessionId);
-    Assert.Equal(RemoteControlCommandPolicyDto.CurrentPolicyVersion, policy.PolicyVersion);
-    Assert.Equal(
-      [RemoteControlViewerDtoType.KeyEvent, RemoteControlViewerDtoType.TypeText],
-      policy.AllowedDtoTypes);
-    Assert.False(string.IsNullOrEmpty(policy.PolicyHash));
-    Assert.True(policy.IsBoundTo(sessionId));
-
-    var sameAgain = RemoteControlCommandPolicyDto.Create(
-      sessionId,
-      [RemoteControlViewerDtoType.TypeText, RemoteControlViewerDtoType.KeyEvent]);
-    Assert.Equal(policy.PolicyHash, sameAgain.PolicyHash);
-  }
-
   [Fact]
   public void GetAllowedDtoTypes_ConnectOnly_CoversOnlyConnectionMaintenanceCommands()
   {
@@ -103,53 +76,5 @@ public class RemoteControlCommandPolicyTests
     Assert.Equal(
       PermissionNames.DeviceRemoteControlInteract,
       RemoteControlCommandPermissions.GetRequiredPermission(RemoteControlViewerDtoType.KeyEvent));
-  }
-
-  [Fact]
-  public void IsBoundTo_FalseWhenAllowedSetIsTampered()
-  {
-    var sessionId = Guid.NewGuid();
-    var policy = RemoteControlCommandPolicyDto.Create(
-      sessionId,
-      [RemoteControlViewerDtoType.KeyEvent]);
-
-    var smuggled = policy with
-    {
-      AllowedDtoTypes =
-      [
-        .. policy.AllowedDtoTypes,
-        RemoteControlViewerDtoType.TogglePrivacyScreen,
-      ],
-    };
-
-    Assert.False(smuggled.IsBoundTo(sessionId));
-
-    var badHash = policy with { PolicyHash = "deadbeefdeadbeef" };
-    Assert.False(badHash.IsBoundTo(sessionId));
-
-    var emptyHash = policy with { PolicyHash = string.Empty };
-    Assert.False(emptyHash.IsBoundTo(sessionId));
-  }
-
-  [Fact]
-  public void IsBoundTo_FalseWhenPolicyVersionIsTampered()
-  {
-    var sessionId = Guid.NewGuid();
-    var policy = RemoteControlCommandPolicyDto.Create(
-      sessionId,
-      [RemoteControlViewerDtoType.KeyEvent]);
-
-    var bumped = policy with { PolicyVersion = RemoteControlCommandPolicyDto.CurrentPolicyVersion + 1 };
-    Assert.False(bumped.IsBoundTo(sessionId));
-  }
-
-  [Fact]
-  public void IsBoundTo_FalseWhenSessionIdDiffers()
-  {
-    var policy = RemoteControlCommandPolicyDto.Create(
-      Guid.NewGuid(),
-      [RemoteControlViewerDtoType.KeyEvent]);
-
-    Assert.False(policy.IsBoundTo(Guid.NewGuid()));
   }
 }

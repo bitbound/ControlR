@@ -210,16 +210,11 @@ public partial class ViewerHub
         userId,
         Context.ConnectionAborted);
 
-      var commandPolicy = RemoteControlCommandPolicyDto.Create(
-        sessionRequestDto.SessionId,
-        RemoteControlCommandPermissions.GetAllowedDtoTypes(allowedPermissions));
-
       sessionRequestDto = sessionRequestDto with
       {
         NotifyUserOnSessionStart = notifyUser,
         ViewerConnectionId = Context.ConnectionId,
-        ViewerName = displayName,
-        CommandPolicy = commandPolicy
+        ViewerName = displayName
       };
 
       var result = await _agentHub.Clients

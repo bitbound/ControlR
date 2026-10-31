@@ -349,8 +349,7 @@ public class AssistHub(
           request.SessionId,
           activated.AccessToken,
           activated.ViewerDisplayName ?? "technician",
-          activated.ViewerEmail,
-          CreateAssistCommandPolicy(request.SessionId)));
+          activated.ViewerEmail));
 
       return HubResult.Ok();
     }
@@ -359,22 +358,6 @@ public class AssistHub(
       _logger.LogError(ex, "Error while responding to consent for assist session {SessionId}.", request.SessionId);
       return HubResult.Fail("An error occurred while responding to the consent request.");
     }
-  }
-
-  /// <summary>
-  /// The responder-side command policy for assist sessions. Every viewer command kind is allowed
-  /// except the customer-only toggles: ToggleBlockInput and TogglePrivacyScreen are never granted
-  /// to a technician, and ViewerCommandGate on the assist app drops them unconditionally.
-  /// </summary>
-  private static RemoteControlCommandPolicyDto CreateAssistCommandPolicy(Guid sessionId)
-  {
-    var allowed = Enum.GetValues<RemoteControlViewerDtoType>()
-      .Where(x => x is not (
-        RemoteControlViewerDtoType.None
-        or RemoteControlViewerDtoType.ToggleBlockInput
-        or RemoteControlViewerDtoType.TogglePrivacyScreen));
-
-    return RemoteControlCommandPolicyDto.Create(sessionId, allowed);
   }
 
   private static string GetDisplayName(AppUser user)

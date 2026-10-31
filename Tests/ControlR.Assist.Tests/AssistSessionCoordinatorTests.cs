@@ -1,7 +1,6 @@
 using ControlR.Assist.Services;
 using ControlR.Libraries.Api.Contracts.Dtos;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
-using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Api.Contracts.Hubs;
 using ControlR.Libraries.Avalonia.Theming;
 using ControlR.Libraries.Signalr.Client;
@@ -146,25 +145,6 @@ public class AssistSessionCoordinatorTests
   }
 
   [Fact]
-  public async Task HandleSessionStarted_ForwardsCommandPolicyToSessionHost()
-  {
-    var hub = new FakeHubClient();
-    var hostFactory = new FakeHostFactory();
-    var controller = CreateController(hub, hostFactory);
-
-    Assert.True(await RunWithinTimeout(controller.ConnectAsync("server.example.com", CancellationToken.None)));
-    var policy = RemoteControlCommandPolicyDto.Create(
-      hub.LastSessionId,
-      [RemoteControlViewerDtoType.KeyEvent]);
-
-    await ActivateSessionAsync(controller, hub, policy);
-
-    Assert.NotNull(hostFactory.LastRequest);
-    Assert.Same(policy, hostFactory.LastRequest!.CommandPolicy);
-    await RunWithinTimeout(controller.DisposeAsync());
-  }
-
-  [Fact]
   public async Task HubInvokeThatNeverReturns_FailsWithStatusInsteadOfHanging()
   {
     var hub = new FakeHubClient
@@ -221,23 +201,18 @@ public class AssistSessionCoordinatorTests
     await RunWithinTimeout(controller.DisposeAsync());
   }
 
-  private static async Task ActivateSessionAsync(
-    AssistSessionCoordinator controller,
-    FakeHubClient hub,
-    RemoteControlCommandPolicyDto? commandPolicy = null)
+  private static async Task ActivateSessionAsync(AssistSessionCoordinator controller, FakeHubClient hub)
   {
     await RunWithinTimeout(controller.HandleSessionStarted(
-      new(hub.LastSessionId, "token", "Jane", "jane@example.com", commandPolicy)));
+      new(hub.LastSessionId, "token", "Jane", "jane@example.com")));
 
     await WaitForStateAsync(controller, AssistSessionState.Active);
   }
 
-  private static AssistSessionCoordinator CreateController(
-    FakeHubClient hub,
-    FakeHostFactory? hostFactory = null) =>
+  private static AssistSessionCoordinator CreateController(FakeHubClient hub) =>
     new(
       hub,
-      hostFactory ?? new FakeHostFactory(),
+      new FakeHostFactory(),
       new FakeSettingsService(),
       NullLogger<AssistSessionCoordinator>.Instance);
 
@@ -270,13 +245,7 @@ public class AssistSessionCoordinatorTests
 
   private sealed class FakeHostFactory : IAssistSessionHostFactory
   {
-    public AssistSessionRequest? LastRequest { get; private set; }
-
-    public IHost CreateSessionHost(AssistSessionRequest request)
-    {
-      LastRequest = request;
-      return Host.CreateApplicationBuilder().Build();
-    }
+    public IHost CreateSessionHost(AssistSessionRequest request) => Host.CreateApplicationBuilder().Build();
   }
   private sealed class FakeHubClient : IHubConnection<IAssistHub>, IAssistHub
   {

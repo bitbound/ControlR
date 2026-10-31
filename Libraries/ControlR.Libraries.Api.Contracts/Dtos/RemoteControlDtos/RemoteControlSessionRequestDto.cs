@@ -14,12 +14,6 @@ public record RemoteControlSessionRequestDto(
   bool NotifyUserOnSessionStart,
   bool RequireConsent)
 {
-  /// <summary>
-  /// Set by the server only. The sealed command set the responder must enforce for this session.
-  /// Null when the server predates command policies.
-  /// </summary>
-  public RemoteControlCommandPolicyDto? CommandPolicy { get; init; }
-
   public string? ViewerConnectionId { get; init; }
   public string? ViewerName { get; init; }
 }

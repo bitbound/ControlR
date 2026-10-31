@@ -63,13 +63,10 @@ public class AgentHubClientPermissionPreflightTests
   }
 
   [Fact]
-  public async Task CreateRemoteControlSession_ForwardsSealedPolicyToSetup()
+  public async Task CreateRemoteControlSession_ForwardsRequestToDesktopClient_WhenPreflightIsGranted()
   {
     var targetProcessId = 4243;
     var sessionId = Guid.NewGuid();
-    var commandPolicy = RemoteControlCommandPolicyDto.Create(
-      sessionId,
-      [RemoteControlViewerDtoType.KeyEvent]);
 
     var desktopClientRpc = new Mock<IDesktopClientRpcService>();
     desktopClientRpc
@@ -95,21 +92,15 @@ public class AgentHubClientPermissionPreflightTests
       RequireConsent: false)
     {
       ViewerConnectionId = "viewer-1",
-      ViewerName = "Test Viewer",
-      CommandPolicy = commandPolicy
+      ViewerName = "Test Viewer"
     });
 
     Assert.True(result.IsSuccess);
     desktopClientRpc.Verify(
       x => x.ReceiveRemoteControlRequest(It.Is<RemoteControlRequestIpcDto>(dto =>
-        dto.SessionId == sessionId && dto.CommandPolicy == commandPolicy)),
+        dto.SessionId == sessionId && dto.TargetProcessId == targetProcessId)),
       Times.Once);
   }
-
-
-
-
-
 
   [Fact]
   public async Task RequestDesktopPreview_FailsBeforeForwarding_WhenPreflightIsDenied()

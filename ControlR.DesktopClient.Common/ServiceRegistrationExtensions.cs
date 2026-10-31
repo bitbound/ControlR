@@ -14,8 +14,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace ControlR.DesktopClient.Common;
 
@@ -61,11 +59,7 @@ public static class ServiceRegistrationExtensions
       .AddSingleton<IMemoryProvider, MemoryProvider>()
       .AddSingleton<ISystemEnvironment, SystemEnvironment>()
       .AddSingleton<IDesktopRemoteControlStream, DesktopRemoteControlStream>()
-      .AddSingleton<RemoteControlViewerCommandHandler>()
-      .AddSingleton<IRemoteControlViewerCommandHandler>(sp => new CommandPolicyViewerCommandHandler(
-        sp.GetRequiredService<RemoteControlViewerCommandHandler>(),
-        sp.GetRequiredService<IOptions<RemoteControlSessionOptions>>(),
-        sp.GetRequiredService<ILogger<CommandPolicyViewerCommandHandler>>()))
+      .AddSingleton<IRemoteControlViewerCommandHandler, RemoteControlViewerCommandHandler>()
       .AddSingleton<IDesktopCapturerFactory, DesktopCapturerFactory>()
       .AddSingleton<IFrameEncoder, SkiaSharpEncoder>()
       .AddSingleton<IDesktopPreviewProvider, DesktopPreviewProvider>();

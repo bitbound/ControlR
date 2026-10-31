@@ -37,8 +37,7 @@ public class AssistSessionHostFactoryTests
         new Uri("https://server.example.com"),
         Guid.NewGuid(),
         "access-token",
-        "Viewer",
-        null));
+        "Viewer"));
 
       Assert.NotNull(host.Services);
     }

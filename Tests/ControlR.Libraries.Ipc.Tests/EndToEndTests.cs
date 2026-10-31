@@ -1,6 +1,5 @@
 using ControlR.Libraries.Ipc.Interfaces;
 using ControlR.Libraries.Api.Contracts.Dtos.IpcDtos;
-using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Shared.Primitives;
 using ControlR.Libraries.TestingUtilities;
 using Microsoft.Extensions.DependencyInjection;
@@ -172,9 +171,6 @@ public class EndToEndTests(ITestOutputHelper testOutputHelper) : IAsyncLifetime
   {
     var tcs = new TaskCompletionSource<RemoteControlRequestIpcDto>();
     var sessionId = Guid.NewGuid();
-    var commandPolicy = RemoteControlCommandPolicyDto.Create(
-      sessionId,
-      [RemoteControlViewerDtoType.TypeText]);
 
     var mockClientService = new Mock<IDesktopClientRpcService>();
     mockClientService
@@ -218,18 +214,12 @@ public class EndToEndTests(ITestOutputHelper testOutputHelper) : IAsyncLifetime
       NotifyUserOnSessionStart: false,
       RequireConsent: false,
       ViewerConnectionId: "conn-1",
-      ViewerName: "jared")
-    {
-      CommandPolicy = commandPolicy,
-    };
+      ViewerName: "jared");
     await server.Client.ReceiveRemoteControlRequest(request);
 
     var received = await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
     Assert.Equal(sessionId, received.SessionId);
     Assert.Equal("jared", received.ViewerName);
-    Assert.NotNull(received.CommandPolicy);
-    Assert.True(received.CommandPolicy!.IsBoundTo(sessionId));
-    Assert.Equal(commandPolicy.AllowedDtoTypes, received.CommandPolicy!.AllowedDtoTypes);
 
     cts?.Cancel();
     cts?.Dispose();
