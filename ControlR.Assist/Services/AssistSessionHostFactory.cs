@@ -69,7 +69,7 @@ public sealed class AssistSessionHostFactory(
         options.ViewerName = request.ViewerDisplayName;
         options.ViewerConnectionId = null;
 
-        // The technician's browser is a legacy-style viewer for this session: it has no agent
+        // The technician's browser is a legacy-style viewer for this session. It has no agent
         // behind it, so it sends remote control DTOs on the relay instead of through the hub.
         options.ViewerSupportsRemoteControlDtoHub = false;
         options.WebSocketUri = BuildResponderRelayUri(request);

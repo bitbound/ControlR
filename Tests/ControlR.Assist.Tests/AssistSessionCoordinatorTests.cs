@@ -280,7 +280,7 @@ public class AssistSessionCoordinatorTests
     {
       EndSessionCallCount++;
 
-      // Reproduces the end-session race: the server-side ended notification arrives while the
+      // Reproduces the end-session race. The server-side ended notification arrives while the
       // end call is still in flight. Handlers must not wedge the coordinator.
       OnEndSession?.Invoke(request.SessionId);
       return Task.FromResult(HubResult.Ok());

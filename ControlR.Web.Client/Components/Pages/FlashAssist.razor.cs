@@ -100,7 +100,7 @@ public partial class FlashAssist : ComponentBase, IAsyncDisposable
       await RemoteControlStream.SendCloseStreamingSession(cts.Token);
     }
 
-    // Works for both active and consent-wait teardowns: the joined session is tracked by id,
+    // Works for both active and consent-wait teardowns. The joined session is tracked by id,
     // which exists before any local session object does.
     if (endHubSession && _linkedSessionId is Guid hubSessionId)
     {
