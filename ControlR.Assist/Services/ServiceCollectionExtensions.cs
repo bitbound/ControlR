@@ -4,7 +4,6 @@ using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.Libraries.Api.Contracts.Hubs;
 using ControlR.Libraries.Api.Contracts.Hubs.Clients;
 using ControlR.Libraries.Avalonia.Services;
-using ControlR.Libraries.Branding;
 using ControlR.Libraries.Shared.Services.Locks;
 using ControlR.Libraries.Shared.Services.Processes;
 using ControlR.Libraries.Signalr.Client;
@@ -29,11 +28,13 @@ public static class ServiceCollectionExtensions
     {
 #if DEBUG
       // A debug build writes its log to a file so a support session can be diagnosed after the
-      // fact. The file sits next to the settings the app already writes.
+      // fact. The file sits next to the settings the app already writes. The brand key is
+      // qualified because a file-level using for it is unused in a release build, where this
+      // block does not compile.
       builder.AddProvider(new DebugFileLoggerProvider(
         Path.Combine(
           Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-          BrandingConstants.BrandKey,
+          ControlR.Libraries.Branding.BrandingConstants.BrandKey,
           "Assist")));
 #endif
     });
