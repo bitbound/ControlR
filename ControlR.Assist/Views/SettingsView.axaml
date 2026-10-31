@@ -59,8 +59,7 @@
                    Text="{x:Static local:Localization.LanguageRestartNote}" />
       </StackPanel>
 
-      <StackPanel Spacing="8"
-                  IsVisible="{Binding ShowLogFolder}">
+      <StackPanel Spacing="8">
         <TextBlock Text="{x:Static local:Localization.LogsLabel}" FontWeight="SemiBold" />
 
         <controls:ThemeButton HorizontalAlignment="Left"

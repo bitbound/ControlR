@@ -92,6 +92,8 @@
     <ProjectReference
       Include="..\Libraries\ControlR.Libraries.Branding\ControlR.Libraries.Branding.csproj" />
     <ProjectReference
+      Include="..\Libraries\ControlR.Libraries.Serilog\ControlR.Libraries.Serilog.csproj" />
+    <ProjectReference
       Include="..\Libraries\ControlR.Libraries.Signalr.Client\ControlR.Libraries.Signalr.Client.csproj" />
   </ItemGroup>
 

@@ -4,10 +4,13 @@ using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.Libraries.Api.Contracts.Hubs;
 using ControlR.Libraries.Api.Contracts.Hubs.Clients;
 using ControlR.Libraries.Avalonia.Services;
+using ControlR.Libraries.Serilog;
+using ControlR.Libraries.Shared.Services;
 using ControlR.Libraries.Shared.Services.Locks;
 using ControlR.Libraries.Shared.Services.Processes;
 using ControlR.Libraries.Signalr.Client;
 using ControlR.Libraries.Signalr.Client.Extensions;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace ControlR.Assist.Services;
@@ -24,14 +27,27 @@ public static class ServiceCollectionExtensions
     services.AddSingleton<MainWindowViewModel>();
     services.AddSingleton<MainWindow>(provider => new MainWindow(provider.GetRequiredService<MainWindowViewModel>()));
 
-    services.AddLogging(builder =>
-    {
-#if DEBUG
-      // A debug build writes its log to a file so a support session can be diagnosed after the
-      // fact. The file sits next to the settings the app already writes.
-      builder.AddProvider(new DebugFileLoggerProvider(AssistSettingsService.AppDataDirectoryPath));
-#endif
-    });
+    // BootstrapSerilog supplies the sink but not the ILogger<T> registration, so the app container
+    // needs AddLogging too. Omitting it leaves every injected logger unresolvable at runtime.
+    services.AddLogging();
+
+    // Same sink the desktop client and the agent use, so a support session produces a rolling daily
+    // file next to the settings the app already writes.
+    var configuration = new ConfigurationBuilder()
+      .AddEnvironmentVariables()
+      .Build();
+
+    services.BootstrapSerilog(
+      configuration,
+      AssistSettingsService.LogFilePath,
+      TimeSpan.FromDays(7),
+      config =>
+      {
+        if (SystemEnvironment.Instance.IsDebug)
+        {
+          config.MinimumLevel.Debug();
+        }
+      });
 
     services.AddSingleton<IAssistSettingsService, AssistSettingsService>();
     services.AddSingleton<IThemeProvider, ThemeProvider>();
@@ -62,54 +78,4 @@ public static class ServiceCollectionExtensions
 
     return services;
   }
-
-#if DEBUG
-  private sealed class DebugFileLoggerProvider : ILoggerProvider
-  {
-    private readonly Lock _lock = new();
-
-    public DebugFileLoggerProvider(string directory)
-    {
-      Directory.CreateDirectory(directory);
-      Path = System.IO.Path.Combine(directory, "assist.log");
-    }
-
-    public string Path { get; }
-
-    public ILogger CreateLogger(string categoryName) => new DebugFileLogger(categoryName, Path, _lock);
-
-    public void Dispose()
-    {
-    }
-
-    private sealed class DebugFileLogger(string categoryName, string path, Lock log) : ILogger
-    {
-      public IDisposable? BeginScope<TState>(TState state)
-        where TState : notnull => null;
-
-      public bool IsEnabled(LogLevel logLevel) => logLevel >= LogLevel.Information;
-
-      public void Log<TState>(
-        LogLevel logLevel,
-        EventId eventId,
-        TState state,
-        Exception? exception,
-        Func<TState, Exception?, string> formatter)
-      {
-        if (!IsEnabled(logLevel))
-        {
-          return;
-        }
-
-        var line = $"{DateTime.Now:HH:mm:ss.fff} [{logLevel}] {categoryName}: {formatter(state, exception)}" +
-                   (exception is null ? string.Empty : $"\n  {exception}");
-
-        lock (log)
-        {
-          File.AppendAllText(path, line + Environment.NewLine);
-        }
-      }
-    }
-  }
-#endif
 }

@@ -91,12 +91,6 @@ public sealed partial class SettingsViewModel(
     }
   }
 
-#if DEBUG
-  public bool ShowLogFolder => true;
-#else
-  public bool ShowLogFolder => false;
-#endif
-
   [RelayCommand]
   private void Back() => _navigationService.NavigateTo<HomeViewModel>();
 

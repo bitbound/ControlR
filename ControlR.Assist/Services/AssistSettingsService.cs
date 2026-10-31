@@ -45,6 +45,8 @@ public sealed class AssistSettingsService(ILogger<AssistSettingsService> logger)
   /// </summary>
   public static string AppDataDirectoryPath => _settingsDirectory;
 
+  public static string LogFilePath => Path.Combine(_settingsDirectory, "assist.log");
+
   public static void ForgetUrl(AssistAppSettings settings, string url)
   {
     settings.ServerUrlHistory ??= [];
