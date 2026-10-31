@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Security.Claims;
+using System.Threading.RateLimiting;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Libraries.Api.Contracts.Hubs.Clients;
 using ControlR.Web.Server.Authn;
@@ -93,6 +94,38 @@ public class AssistHubTests(ITestOutputHelper testOutput)
     Assert.True(result.IsSuccess);
     Assert.Equal(AssistSessionCache.CodeLength, result.Value!.Code.Length);
     Assert.NotEqual(Guid.Empty, result.Value.SessionId);
+  }
+
+  [Fact]
+  public async Task CreateAssistSession_OverThePerHostLimit_IsRejected()
+  {
+    await using var testApp = await TestAppBuilder.CreateTestApp(_testOutput);
+
+    // One permit per partition, so the second create on the same key has to be refused. The limiter
+    // the app registers is far wider, and this test only needs to prove the hub honors a refusal.
+    var limiter = PartitionedRateLimiter.Create<HubCallerContext, string>(
+      _ => RateLimitPartition.GetFixedWindowLimiter(
+        "same-host",
+        _ => new FixedWindowRateLimiterOptions
+        {
+          PermitLimit = 1,
+          Window = TimeSpan.FromMinutes(1),
+          QueueLimit = 0,
+          AutoReplenishment = false
+        }));
+
+    var (hub, _) = await CreateHubAsync(
+      testApp,
+      user: null,
+      connectionId: "assist-conn-1",
+      sessionCreateLimiter: limiter);
+
+    Assert.True((await hub.CreateAssistSession()).IsSuccess);
+
+    var rejected = await hub.CreateAssistSession();
+
+    Assert.False(rejected.IsSuccess);
+    Assert.Null(rejected.Value);
   }
 
   [Fact]
@@ -417,12 +450,15 @@ public class AssistHubTests(ITestOutputHelper testOutput)
     TestApp testApp,
     AppUser? user,
     Guid? tenantId = null,
-    string? connectionId = null)
+    string? connectionId = null,
+    PartitionedRateLimiter<HubCallerContext>? sessionCreateLimiter = null)
   {
     var scope = testApp.Services.CreateScope();
     var hub = new AssistHub(
       scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>(),
       testApp.Services.GetRequiredService<IAssistSessionCache>(),
+      sessionCreateLimiter
+        ?? testApp.Services.GetRequiredService<PartitionedRateLimiter<HubCallerContext>>(),
       scope.ServiceProvider.GetRequiredService<IPermissionEvaluator>(),
       scope.ServiceProvider.GetRequiredService<IResourceDescriptorFactory>(),
       testApp.Services.GetRequiredService<ILogger<AssistHub>>());

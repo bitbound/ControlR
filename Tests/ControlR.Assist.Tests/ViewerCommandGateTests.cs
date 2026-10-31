@@ -8,6 +8,59 @@ namespace ControlR.Assist.Tests;
 
 public class ViewerCommandGateTests
 {
+
+  // Every viewer command must land in exactly one of the three groups. A type that belongs to none
+  // of them is passed through by default, which is how a keyboard-state reset reached a view-only
+  // customer, so this fails until a new enum member is deliberately classified.
+  [Fact]
+  public async Task EveryViewerDtoTypeIsDeliberatelyClassified()
+  {
+    var neverAllowed = new[]
+    {
+      RemoteControlViewerDtoType.ToggleBlockInput,
+      RemoteControlViewerDtoType.TogglePrivacyScreen
+    };
+
+    var droppedWhileViewOnly = new[]
+    {
+      RemoteControlViewerDtoType.KeyEvent,
+      RemoteControlViewerDtoType.MouseClick,
+      RemoteControlViewerDtoType.MouseButtonEvent,
+      RemoteControlViewerDtoType.MovePointer,
+      RemoteControlViewerDtoType.ResetKeyboardState,
+      RemoteControlViewerDtoType.TypeText,
+      RemoteControlViewerDtoType.WheelScroll,
+      RemoteControlViewerDtoType.RequestClipboardText,
+      RemoteControlViewerDtoType.ClipboardText,
+      RemoteControlViewerDtoType.ToggleBlockInput,
+      RemoteControlViewerDtoType.TogglePrivacyScreen
+    };
+
+    var alwaysPassed = new[]
+    {
+      RemoteControlViewerDtoType.None,
+      RemoteControlViewerDtoType.ChangeDisplays,
+      RemoteControlViewerDtoType.CloseRemoteControlSession,
+      RemoteControlViewerDtoType.RequestKeyFrame,
+      RemoteControlViewerDtoType.UpdateCaptureSettings
+    };
+
+    var allTypes = Enum.GetValues<RemoteControlViewerDtoType>();
+    var classified = neverAllowed.Concat(droppedWhileViewOnly).Concat(alwaysPassed);
+    Assert.Equal(allTypes.OrderBy(x => x), classified.Distinct().OrderBy(x => x));
+
+    foreach (var dtoType in allTypes)
+    {
+      var viewOnlyInner = new RecordingHandler();
+      await CreateGate(viewOnlyInner, new AssistInputGate { IsViewOnly = true }).Handle(CreateWrapper(dtoType));
+      Assert.Equal(!droppedWhileViewOnly.Contains(dtoType), viewOnlyInner.Handled.Count == 1);
+
+      var fullControlInner = new RecordingHandler();
+      await CreateGate(fullControlInner, new AssistInputGate()).Handle(CreateWrapper(dtoType));
+      Assert.Equal(!neverAllowed.Contains(dtoType), fullControlInner.Handled.Count == 1);
+    }
+  }
+
   [Theory]
   [InlineData(RemoteControlViewerDtoType.ToggleBlockInput)]
   [InlineData(RemoteControlViewerDtoType.TogglePrivacyScreen)]
@@ -42,6 +95,7 @@ public class ViewerCommandGateTests
   [InlineData(RemoteControlViewerDtoType.MouseClick)]
   [InlineData(RemoteControlViewerDtoType.MouseButtonEvent)]
   [InlineData(RemoteControlViewerDtoType.MovePointer)]
+  [InlineData(RemoteControlViewerDtoType.ResetKeyboardState)]
   [InlineData(RemoteControlViewerDtoType.TypeText)]
   [InlineData(RemoteControlViewerDtoType.WheelScroll)]
   [InlineData(RemoteControlViewerDtoType.RequestClipboardText)]

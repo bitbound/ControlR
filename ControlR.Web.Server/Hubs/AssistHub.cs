@@ -3,6 +3,7 @@ using ControlR.Libraries.Api.Contracts.Hubs.Clients;
 using ControlR.Web.Server.Authz.Permissions;
 using ControlR.Web.Server.Services.Assist;
 using ControlR.Web.Server.Services.Authorization;
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.SignalR;
 
 namespace ControlR.Web.Server.Hubs;
@@ -18,6 +19,7 @@ namespace ControlR.Web.Server.Hubs;
 public class AssistHub(
   UserManager<AppUser> userManager,
   IAssistSessionCache sessionCache,
+  PartitionedRateLimiter<HubCallerContext> sessionCreateLimiter,
   IPermissionEvaluator permissionEvaluator,
   IResourceDescriptorFactory resourceFactory,
   ILogger<AssistHub> logger)
@@ -29,6 +31,7 @@ public class AssistHub(
   private readonly IPermissionEvaluator _permissionEvaluator = permissionEvaluator;
   private readonly IResourceDescriptorFactory _resourceFactory = resourceFactory;
   private readonly IAssistSessionCache _sessionCache = sessionCache;
+  private readonly PartitionedRateLimiter<HubCallerContext> _sessionCreateLimiter = sessionCreateLimiter;
   private readonly UserManager<AppUser> _userManager = userManager;
 
   public async Task<HubResult> CancelAssistConsent(CancelAssistConsentRequestDto request)
@@ -77,6 +80,22 @@ public class AssistHub(
   {
     try
     {
+      // The cache bounds how many sessions exist in total. Without a per-host bound, one address
+      // can create all of them and hold each waiting entry resident for the whole waiting window.
+      using var lease = await _sessionCreateLimiter.AcquireAsync(
+        Context,
+        permitCount: 1,
+        Context.ConnectionAborted);
+
+      if (!lease.IsAcquired)
+      {
+        _logger.LogWarning(
+          "Assist session creation rate limited for connection {ConnectionId}.",
+          Context.ConnectionId);
+        return HubResult.Fail<CreateAssistSessionResponseDto>(
+          "Too many sessions have been started from this address recently. Wait a minute and try again.");
+      }
+
       var session = await _sessionCache.CreateAsync(Context.ConnectionId, Context.ConnectionAborted);
 
       _logger.LogInformation(

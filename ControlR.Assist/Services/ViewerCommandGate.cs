@@ -35,6 +35,7 @@ public sealed class ViewerCommandGate(
     RemoteControlViewerDtoType.MouseClick,
     RemoteControlViewerDtoType.MouseButtonEvent,
     RemoteControlViewerDtoType.MovePointer,
+    RemoteControlViewerDtoType.ResetKeyboardState,
     RemoteControlViewerDtoType.TypeText,
     RemoteControlViewerDtoType.WheelScroll,
     RemoteControlViewerDtoType.RequestClipboardText,

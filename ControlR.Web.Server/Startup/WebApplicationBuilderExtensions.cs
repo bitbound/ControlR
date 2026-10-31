@@ -201,6 +201,11 @@ public static class WebApplicationBuilderExtensions
         AnonymousAuthRateLimitPolicy.Create());
     });
 
+    // A hub method gets no endpoint, so the attribute-based policies above cannot reach it. Assist
+    // session creation acquires from this limiter itself. The container owns disposal.
+    builder.Services.AddSingleton(
+      _ => PartitionedRateLimiter.Create(AssistSessionCreateRateLimitPolicy.Create()));
+
     // Add authn/authz services.
     // Authentication must register first. Identity replaces the application cookie's Events,
     // and the cookie event handlers in AddControlrAuthorization have to be configured after that.
