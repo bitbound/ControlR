@@ -8,7 +8,7 @@ namespace ControlR.Libraries.Shared.Constants;
 public static class AppConstants
 {
   public const string AgentHubPath = "/hubs/agent";
-
+  public const string AssistHubPath = "/hubs/assist";
   public const int DefaultHubDtoChunkSize = 100;
   public const string DefaultInstanceId = "default";
   public const double DefaultRemoteControlAutoQualityLowerThresholdMbps = 5d;

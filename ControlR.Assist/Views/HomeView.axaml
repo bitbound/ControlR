@@ -1,0 +1,280 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:ControlR.Assist.ViewModels"
+             xmlns:local="using:ControlR.Assist"
+             xmlns:brand="using:ControlR.Libraries.Branding"
+             xmlns:controls="using:ControlR.Libraries.Avalonia.Controls"
+             mc:Ignorable="d"
+             d:DesignWidth="640"
+             d:DesignHeight="560"
+             x:Class="ControlR.Assist.Views.HomeView"
+             x:DataType="vm:HomeViewModel">
+
+  <ScrollViewer>
+    <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="16">
+
+      <!-- Page header. -->
+      <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+        <Image Source="/Assets/appicon.png"
+               Width="36"
+               Height="36"
+               VerticalAlignment="Center" />
+        <StackPanel Grid.Column="1"
+                    Spacing="2"
+                    VerticalAlignment="Center">
+          <TextBlock Classes="Primary"
+                     FontSize="36"
+                     FontWeight="Bold"
+                     Text="{x:Static brand:BrandingConstants.BrandName}" />
+          <TextBlock Classes="Secondary"
+                     TextWrapping="Wrap"
+                     Text="{x:Static local:Localization.HomeTagline}" />
+        </StackPanel>
+        <StackPanel Grid.Column="2"
+                    Orientation="Horizontal"
+                    Spacing="4"
+                    VerticalAlignment="Top">
+          <controls:ThemeButton Width="36"
+                                Height="36"
+                                Padding="0"
+                                Variant="Text"
+                                ToolTip.Tip="{x:Static local:Localization.Settings}"
+                                Command="{Binding ShowSettingsCommand}">
+            <PathIcon Width="17"
+                      Height="17"
+                      HorizontalAlignment="Center"
+                      VerticalAlignment="Center"
+                      Data="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
+          </controls:ThemeButton>
+          <controls:ThemeButton Width="36"
+                                Height="36"
+                                Padding="0"
+                                Variant="Text"
+                                ToolTip.Tip="{x:Static local:Localization.About}"
+                                Command="{Binding ShowAboutCommand}">
+            <TextBlock Text="?"
+                       FontSize="16"
+                       FontWeight="Bold"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center" />
+          </controls:ThemeButton>
+        </StackPanel>
+      </Grid>
+
+      <!-- Notices -->
+      <StackPanel Grid.Row="1" Spacing="12">
+        <controls:Callout Severity="Warning"
+                          Message="{x:Static local:Localization.TrustNoticeText}"
+                          IsVisible="{Binding ShowTrustNotice}" />
+        <controls:Callout Severity="Error"
+                          Message="{Binding StatusMessage}"
+                          IsVisible="{Binding ShowStatusAlert}" />
+      </StackPanel>
+
+      <!-- Single primary card for the connect flow steps -->
+      <Border Grid.Row="2"
+              Classes="Card"
+              VerticalAlignment="Top"
+              IsVisible="{Binding ShowStepCard}">
+        <StackPanel Spacing="12">
+
+          <!-- Step 1: server URL entry -->
+          <StackPanel Spacing="6"
+                      IsVisible="{Binding ShowUrlEntry}">
+            <TextBlock Text="{x:Static local:Localization.ServerUrlLabel}"
+                       FontWeight="SemiBold" />
+            <TextBlock Classes="Small Secondary"
+                       TextWrapping="Wrap"
+                       Text="{x:Static local:Localization.ServerUrlHelp}" />
+            <ComboBox ItemsSource="{Binding SavedServerUrls}"
+                      Text="{Binding ServerUrl, Mode=TwoWay}"
+                      IsEditable="True"
+                      MinHeight="36"
+                      PlaceholderText="{x:Static local:Localization.ServerUrlWatermark}">
+              <ComboBox.KeyBindings>
+                <KeyBinding Gesture="Enter" Command="{Binding NextCommand}" />
+              </ComboBox.KeyBindings>
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="x:String">
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">
+                    <TextBlock Text="{Binding}"
+                               VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis" />
+                    <controls:ThemeButton Grid.Column="1"
+                                          Width="24"
+                                          Height="24"
+                                          Padding="0"
+                                          Variant="Text"
+                                          ToolTip.Tip="{x:Static local:Localization.RemoveSavedServerTooltip}"
+                                          Command="{Binding $parent[UserControl].((vm:HomeViewModel)DataContext).RemoveSavedServerCommand}"
+                                          CommandParameter="{Binding}">
+                      <PathIcon Width="12"
+                                Height="12"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Data="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                    </controls:ThemeButton>
+                  </Grid>
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+            <controls:ThemeButton Content="{x:Static local:Localization.NextButtonText}"
+                                  MinHeight="36"
+                                  HorizontalAlignment="Stretch"
+                                  HorizontalContentAlignment="Center"
+                                  Color="Primary"
+                                  Variant="Filled"
+                                  Command="{Binding NextCommand}" />
+          </StackPanel>
+
+          <!-- Step 2: confirm the server and connect -->
+          <StackPanel Spacing="4"
+                      IsVisible="{Binding ShowConnectAction}">
+            <StackPanel Spacing="2"
+                        IsVisible="{Binding CanEditServerUrl}">
+              <TextBlock Classes="Small Secondary"
+                         Text="{x:Static local:Localization.ConnectToLabel}" />
+              <TextBlock FontWeight="SemiBold"
+                         TextWrapping="Wrap"
+                         Text="{Binding ServerUrl}" />
+            </StackPanel>
+            <controls:ThemeButton Content="{x:Static local:Localization.ConnectButtonText}"
+                                  MinHeight="36"
+                                  Margin="0,8,0,0"
+                                  HorizontalAlignment="Stretch"
+                                  HorizontalContentAlignment="Center"
+                                  Color="Primary"
+                                  Variant="Filled"
+                                  Command="{Binding ConnectCommand}" />
+            <controls:ThemeButton Margin="0,4,0,0"
+                                  HorizontalAlignment="Left"
+                                  Variant="Text"
+                                  Content="{x:Static local:Localization.ChangeServerButtonText}"
+                                  Command="{Binding ChangeServerCommand}"
+                                  IsVisible="{Binding CanEditServerUrl}" />
+          </StackPanel>
+
+          <!-- Connecting -->
+          <StackPanel Spacing="10"
+                      IsVisible="{Binding IsBusy}">
+            <ProgressBar IsIndeterminate="True" />
+            <TextBlock Classes="Small Secondary"
+                       Text="{x:Static local:Localization.StatusConnecting}" />
+            <controls:ThemeButton Content="{x:Static local:Localization.CancelButtonText}"
+                                  MinHeight="36"
+                                  HorizontalAlignment="Stretch"
+                                  HorizontalContentAlignment="Center"
+                                  Variant="Outlined"
+                                  Command="{Binding CancelConnectCommand}" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <!-- Ready / active group. Consent requests appear as a modal in the main window. -->
+      <StackPanel Grid.Row="2"
+                  Spacing="12"
+                  VerticalAlignment="Top"
+                  IsVisible="{Binding IsConnectedToServer}">
+
+        <!-- Access code: the star of the ready state -->
+        <Border Classes="Card"
+                IsVisible="{Binding ShowCode}">
+          <StackPanel Spacing="14">
+            <TextBlock Classes="Small Secondary"
+                       TextWrapping="Wrap"
+                       Text="{x:Static local:Localization.AccessCodeCaption}" />
+            <Grid>
+              <TextBlock FontSize="38"
+                         FontWeight="Bold"
+                         FontFamily="Cascadia Mono,Consolas,Menlo,monospace"
+                         LetterSpacing="3"
+                         HorizontalAlignment="Center"
+                         Text="{Binding Code}" />
+              <controls:ThemeButton x:Name="CopyCodeButton"
+                                    Width="34"
+                                    Height="34"
+                                    Padding="0"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Center"
+                                    Variant="Text"
+                                    ToolTip.Tip="{x:Static local:Localization.CopyCodeTooltip}"
+                                    Click="OnCopyCodeClick">
+                <Panel>
+                  <PathIcon x:Name="CopyGlyph"
+                            Width="16"
+                            Height="16"
+                            Data="M16 1H4C2.9 1 2 1.9 2 3v14h2V3h12V1zm3 4H8C6.9 5 6 5.9 6 7v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" />
+                  <PathIcon x:Name="CopiedGlyph"
+                            Width="16"
+                            Height="16"
+                            IsVisible="False"
+                            Data="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                </Panel>
+              </controls:ThemeButton>
+            </Grid>
+            <StackPanel Orientation="Horizontal"
+                        HorizontalAlignment="Right"
+                        Spacing="8"
+                        IsVisible="{Binding !IsSessionActive}">
+              <controls:ThemeButton Content="{Binding NewCodeText}"
+                                    MinHeight="36"
+                                    Variant="Outlined"
+                                    IsEnabled="{Binding IsNewCodeEnabled}"
+                                    Command="{Binding GenerateNewCodeCommand}" />
+              <controls:ThemeButton Content="{x:Static local:Localization.DisconnectButtonText}"
+                                    MinHeight="36"
+                                    Variant="Outlined"
+                                    Command="{Binding DisconnectCommand}" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
+
+        <!-- Active session: lighter, borderless treatment under the code card -->
+        <StackPanel Spacing="12"
+                    IsVisible="{Binding IsSessionActive}">
+          <StackPanel Orientation="Horizontal"
+                      Spacing="8">
+            <Ellipse Width="10"
+                     Height="10"
+                     Fill="{DynamicResource SuccessColor}"
+                     VerticalAlignment="Center" />
+            <TextBlock FontWeight="SemiBold"
+                       VerticalAlignment="Center"
+                       TextWrapping="Wrap"
+                       Text="{x:Static local:Localization.SessionActiveCaption}" />
+          </StackPanel>
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <ToggleSwitch HorizontalAlignment="Left"
+                          VerticalAlignment="Center"
+                          OnContent="{x:Static local:Localization.ViewOnlyButtonText}"
+                          OffContent="{x:Static local:Localization.ViewOnlyButtonText}"
+                          IsChecked="{Binding IsViewOnly}"
+                          Command="{Binding SetViewOnlyCommand}" />
+            <controls:ThemeButton Grid.Column="1"
+                                  Content="{x:Static local:Localization.EndSessionButtonText}"
+                                  MinHeight="36"
+                                  Color="Error"
+                                  Variant="Filled"
+                                  Command="{Binding EndSessionCommand}" />
+          </Grid>
+        </StackPanel>
+      </StackPanel>
+
+      <!-- Status line -->
+      <TextBlock Grid.Row="3"
+                 Classes="Small Secondary"
+                 TextWrapping="Wrap"
+                 IsVisible="{Binding ShowIdleStatus}"
+                 Text="{Binding StatusMessage}" />
+      <!-- Active viewer line with the email in the secondary color. Runs are built in code-behind. -->
+      <TextBlock x:Name="ViewerStatusText"
+                 Grid.Row="3"
+                 Classes="Small"
+                 TextWrapping="Wrap"
+                 IsVisible="{Binding ShowConnectedStatus}" />
+    </Grid>
+  </ScrollViewer>
+
+</UserControl>

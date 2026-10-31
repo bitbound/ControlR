@@ -18,6 +18,21 @@
 
       <SolidColorBrush x:Key="ErrorColor" Color="#f87171"/>
 
+      <!-- Tinted backgrounds for Material-style alerts (severity color over the surface). -->
+      <SolidColorBrush x:Key="PrimaryBackgroundBrush" Color="#402196F3"/>
+
+      <SolidColorBrush x:Key="SecondaryBackgroundBrush" Color="#4021f3e9"/>
+
+      <SolidColorBrush x:Key="TertiaryBackgroundBrush" Color="#407b21f3"/>
+
+      <SolidColorBrush x:Key="InfoBackgroundBrush" Color="#4089b4f8"/>
+
+      <SolidColorBrush x:Key="SuccessBackgroundBrush" Color="#402cb67d"/>
+
+      <SolidColorBrush x:Key="WarningBackgroundBrush" Color="#40facc15"/>
+
+      <SolidColorBrush x:Key="ErrorBackgroundBrush" Color="#40f87171"/>
+
       <SolidColorBrush x:Key="DarkColor" Color="#212121"/>
 
       <SolidColorBrush x:Key="DefaultColor" Color="#DEFFFFFF"/>
@@ -139,6 +154,21 @@
       <SolidColorBrush x:Key="WarningColor" Color="#ffc107"/>
 
       <SolidColorBrush x:Key="ErrorColor" Color="#dc3545"/>
+
+      <!-- Tinted backgrounds for Material-style alerts (severity color over the surface). -->
+      <SolidColorBrush x:Key="PrimaryBackgroundBrush" Color="#332196F3"/>
+
+      <SolidColorBrush x:Key="SecondaryBackgroundBrush" Color="#33008c7a"/>
+
+      <SolidColorBrush x:Key="TertiaryBackgroundBrush" Color="#337b21f3"/>
+
+      <SolidColorBrush x:Key="InfoBackgroundBrush" Color="#330d6efd"/>
+
+      <SolidColorBrush x:Key="SuccessBackgroundBrush" Color="#3328a745"/>
+
+      <SolidColorBrush x:Key="WarningBackgroundBrush" Color="#33ffc107"/>
+
+      <SolidColorBrush x:Key="ErrorBackgroundBrush" Color="#33dc3545"/>
 
       <SolidColorBrush x:Key="DarkColor" Color="#424242"/>
 

@@ -297,6 +297,14 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
       return HubResult.Fail("Remote control session has not been initialized.");
     }
 
+    if (session.IsRelayDirect)
+    {
+      // The relay carries no return channel, so the command is fire-and-forget. Any result the
+      // responder produces arrives as a desktop wrapper through the normal message handlers.
+      await SendDto(wrapper, cancellationToken);
+      return HubResult.Ok();
+    }
+
     await _viewerHub.WaitForConnected(cancellationToken);
 
     var request = CreateRequest(session, wrapper);
@@ -338,6 +346,20 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
     if (_session is not { } session)
     {
       throw new InvalidOperationException("Remote control session has not been initialized.");
+    }
+
+    if (session.IsRelayDirect)
+    {
+      // The relay is typed on the desktop wrapper. A responder running without the hub command
+      // path retags the message back to the viewer command kind when it reads the payload.
+      var relayWrapper = new RemoteControlDesktopWrapper
+      {
+        DtoType = (RemoteControlDesktopDtoType)(int)wrapper.DtoType,
+        Payload = wrapper.Payload,
+        SendTimestamp = wrapper.SendTimestamp
+      };
+      await Send(relayWrapper, cancellationToken);
+      return;
     }
 
     // The typed proxy awaits a completion message for any Task-returning method, so the

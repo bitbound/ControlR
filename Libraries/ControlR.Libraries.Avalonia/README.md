@@ -10,6 +10,7 @@ A cross-platform Avalonia UI library providing reusable controls, theming, and v
 - **ThemeButton**: Base button control with theming support
 - **DialogHost** & **DialogProvider**: A dialog management system for Avalonia applications
 - **Snackbar**: A notification system for displaying temporary messages
+- **Callout**: A Material-style alert banner with severity-tinted background, icon, and text
 
 ### Theming
 

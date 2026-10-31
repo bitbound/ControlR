@@ -7,5 +7,7 @@ public enum AvaloniaThemeMode
   [EnumMember]
   Dark = 0,
   [EnumMember]
-  Light = 1
+  Light = 1,
+  [EnumMember]
+  System = 2
 }

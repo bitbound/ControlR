@@ -7,6 +7,7 @@ namespace ControlR.Web.Server.Authz.Permissions;
 public static class PermissionCategories
 {
   public const string Agents = "Agents";
+  public const string Assist = "Assist";
   public const string DeviceGroups = "Device Groups";
   public const string Devices = "Devices";
   public const string InstallerKeys = "Installer Keys";

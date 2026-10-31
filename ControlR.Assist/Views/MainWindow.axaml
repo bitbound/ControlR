@@ -1,0 +1,94 @@
+<Window xmlns="https://github.com/avaloniaui"
+       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+       xmlns:vm="using:ControlR.Assist.ViewModels"
+       xmlns:local="using:ControlR.Assist"
+       xmlns:brand="using:ControlR.Libraries.Branding"
+       xmlns:controls="using:ControlR.Libraries.Avalonia.Controls"
+       mc:Ignorable="d"
+       d:DesignWidth="640"
+       d:DesignHeight="560"
+       x:Class="ControlR.Assist.Views.MainWindow"
+       x:DataType="vm:MainWindowViewModel"
+       Icon="/Assets/appicon.ico"
+       Title="{Binding WindowTitle}"
+       Width="640"
+       Height="560"
+       MinWidth="460"
+       MinHeight="480">
+
+  <Grid>
+    <ContentControl Content="{Binding CurrentViewModel}" Padding="24" />
+
+    <!-- Modal confirmation prompt (End session / Disconnect). -->
+    <Grid Classes="DialogOverlay"
+          IsVisible="{Binding IsConfirmOpen}">
+      <Border Classes="Card"
+              MaxWidth="420"
+              Margin="24"
+              Padding="16"
+              HorizontalAlignment="Stretch"
+              VerticalAlignment="Center">
+        <StackPanel Spacing="16">
+          <TextBlock FontSize="16"
+                     FontWeight="SemiBold"
+                     TextWrapping="Wrap"
+                     Text="{Binding ConfirmMessage}" />
+          <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+            <controls:ThemeButton Grid.Column="0"
+                                  Content="{x:Static local:Localization.CancelButtonText}"
+                                  MinHeight="36"
+                                  HorizontalAlignment="Stretch"
+                                  HorizontalContentAlignment="Center"
+                                  Variant="Outlined"
+                                  Command="{Binding CancelConfirmCommand}" />
+            <controls:ThemeButton Grid.Column="1"
+                                  Content="{x:Static local:Localization.ConfirmButtonText}"
+                                  MinHeight="36"
+                                  HorizontalAlignment="Stretch"
+                                  HorizontalContentAlignment="Center"
+                                  Color="Primary"
+                                  Variant="Filled"
+                                  Command="{Binding AcceptConfirmCommand}" />
+          </Grid>
+        </StackPanel>
+      </Border>
+    </Grid>
+
+    <!-- Consent request modal. Stays above every page, including About. -->
+    <Grid Classes="DialogOverlay"
+          IsVisible="{Binding Home.IsConsentPending}">
+      <Border Classes="Card"
+              MaxWidth="420"
+              Margin="24"
+              Padding="16"
+              HorizontalAlignment="Stretch"
+              VerticalAlignment="Center">
+        <StackPanel Spacing="16">
+          <TextBlock x:Name="ConsentText"
+                     FontSize="16"
+                     TextWrapping="Wrap" />
+          <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+            <controls:ThemeButton Grid.Column="0"
+                                  Content="{x:Static local:Localization.DeclineButtonText}"
+                                  MinHeight="36"
+                                  HorizontalAlignment="Stretch"
+                                  HorizontalContentAlignment="Center"
+                                  Variant="Outlined"
+                                  Command="{Binding Home.DeclineConsentCommand}" />
+            <controls:ThemeButton Grid.Column="1"
+                                  Content="{x:Static local:Localization.AcceptButtonText}"
+                                  MinHeight="36"
+                                  HorizontalAlignment="Stretch"
+                                  HorizontalContentAlignment="Center"
+                                  Color="Primary"
+                                  Variant="Filled"
+                                  Command="{Binding Home.AcceptConsentCommand}" />
+          </Grid>
+        </StackPanel>
+      </Border>
+    </Grid>
+  </Grid>
+
+</Window>

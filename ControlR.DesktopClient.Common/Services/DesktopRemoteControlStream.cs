@@ -32,7 +32,7 @@ internal sealed class DesktopRemoteControlStream(
   IDesktopCapturerFactory desktopCapturerFactory,
   IMemoryProvider memoryProvider,
   IDisplayManager displayManager,
-  IIpcClientAccessor ipcClientAccessor,
+  IRemoteControlDtoSender remoteControlDtoSender,
   IRemoteControlViewerCommandHandler viewerCommandHandler,
   IWaiter waiter,
   IOptions<RemoteControlSessionOptions> startupOptions,
@@ -43,9 +43,9 @@ internal sealed class DesktopRemoteControlStream(
   private readonly ICaptureMetrics _captureMetrics = captureMetrics;
   private readonly IDesktopCapturer _desktopCapturer = desktopCapturerFactory.GetOrCreate();
   private readonly IDisplayManager _displayManager = displayManager;
-  private readonly IIpcClientAccessor _ipcClientAccessor = ipcClientAccessor;
   private readonly ILogger<DesktopRemoteControlStream> _logger = logger;
   private readonly TimeSpan _metricsWindow = TimeSpan.FromSeconds(3);
+  private readonly IRemoteControlDtoSender _remoteControlDtoSender = remoteControlDtoSender;
   private readonly ISessionConsentService _sessionConsentService = sessionConsentService;
   private readonly IOptions<RemoteControlSessionOptions> _startupOptions = startupOptions;
   private readonly IToaster _toaster = toaster;
@@ -318,20 +318,22 @@ internal sealed class DesktopRemoteControlStream(
       return true;
     }
 
-    if (!_ipcClientAccessor.TryGetClient(out var client))
-    {
-      _logger.LogWarning("IPC client is not connected.  Dropping {DtoType} DTO.", wrapper.DtoType);
-      return false;
-    }
-
     if (string.IsNullOrWhiteSpace(_startupOptions.Value.ViewerConnectionId))
     {
       _logger.LogWarning("Viewer connection ID is missing.  Dropping {DtoType} DTO.", wrapper.DtoType);
       return false;
     }
 
-    await client.Server.SendRemoteControlDto(_startupOptions.Value.ViewerConnectionId, wrapper);
-    return true;
+    var sent = await _remoteControlDtoSender.TrySendRemoteControlDto(
+      _startupOptions.Value.ViewerConnectionId,
+      wrapper);
+
+    if (!sent)
+    {
+      _logger.LogWarning("No DTO sender is connected.  Dropping {DtoType} DTO.", wrapper.DtoType);
+    }
+
+    return sent;
   }
 
   private Timer StartMetricsTimer(CancellationToken cancellationToken)

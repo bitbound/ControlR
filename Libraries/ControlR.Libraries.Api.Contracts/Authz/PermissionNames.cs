@@ -3,6 +3,7 @@ namespace ControlR.Libraries.Api.Contracts.Authz;
 public static class PermissionNames
 {
   public const string AgentInstall = "agent.install";
+  public const string AssistSessionsConnect = "assist-sessions.connect";
   public const string DeviceAgentUpdate = "device.agent.update";
   public const string DeviceAliasWrite = "device.alias.write";
   public const string DeviceChatSend = "device.chat.send";

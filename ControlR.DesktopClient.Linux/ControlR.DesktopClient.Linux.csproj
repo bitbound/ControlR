@@ -17,6 +17,7 @@
 	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="CommunityToolkit.Mvvm" />
+		<PackageReference Include="Microsoft.VisualStudio.Threading.Only" />
 		<PackageReference Include="Tmds.DBus" />
 		<PackageReference Include="Tmds.DBus.Protocol" />
 	</ItemGroup>

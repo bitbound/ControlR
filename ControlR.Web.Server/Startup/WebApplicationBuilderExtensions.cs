@@ -13,6 +13,7 @@ using ControlR.Web.Server.Services.LogonTokens;
 using ControlR.Web.Client.Services;
 using Microsoft.AspNetCore.Http.Features;
 using ControlR.Web.Server.Services.AgentInstaller;
+using ControlR.Web.Server.Services.Assist;
 using ControlR.Web.Server.Services.Authorization;
 using ControlR.Web.Server.Services.DeviceFileSystem;
 using ControlR.Web.Server.Services.DeviceManagement;
@@ -200,6 +201,11 @@ public static class WebApplicationBuilderExtensions
         AnonymousAuthRateLimitPolicy.Create());
     });
 
+    // A hub method gets no endpoint, so the attribute-based policies above cannot reach it. Assist
+    // session creation acquires from this limiter itself. The container owns disposal.
+    builder.Services.AddSingleton(
+      _ => PartitionedRateLimiter.Create(AssistSessionCreateRateLimitPolicy.Create()));
+
     // Add authn/authz services.
     // Authentication must register first. Identity replaces the application cookie's Events,
     // and the cookie event handlers in AddControlrAuthorization have to be configured after that.
@@ -265,6 +271,9 @@ public static class WebApplicationBuilderExtensions
     builder.Services.AddHostedService(sp => sp.GetRequiredService<PatScopeTrimBackgroundService>());
     builder.Services.AddSingleton<ServiceAccountCredentialCleanupBackgroundService>();
     builder.Services.AddHostedService(sp => sp.GetRequiredService<ServiceAccountCredentialCleanupBackgroundService>());
+    builder.Services.AddSingleton<IAssistSessionCache, AssistSessionCache>();
+    builder.Services.AddSingleton<AssistSessionCleanupBackgroundService>();
+    builder.Services.AddHostedService(sp => sp.GetRequiredService<AssistSessionCleanupBackgroundService>());
     builder.Services.AddScoped<IAgentInstallerKeyManager, AgentInstallerKeyManager>();
     builder.Services.AddScoped<IAgentVersionProvider, AgentVersionProvider>();
     builder.Services.AddScoped<IReleaseNotesProvider, ReleaseNotesProvider>();

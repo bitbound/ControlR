@@ -5,7 +5,6 @@ using ControlR.DesktopClient.Common.ServiceInterfaces.Toaster;
 using ControlR.Libraries.Api.Contracts.Dtos.IpcDtos;
 using ControlR.Libraries.Avalonia.Services;
 using ControlR.Libraries.Shared.Services.Locks;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
@@ -14,7 +13,7 @@ namespace ControlR.DesktopClient.Linux.Services;
 public class LinuxRemoteControlHostBuilderFactory(
   IOptionsMonitor<DesktopClientOptions> desktopClientOptions,
   IUserInteractionService userInteractionService,
-  IIpcClientAccessor ipcClientAccessor,
+  IRemoteControlDtoSender remoteControlDtoSender,
   IAsyncLock asyncLock,
   IToaster toaster,
   IUiDispatcher dispatcher) : IRemoteControlHostBuilderFactory
@@ -22,7 +21,7 @@ public class LinuxRemoteControlHostBuilderFactory(
   private readonly IAsyncLock _asyncLock = asyncLock;
   private readonly IOptionsMonitor<DesktopClientOptions> _desktopClientOptions = desktopClientOptions;
   private readonly IUiDispatcher _dispatcher = dispatcher;
-  private readonly IIpcClientAccessor _ipcClientAccessor = ipcClientAccessor;
+  private readonly IRemoteControlDtoSender _remoteControlDtoSender = remoteControlDtoSender;
   private readonly IToaster _toaster = toaster;
   private readonly IUserInteractionService _userInteractionService = userInteractionService;
 
@@ -31,14 +30,13 @@ public class LinuxRemoteControlHostBuilderFactory(
     var builder = Host.CreateApplicationBuilder();
 
     builder.AddCommonRemoteControlServices(
-      appBuilder =>
+      new RemoteControlHostDependencies
       {
-        appBuilder.Services
-          .AddSingleton(_toaster)
-          .AddSingleton(_dispatcher)
-          .AddSingleton(_userInteractionService)
-          .AddSingleton(_ipcClientAccessor)
-          .AddSingleton(_asyncLock);
+        Toaster = _toaster,
+        UserInteraction = _userInteractionService,
+        DtoSender = _remoteControlDtoSender,
+        Dispatcher = _dispatcher,
+        AsyncLock = _asyncLock
       },
       options =>
       {
@@ -56,6 +54,7 @@ public class LinuxRemoteControlHostBuilderFactory(
       });
 
     builder.AddRemoteControlPlatformServices();
+    builder.ConfigureRemoteControlHostValidation();
     return builder;
   }
 }

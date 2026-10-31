@@ -1,0 +1,136 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>$(XplatTarget)</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <PackageIcon>appicon.png</PackageIcon>
+    <ApplicationIcon>Assets\appicon.ico</ApplicationIcon>
+    <DebugType Condition="'$(Configuration)' == 'Release'">embedded</DebugType>
+    <!--
+      Assist ships untrimmed for v1. A trimmed single file is roughly half the download size, but
+      the capture and interop paths are not linker-clean yet (COM marshalling in DxOutputDuplicator,
+      CsWin32 DXGI/D3D11, MessagePack reflection). Revisit once download telemetry justifies the
+      work. IsAotCompatible keeps the trim analyzers running so reflection issues stay visible.
+    -->
+    <PublishTrimmed>false</PublishTrimmed>
+    <TrimMode>none</TrimMode>
+    <SelfContained Condition="'$(RuntimeIdentifier)' != ''">true</SelfContained>
+    <PublishSingleFile Condition="'$(RuntimeIdentifier)' != '' AND '$(IsMacOS)' != 'true'">true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(IsWindows)' == 'true'">
+    <OutputType Condition="'$(Configuration)' == 'Debug'">Exe</OutputType>
+    <OutputType Condition="'$(Configuration)' != 'Debug'">WinExe</OutputType>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <Import Project="..\Mac.Build.props" />
+
+  <PropertyGroup Condition="'$(IsMacOS)' == 'true'">
+    <ApplicationId>app.controlr.assist.dev</ApplicationId>
+    <CodesignEntitlements>Entitlements.plist</CodesignEntitlements>
+    <!--
+      PublishTrimmed must stay true for a RuntimeIdentifier build, which is how the .app bundle is
+      produced. The macOS SDK rejects anything else. Mac.Build.props already sets LinkMode and
+      TrimMode to none so nothing is actually trimmed, and the trim analyzers that it turns off for
+      DesktopClient are switched back on here.
+    -->
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+    <SuppressTrimAnalysisWarnings>false</SuppressTrimAnalysisWarnings>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(IsMacOS)' == 'true' and '$(Configuration)' == 'Debug'">
+    <_CanOutputAppBundle>false</_CanOutputAppBundle>
+    <GenerateDependencyFile>true</GenerateDependencyFile>
+    <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\**" />
+  </ItemGroup>
+
+  <!-- XML doc comments ship as loose files with no runtime use. Same pattern as the .pdb strip
+       in Directory.Build.targets: the removal must run after ComputeFilesToPublish populates
+       the item list. A static ItemGroup Remove sees an empty list and strips nothing. -->
+  <Target Name="TrimXmlDocsFromPublish" AfterTargets="ComputeFilesToPublish">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(Extension)' == '.xml'" />
+    </ItemGroup>
+  </Target>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\Strings\en-US.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+    <PackageReference Include="Avalonia.Fonts.Inter" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="AvaloniaUI.DiagnosticsSupport">
+      <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
+      <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
+    </PackageReference>
+    <PackageReference Update="Bitbound.Analyzers.MemberOrder">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference
+      Include="..\ControlR.DesktopClient.Common\ControlR.DesktopClient.Common.csproj" />
+    <ProjectReference
+      Include="..\Libraries\ControlR.Libraries.Avalonia\ControlR.Libraries.Avalonia.csproj" />
+    <ProjectReference
+      Include="..\Libraries\ControlR.Libraries.Branding\ControlR.Libraries.Branding.csproj" />
+    <ProjectReference
+      Include="..\Libraries\ControlR.Libraries.Serilog\ControlR.Libraries.Serilog.csproj" />
+    <ProjectReference
+      Include="..\Libraries\ControlR.Libraries.Signalr.Client\ControlR.Libraries.Signalr.Client.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(IsWindows)' == 'true'">
+    <ProjectReference
+      Include="..\ControlR.DesktopClient.Windows\ControlR.DesktopClient.Windows.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(IsMacOS)' == 'true'">
+    <ProjectReference Include="..\ControlR.DesktopClient.Mac\ControlR.DesktopClient.Mac.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(IsLinux)' == 'true'">
+    <ProjectReference Include="..\ControlR.DesktopClient.Linux\ControlR.DesktopClient.Linux.csproj" />
+    <PackageReference Include="Avalonia.Wayland" />
+  </ItemGroup>
+
+  <!--
+    Nothing in Assist's DI graph constructs the remote-control types yet, so the linker trims them and
+    never analyzes them. Pass -p:AssistRootDesktopClient=true to root them and get their trim warnings,
+    which is how the capture, encode, and platform interop paths get validated before Assist wires up a
+    real session. The switch also turns the trim pass on, since rooting without trimming analyzes
+    nothing. The default publish stays unrooted and untrimmed so those warnings cannot be quietly accepted.
+  -->
+  <PropertyGroup Condition="'$(AssistRootDesktopClient)' == 'true'">
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>full</TrimMode>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(AssistRootDesktopClient)' == 'true'">
+    <TrimmerRootAssembly Include="ControlR.DesktopClient.Common" />
+    <TrimmerRootAssembly Include="ControlR.DesktopClient.Windows" />
+    <TrimmerRootAssembly Include="ControlR.Libraries.NativeInterop.Windows" />
+    <TrimmerRootAssembly Include="ControlR.Libraries.Avalonia" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Assets\appicon.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+</Project>

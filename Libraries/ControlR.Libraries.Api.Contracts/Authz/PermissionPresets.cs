@@ -41,6 +41,7 @@ public static class PermissionPresets
         PermissionNames.TenantPermissionsRead,
         PermissionNames.TenantPermissionsDeny,
         PermissionNames.TenantAuthorizationLogsRead,
+        PermissionNames.AssistSessionsConnect,
       ],
 
       [TenantAdministrator] =
@@ -106,6 +107,7 @@ public static class PermissionPresets
         PermissionNames.DeviceWakeSend,
         PermissionNames.DevicePowerManage,
         PermissionNames.DeviceAgentUpdate,
+        PermissionNames.AssistSessionsConnect,
       ],
 
       [AgentInstaller] =

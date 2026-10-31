@@ -40,6 +40,7 @@ public static class PermissionPolicies
     new Dictionary<string, PermissionPolicyDefinition>
     {
       [PolicyNames.RequireAgentInstall] = new(PermissionNames.AgentInstall, PermissionScopeKind.Tenant),
+      [PolicyNames.RequireAssistSessionsConnect] = new(PermissionNames.AssistSessionsConnect, PermissionScopeKind.Tenant),
       [PolicyNames.RequireAuthorizationLogsRead] = new(PermissionNames.TenantAuthorizationLogsRead, PermissionScopeKind.Tenant),
       [PolicyNames.RequireCustomersRead] = new(PermissionNames.TenantCustomersRead, PermissionScopeKind.Tenant),
       [PolicyNames.RequireCustomersWrite] = new(PermissionNames.TenantCustomersWrite, PermissionScopeKind.Tenant),

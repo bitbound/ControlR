@@ -29,6 +29,12 @@
       Access Tokens
     </MudNavLink>
   </AuthorizeView>
+  <AuthorizeView Policy="@(PolicyNames.RequireAssistSessionsConnect)">
+    <MudNavLink Disabled="!_isAuthenticated" Href="@(ClientRoutes.AssistViewer)" Match="NavLinkMatch.Prefix"
+                Icon="@Icons.Material.Filled.SupportAgent">
+      Flash Assist
+    </MudNavLink>
+  </AuthorizeView>
   <MudNavLink Disabled="!_isAuthenticated" Href="@(ClientRoutes.Settings)" Match="NavLinkMatch.Prefix"
               Icon="@Icons.Material.Filled.Settings">
     Settings

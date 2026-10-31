@@ -12,6 +12,7 @@ using ControlR.Libraries.WebSocketRelay.Client;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 
 namespace ControlR.DesktopClient.Common;
@@ -20,13 +21,31 @@ public static class ServiceRegistrationExtensions
 {
   public static IHostApplicationBuilder AddCommonRemoteControlServices(
     this IHostApplicationBuilder builder,
-    Action<IHostApplicationBuilder> configureDependencies,
+    RemoteControlHostDependencies dependencies,
     Action<RemoteControlSessionOptions> configureSessionOptions,
     Action<DesktopClientOptions> configureDesktopClientOptions)
   {
     builder.Configuration.AddEnvironmentVariables();
 
-    configureDependencies(builder);
+    builder.Services
+      .AddSingleton(dependencies.Toaster)
+      .AddSingleton(dependencies.UserInteraction)
+      .AddSingleton(dependencies.DtoSender);
+
+    if (dependencies.Dispatcher is not null)
+    {
+      builder.Services.AddSingleton(dependencies.Dispatcher);
+    }
+
+    if (dependencies.AsyncLock is not null)
+    {
+      builder.Services.AddSingleton(dependencies.AsyncLock);
+    }
+
+    if (dependencies.Consent is not null)
+    {
+      builder.Services.AddSingleton(dependencies.Consent);
+    }
 
     builder.Services
       .AddOptions()
@@ -44,8 +63,13 @@ public static class ServiceRegistrationExtensions
       .AddSingleton<IRemoteControlViewerCommandHandler, RemoteControlViewerCommandHandler>()
       .AddSingleton<IDesktopCapturerFactory, DesktopCapturerFactory>()
       .AddSingleton<IFrameEncoder, SkiaSharpEncoder>()
-      .AddSingleton<IDesktopPreviewProvider, DesktopPreviewProvider>()
-      .AddSingleton<ISessionConsentService, SessionConsentService>()
+      .AddSingleton<IDesktopPreviewProvider, DesktopPreviewProvider>();
+
+    // TryAdd so an app that supplies its own consent service through
+    // RemoteControlHostDependencies wins over this default.
+    builder.Services.TryAddSingleton<ISessionConsentService, SessionConsentService>();
+
+    builder.Services
       .AddSingleton<IRemoteControlSessionState, RemoteControlSessionState>()
       .AddSingleton<IWaiter, Waiter>()
       .AddTransient<FrameBasedCapturer>()
@@ -54,6 +78,23 @@ public static class ServiceRegistrationExtensions
       .AddHostedService<RemoteControlSessionInitializer>()
       .Configure(configureSessionOptions)
       .Configure(configureDesktopClientOptions);
+
+    return builder;
+  }
+
+  /// <summary>
+  /// Validates the session host graph when it is built, so a dependency the app forgot to forward
+  /// fails at construction instead of at StartAsync inside a live session.
+  /// </summary>
+  public static IHostApplicationBuilder ConfigureRemoteControlHostValidation(
+    this IHostApplicationBuilder builder)
+  {
+    builder.ConfigureContainer(new DefaultServiceProviderFactory(
+      new ServiceProviderOptions
+      {
+        ValidateOnBuild = true,
+        ValidateScopes = true
+      }));
 
     return builder;
   }

@@ -3,6 +3,7 @@
 public static class ClientRoutes
 {
   public const string About = "/about";
+  public const string AssistViewer = "/assist-viewer";
   public const string AuthorizationLogs = "/authorization-logs";
   public const string Customers = "/customers";
   public const string Deploy = "/deploy";
