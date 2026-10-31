@@ -17,6 +17,10 @@ public partial class HomeView : UserControl
   {
     InitializeComponent();
     DetachedFromVisualTree += (_, _) => UnsubscribeFromViewModel();
+
+    // The viewer-status run captures the secondary brush, so it has to be rebuilt when the
+    // theme changes underneath it.
+    ActualThemeVariantChanged += (_, _) => RebuildViewerStatus();
   }
 
   // SecondaryColor lives in the theme dictionaries, so the current theme variant must be passed.
@@ -50,7 +54,7 @@ public partial class HomeView : UserControl
     catch (Exception)
     {
       // The platform clipboard can fail while another process holds it. Losing the copy feedback
-      // is acceptable; taking the app down mid-session is not.
+      // is acceptable. Taking the app down mid-session is not.
       return;
     }
 

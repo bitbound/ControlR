@@ -22,15 +22,20 @@ public partial class MainWindow : Window
   {
     DataContext = viewModel;
     viewModel.Home.PropertyChanged += OnHomePropertyChanged;
+
+    // The consent text captures the secondary brush, so it has to be rebuilt when the theme
+    // changes underneath it.
+    ActualThemeVariantChanged += (_, _) => RebuildConsentText();
   }
 
-  private HomeViewModel Home =>
-    DataContext is MainWindowViewModel viewModel
-      ? viewModel.Home
-      : throw new InvalidOperationException("MainWindow requires a MainWindowViewModel DataContext.");
+  private HomeViewModel Home => ViewModel.Home;
 
   // SecondaryColor lives in the theme dictionaries, so the current theme variant must be passed.
   private IBrush? SecondaryBrush => this.TryFindResource("SecondaryColor", ActualThemeVariant, out var resource) ? resource as IBrush : null;
+
+  private MainWindowViewModel ViewModel =>
+    DataContext as MainWindowViewModel
+      ?? throw new InvalidOperationException("MainWindow requires a MainWindowViewModel DataContext.");
 
   protected override async void OnClosing(WindowClosingEventArgs e)
   {
@@ -40,7 +45,7 @@ public partial class MainWindow : Window
     {
       e.Cancel = true;
 
-      if (await ((MainWindowViewModel)DataContext!).ConfirmExitAsync())
+      if (await ViewModel.ConfirmExitAsync())
       {
         _exitConfirmed = true;
         Close();

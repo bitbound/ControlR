@@ -164,7 +164,7 @@ public class AssistSessionCoordinatorTests
     await WaitForStateAsync(controller, AssistSessionState.PendingConsent);
 
     // Queue accept and decline back-to-back without awaiting, as double-clicking the consent
-    // modal does. Only the first response may reach the server; a queued decline that lands
+    // modal does. Only the first response may reach the server. A queued decline that lands
     // after the server already activated the session would tear the new session down.
     var accept = controller.RespondToConsentAsync(true);
     var decline = controller.RespondToConsentAsync(false);
@@ -232,9 +232,9 @@ public class AssistSessionCoordinatorTests
     event Func<string?, Task>? IHubConnection<IAssistHub>.Reconnected { add { } remove { } }
     event Func<Exception?, Task>? IHubConnection<IAssistHub>.Reconnecting { add { } remove { } }
 
-    public int ConsentResponseCallCount { get; private set; }
     public string? ConnectionId => "test-connection";
     public HubConnectionState ConnectionState => HubConnectionState.Connected;
+    public int ConsentResponseCallCount { get; private set; }
     public int CreateSessionCallCount { get; private set; }
     public int EndSessionCallCount { get; private set; }
     public bool HangCreateSession { get; init; }

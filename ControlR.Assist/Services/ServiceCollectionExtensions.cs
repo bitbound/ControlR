@@ -4,6 +4,7 @@ using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.Libraries.Api.Contracts.Hubs;
 using ControlR.Libraries.Api.Contracts.Hubs.Clients;
 using ControlR.Libraries.Avalonia.Services;
+using ControlR.Libraries.Branding;
 using ControlR.Libraries.Shared.Services.Locks;
 using ControlR.Libraries.Shared.Services.Processes;
 using ControlR.Libraries.Signalr.Client;
@@ -23,7 +24,19 @@ public static class ServiceCollectionExtensions
     services.AddSingleton<MainWindowViewModel>();
     services.AddSingleton<MainWindow>(provider => new MainWindow(provider.GetRequiredService<MainWindowViewModel>()));
 
-    services.AddLogging();
+    services.AddLogging(builder =>
+    {
+#if DEBUG
+      // A debug build writes its log to a file so a support session can be diagnosed after the
+      // fact. The file sits next to the settings the app already writes.
+      builder.AddProvider(new DebugFileLoggerProvider(
+        Path.Combine(
+          Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+          BrandingConstants.BrandKey,
+          "Assist")));
+#endif
+    });
+
     services.AddSingleton<IAssistSettingsService, AssistSettingsService>();
     services.AddSingleton<IAssistSessionHostFactory, AssistSessionHostFactory>();
 
@@ -54,11 +67,19 @@ public static class ServiceCollectionExtensions
   }
 
 #if DEBUG
-  private sealed class DebugFileLoggerProvider(string path) : ILoggerProvider
+  private sealed class DebugFileLoggerProvider : ILoggerProvider
   {
     private readonly Lock _lock = new();
 
-    public ILogger CreateLogger(string categoryName) => new DebugFileLogger(categoryName, path, _lock);
+    public DebugFileLoggerProvider(string directory)
+    {
+      Directory.CreateDirectory(directory);
+      Path = System.IO.Path.Combine(directory, "assist.log");
+    }
+
+    public string Path { get; }
+
+    public ILogger CreateLogger(string categoryName) => new DebugFileLogger(categoryName, Path, _lock);
 
     public void Dispose()
     {

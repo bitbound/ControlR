@@ -237,6 +237,8 @@ public class AssistHub(
 
       // A technician dropping the connection during consent is treated like a cancel. The session
       // returns to waiting so the customer keeps the same code. An active session is torn down.
+      // A connection can hold more than one session, because nothing stops a technician from
+      // joining a second code while the first is still waiting on consent.
       var viewerSessions = (await _sessionCache.SnapshotAsync(cleanupToken))
         .Where(x => x.ViewerConnectionId == Context.ConnectionId)
         .ToList();
@@ -352,7 +354,7 @@ public class AssistHub(
 
   /// <summary>
   /// Tenant-scoped capability check for the technician side of an assist session. A server
-  /// principal has no tenant claim, so it is evaluated against the server resource; the
+  /// principal has no tenant claim, so it is evaluated against the server resource. The
   /// permission itself only grants at tenant scope.
   /// </summary>
   private async Task<bool> CanTechnicianConnectAsync()

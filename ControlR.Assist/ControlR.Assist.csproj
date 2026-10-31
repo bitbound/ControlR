@@ -34,7 +34,7 @@
     <CodesignEntitlements>Entitlements.plist</CodesignEntitlements>
     <!--
       PublishTrimmed must stay true for a RuntimeIdentifier build, which is how the .app bundle is
-      produced; the macOS SDK rejects anything else. Mac.Build.props already sets LinkMode and
+      produced. The macOS SDK rejects anything else. Mac.Build.props already sets LinkMode and
       TrimMode to none so nothing is actually trimmed, and the trim analyzers that it turns off for
       DesktopClient are switched back on here.
     -->

@@ -14,7 +14,7 @@ public class AgentRemoteControlDtoSender(IIpcClientAccessor ipcClientAccessor) :
     string viewerConnectionId,
     RemoteControlDesktopWrapper wrapper)
   {
-    if (!_ipcClientAccessor.TryGetClient(out var client))
+    if (!_ipcClientAccessor.TryGetClient(out var client) || !client.IsConnected)
     {
       return false;
     }

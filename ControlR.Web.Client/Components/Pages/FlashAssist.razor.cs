@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.AspNetCore.SignalR.Client;
 
 namespace ControlR.Web.Client.Components.Pages;
 
@@ -6,6 +7,7 @@ namespace ControlR.Web.Client.Components.Pages;
 public partial class FlashAssist : ComponentBase, IAsyncDisposable
 {
   private readonly uint _commandTimeoutSeconds = 30;
+  private readonly DisposableCollection _messengerRegistrations = [];
   private readonly CancellationTokenSource _pageCts = new();
 
   private string? _accessCode;
@@ -54,6 +56,7 @@ public partial class FlashAssist : ComponentBase, IAsyncDisposable
   public async ValueTask DisposeAsync()
   {
     _messengerRegistration?.Dispose();
+    _messengerRegistrations.Dispose();
     _pageCts.Cancel();
     await CleanupSession(sendCloseStreamingSession: false, endHubSession: true);
     _pageCts.Dispose();
@@ -65,9 +68,13 @@ public partial class FlashAssist : ComponentBase, IAsyncDisposable
       this,
       HandleAssistConsentResponded);
 
-    Messenger.Register<DtoReceivedMessage<AssistSessionEndedDto>>(
-      this,
-      HandleAssistSessionEnded);
+    _messengerRegistrations.AddRange(
+      Messenger.Register<DtoReceivedMessage<AssistSessionEndedDto>>(
+        this,
+        HandleAssistSessionEnded),
+      Messenger.Register<HubConnectionStateChangedMessage>(
+        this,
+        HandleHubConnectionStateChanged));
 
     return base.OnInitializedAsync();
   }
@@ -149,7 +156,7 @@ public partial class FlashAssist : ComponentBase, IAsyncDisposable
     }
 
     // The relay also reports a closed connection when the session is torn down. Whichever
-    // arrives first processes; the hub-provided reason wins over the generic disconnect message.
+    // arrives first processes. The hub-provided reason wins over the generic disconnect message.
     if (_sessionEndedHandled)
     {
       return;
@@ -265,6 +272,26 @@ public partial class FlashAssist : ComponentBase, IAsyncDisposable
     {
       _state = AssistPageState.CodeEntry;
       _statusMessage = "The connection to the remote device was lost.";
+      _statusSeverity = Severity.Warning;
+      StateHasChanged();
+    });
+  }
+
+  private async Task HandleHubConnectionStateChanged(object subscriber, HubConnectionStateChangedMessage message)
+  {
+    // The relay stream only exists once the session is active, so a hub drop during the consent
+    // wait would otherwise leave the page spinning over a request the server has abandoned.
+    if (_state != AssistPageState.WaitingForConsent || message.NewState == HubConnectionState.Connected)
+    {
+      return;
+    }
+
+    await CleanupSession(sendCloseStreamingSession: false, endHubSession: false);
+
+    await InvokeAsync(() =>
+    {
+      _state = AssistPageState.CodeEntry;
+      _statusMessage = "The connection to the server was lost.";
       _statusSeverity = Severity.Warning;
       StateHasChanged();
     });

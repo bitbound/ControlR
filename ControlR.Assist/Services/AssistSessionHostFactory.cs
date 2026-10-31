@@ -125,7 +125,7 @@ public sealed class AssistSessionHostFactory(
       Task.FromResult(true);
   }
 
-  // No UI in the assist session host; the consent prompt lives in the assist app's main window.
+  // No UI in the assist session host. The consent prompt lives in the assist app's main window.
   private sealed class HeadlessUserInteractionService : IUserInteractionService
   {
     public Task<bool> ShowConsentDialogAsync(string requesterName, CancellationToken cancellationToken) =>

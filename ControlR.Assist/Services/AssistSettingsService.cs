@@ -8,7 +8,10 @@ namespace ControlR.Assist.Services;
 public class AssistAppSettings
 {
   public string? ServerUrl { get; set; }
-  public List<string> ServerUrlHistory { get; set; } = [];
+
+  // Nullable because a settings file written by another build can carry a null history, and the
+  // deserializer would overwrite the initializer with it.
+  public List<string>? ServerUrlHistory { get; set; } = [];
 }
 
 public interface IAssistSettingsService
@@ -33,12 +36,15 @@ public sealed class AssistSettingsService(ILogger<AssistSettingsService> logger)
   public static void RememberUrl(AssistAppSettings settings, string url)
   {
     settings.ServerUrl = url;
-    settings.ServerUrlHistory.Remove(url);
-    settings.ServerUrlHistory.Insert(0, url);
 
-    if (settings.ServerUrlHistory.Count > MaxHistoryEntries)
+    var history = settings.ServerUrlHistory ??= [];
+
+    history.Remove(url);
+    history.Insert(0, url);
+
+    if (history.Count > MaxHistoryEntries)
     {
-      settings.ServerUrlHistory.RemoveRange(MaxHistoryEntries, settings.ServerUrlHistory.Count - MaxHistoryEntries);
+      history.RemoveRange(MaxHistoryEntries, history.Count - MaxHistoryEntries);
     }
   }
 
@@ -52,8 +58,11 @@ public sealed class AssistSettingsService(ILogger<AssistSettingsService> logger)
       }
 
       var json = File.ReadAllText(_settingsPath);
-      return JsonSerializer.Deserialize(json, AssistSettingsJsonContext.Default.AssistAppSettings)
+      var settings = JsonSerializer.Deserialize(json, AssistSettingsJsonContext.Default.AssistAppSettings)
         ?? new AssistAppSettings();
+
+      settings.ServerUrlHistory ??= [];
+      return settings;
     }
     catch (Exception ex)
     {

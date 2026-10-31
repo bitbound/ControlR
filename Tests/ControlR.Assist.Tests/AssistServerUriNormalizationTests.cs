@@ -41,6 +41,7 @@ public class AssistServerUriNormalizationTests
   public void Valid(string input, string expected)
   {
     Assert.True(AssistSessionCoordinator.TryNormalizeServerUri(input, out var uri));
+    Assert.NotNull(uri);
     Assert.Equal(expected, uri.ToString());
   }
 }

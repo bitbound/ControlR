@@ -9,11 +9,6 @@ using Microsoft.Extensions.Options;
 
 namespace ControlR.DesktopClient.Services;
 
-public interface IIpcClientAccessor
-{
-  bool TryGetClient([NotNullWhen(true)] out IIpcClient? connection);
-}
-
 public class IpcClientManager(
   TimeProvider timeProvider,
   IIpcConnectionFactory ipcConnectionFactory,

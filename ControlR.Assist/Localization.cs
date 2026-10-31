@@ -162,8 +162,8 @@ public static class Localization
 }
 
 /// <summary>
-/// The desktop client deserializes its strings file with reflection. Assist ships trimmed, so the
-/// same deserialization has to go through a source-generated type instead.
+/// A source-generated context keeps the trim analyzers satisfied if Assist is ever published
+/// trimmed, and it reads the strings file the same way the desktop client does.
 /// </summary>
 [JsonSourceGenerationOptions(
   AllowTrailingCommas = true,

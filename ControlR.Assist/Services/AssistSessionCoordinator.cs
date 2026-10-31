@@ -72,9 +72,9 @@ public sealed class AssistSessionCoordinator : IAsyncDisposable
   /// prefix. The host must be a plausible hostname (dotted), localhost, or an IP address, and any
   /// path, query, or fragment is dropped.
   /// </summary>
-  public static bool TryNormalizeServerUri(string? input, out Uri serverUri)
+  public static bool TryNormalizeServerUri(string? input, out Uri? serverUri)
   {
-    serverUri = null!;
+    serverUri = null;
 
     var candidate = (input ?? string.Empty).Trim();
     if (candidate.Length == 0 || candidate.Any(char.IsWhiteSpace))
@@ -216,7 +216,7 @@ public sealed class AssistSessionCoordinator : IAsyncDisposable
 
   private async Task<bool> ConnectCoreAsync(string serverUrl, CancellationToken cancellationToken)
   {
-    if (!TryNormalizeServerUri(serverUrl, out var serverUri))
+    if (!TryNormalizeServerUri(serverUrl, out var serverUri) || serverUri is null)
     {
       StatusMessage = Localization.StatusInvalidUrl;
       RaiseStateChanged();
@@ -618,7 +618,7 @@ public sealed class AssistSessionCoordinator : IAsyncDisposable
           return;
         }
 
-        // Skip the handoff when this side already tore the host down; that path finished
+        // Skip the handoff when this side already tore the host down. That path finished
         // the session bookkeeping itself.
         if (!ReferenceEquals(_sessionHost, host) && _sessionHost is null)
         {

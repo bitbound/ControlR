@@ -74,10 +74,6 @@ public interface IAssistSessionCache
 
   Task<AssistSession?> TryGetByCodeAsync(string code, CancellationToken cancellationToken = default);
 
-  Task<AssistSession?> TryGetByViewerConnectionIdAsync(
-    string viewerConnectionId,
-    CancellationToken cancellationToken = default);
-
   /// <summary>
   /// Removes the session only if it still matches the given status and status timestamp. Guards
   /// cleanup paths that decided from a stale snapshot against deleting a since-transitioned session.
@@ -255,13 +251,6 @@ public sealed class AssistSessionCache(TimeProvider timeProvider, Func<string>? 
   public Task<AssistSession?> TryGetByCodeAsync(string code, CancellationToken cancellationToken = default)
   {
     return TryGetFirstAsync(x => x.Code == code, cancellationToken);
-  }
-
-  public Task<AssistSession?> TryGetByViewerConnectionIdAsync(
-    string viewerConnectionId,
-    CancellationToken cancellationToken = default)
-  {
-    return TryGetFirstAsync(x => x.ViewerConnectionId == viewerConnectionId, cancellationToken);
   }
 
   public Task<AssistSession?> TryRemoveAsync(

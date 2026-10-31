@@ -208,7 +208,7 @@ public sealed partial class HomeViewModel : ViewModelBase, IDisposable
   [RelayCommand]
   private void Next()
   {
-    if (!AssistSessionCoordinator.TryNormalizeServerUri(ServerUrl, out var normalized))
+    if (!AssistSessionCoordinator.TryNormalizeServerUri(ServerUrl, out var normalized) || normalized is null)
     {
       StatusMessage = Localization.StatusInvalidUrl;
       return;

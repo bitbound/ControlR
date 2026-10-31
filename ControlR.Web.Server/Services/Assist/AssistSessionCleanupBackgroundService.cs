@@ -7,7 +7,7 @@ namespace ControlR.Web.Server.Services.Assist;
 
 /// <summary>
 /// Ages out assist sessions that stalled: a consent prompt nobody answered, a code nobody used,
-/// or a session that outlived any sane support call. Normal ends are disconnect-driven; this is
+/// or a session that outlived any sane support call. Normal ends are disconnect-driven. This is
 /// the safety net.
 /// </summary>
 public class AssistSessionCleanupBackgroundService(
