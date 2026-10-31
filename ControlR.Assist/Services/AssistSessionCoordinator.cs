@@ -22,13 +22,13 @@ public enum AssistSessionState
 /// a lock that a queue item holds while awaiting a hub response, which is the cycle that used to
 /// wedge the app when a session was ended.
 /// </summary>
-public sealed class AssistSessionController : IAsyncDisposable
+public sealed class AssistSessionCoordinator : IAsyncDisposable
 {
   private static readonly TimeSpan _invokeTimeout = TimeSpan.FromSeconds(15);
   private static readonly TimeSpan _queueDrainTimeout = TimeSpan.FromSeconds(5);
 
   private readonly IAssistSignalRClient _hubClient;
-  private readonly ILogger<AssistSessionController> _logger;
+  private readonly ILogger<AssistSessionCoordinator> _logger;
   private readonly Task _queueLoop;
   private readonly IAssistSessionHostFactory _sessionHostFactory;
   private readonly IAssistSettingsService _settingsService;
@@ -39,11 +39,11 @@ public sealed class AssistSessionController : IAsyncDisposable
   private Guid? _consentRespondedSessionId;
   private IHost? _sessionHost;
 
-  public AssistSessionController(
+  public AssistSessionCoordinator(
     IAssistSignalRClient hubClient,
     IAssistSessionHostFactory sessionHostFactory,
     IAssistSettingsService settingsService,
-    ILogger<AssistSessionController> logger)
+    ILogger<AssistSessionCoordinator> logger)
   {
     _hubClient = hubClient;
     _sessionHostFactory = sessionHostFactory;
@@ -253,7 +253,9 @@ public sealed class AssistSessionController : IAsyncDisposable
     return created;
   }
 
-  private async Task<bool> CreateSessionCoreAsync(CancellationToken cancellationToken)
+  private async Task<bool> CreateSessionCoreAsync(
+    CancellationToken cancellationToken,
+    string? statusMessage = null)
   {
     var result = await InvokeHubAsync(ct => _hubClient.CreateAssistSession(ct));
     if (!result.IsSuccess || result.Value is null)
@@ -267,7 +269,7 @@ public sealed class AssistSessionController : IAsyncDisposable
 
     Code = result.Value.Code;
     _activeSessionId = result.Value.SessionId;
-    StatusMessage = null;
+    StatusMessage = statusMessage;
     SetState(AssistSessionState.Ready);
     return true;
   }
@@ -308,8 +310,7 @@ public sealed class AssistSessionController : IAsyncDisposable
     await EndCurrentSessionAsync().ConfigureAwait(false);
     await StopSessionHostAsync().ConfigureAwait(false);
     SetConsentPending(null, null, null, null);
-    StatusMessage = Localization.StatusSessionEnded;
-    await CreateSessionCoreAsync(CancellationToken.None).ConfigureAwait(false);
+    await CreateSessionCoreAsync(CancellationToken.None, Localization.StatusSessionEnded).ConfigureAwait(false);
     RaiseStateChanged();
   }
 
@@ -336,7 +337,7 @@ public sealed class AssistSessionController : IAsyncDisposable
       }
     }))
     {
-      tcs.SetException(new ObjectDisposedException(nameof(AssistSessionController)));
+      tcs.SetException(new ObjectDisposedException(nameof(AssistSessionCoordinator)));
     }
 
     return tcs.Task;
@@ -423,8 +424,7 @@ public sealed class AssistSessionController : IAsyncDisposable
     await EndCurrentSessionAsync().ConfigureAwait(false);
     await StopSessionHostAsync().ConfigureAwait(false);
     SetConsentPending(null, null, null, null);
-    StatusMessage = Localization.StatusReconnected;
-    await CreateSessionCoreAsync(CancellationToken.None).ConfigureAwait(false);
+    await CreateSessionCoreAsync(CancellationToken.None, Localization.StatusReconnected).ConfigureAwait(false);
     RaiseStateChanged();
   }
 
@@ -437,8 +437,7 @@ public sealed class AssistSessionController : IAsyncDisposable
 
     await StopSessionHostAsync().ConfigureAwait(false);
     SetConsentPending(null, null, null, null);
-    StatusMessage = dto.Reason;
-    await CreateSessionCoreAsync(CancellationToken.None).ConfigureAwait(false);
+    await CreateSessionCoreAsync(CancellationToken.None, dto.Reason).ConfigureAwait(false);
     RaiseStateChanged();
   }
 
@@ -449,11 +448,12 @@ public sealed class AssistSessionController : IAsyncDisposable
       return;
     }
 
-    _sessionHost = null;
-    StatusMessage = Localization.StatusSessionEnded;
+    // The host stopped itself, so it is still assigned here. Stopping it is what disposes the
+    // container and the hosted services it owns.
+    await StopSessionHostAsync().ConfigureAwait(false);
     await EndCurrentSessionAsync().ConfigureAwait(false);
     SetConsentPending(null, null, null, null);
-    await CreateSessionCoreAsync(CancellationToken.None).ConfigureAwait(false);
+    await CreateSessionCoreAsync(CancellationToken.None, Localization.StatusSessionEnded).ConfigureAwait(false);
     RaiseStateChanged();
   }
 
@@ -608,9 +608,8 @@ public sealed class AssistSessionController : IAsyncDisposable
     {
       _logger.LogError(ex, "Failed to start the assist session host.");
       await StopSessionHostAsync().ConfigureAwait(false);
-      StatusMessage = Localization.StatusSessionStartFailed;
       await EndCurrentSessionAsync().ConfigureAwait(false);
-      await CreateSessionCoreAsync(CancellationToken.None).ConfigureAwait(false);
+      await CreateSessionCoreAsync(CancellationToken.None, Localization.StatusSessionStartFailed).ConfigureAwait(false);
       RaiseStateChanged();
     }
   }

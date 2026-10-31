@@ -3,8 +3,10 @@ using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.ServiceInterfaces.Toaster;
 using ControlR.DesktopClient.Common.Services;
 using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
+using ControlR.Libraries.Avalonia.Services;
 using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Constants;
+using ControlR.Libraries.Shared.Services.Locks;
 using ControlR.Libraries.WebSocketRelay.Client;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -34,20 +36,31 @@ public interface IAssistSessionHostFactory
 /// Builds an isolated generic host per session so the capture and input services can use
 /// per-session options and stop cleanly when the session ends, without disturbing the app host.
 /// </summary>
-public sealed class AssistSessionHostFactory : IAssistSessionHostFactory
+public sealed class AssistSessionHostFactory(
+  ILoggerFactory loggerFactory,
+  IUiDispatcher dispatcher,
+  IAsyncLock asyncLock) : IAssistSessionHostFactory
 {
   private const uint RelayTimeoutSeconds = 30;
+
+  private readonly IAsyncLock _asyncLock = asyncLock;
+  private readonly IUiDispatcher _dispatcher = dispatcher;
+  private readonly ILoggerFactory _loggerFactory = loggerFactory;
 
   public IHost CreateSessionHost(AssistSessionRequest request)
   {
     var builder = Host.CreateApplicationBuilder();
 
     builder.AddCommonRemoteControlServices(
-      appBuilder => appBuilder.Services
-        .AddSingleton<IToaster, LogToaster>()
-        .AddSingleton<IRemoteControlDtoSender, RelayOnlyDtoSender>()
-        .AddSingleton<ISessionConsentService, AutoApproveConsentService>()
-        .AddSingleton<IUserInteractionService, HeadlessUserInteractionService>(),
+      new RemoteControlHostDependencies
+      {
+        Toaster = new LogToaster(_loggerFactory.CreateLogger<LogToaster>()),
+        UserInteraction = new HeadlessUserInteractionService(),
+        DtoSender = new RelayOnlyDtoSender(),
+        Consent = new AutoApproveConsentService(),
+        Dispatcher = _dispatcher,
+        AsyncLock = _asyncLock
+      },
       options =>
       {
         options.SessionId = request.SessionId;
@@ -68,6 +81,7 @@ public sealed class AssistSessionHostFactory : IAssistSessionHostFactory
 
     builder.AddRemoteControlPlatformServices();
     WrapViewerCommandHandler(builder.Services);
+    builder.ConfigureRemoteControlHostValidation();
 
     return builder.Build();
   }
@@ -81,7 +95,7 @@ public sealed class AssistSessionHostFactory : IAssistSessionHostFactory
       RelayRole.Responder,
       RelayTimeoutSeconds);
 
-  // The customer keeps authority over the machine: the real command handler is wrapped so view-only
+  // The customer keeps authority over the machine. The real command handler is wrapped so view-only
   // drops input, and block-input/privacy-screen requests never reach it.
   private static void WrapViewerCommandHandler(IServiceCollection services)
   {
@@ -134,7 +148,7 @@ public sealed class AssistSessionHostFactory : IAssistSessionHostFactory
   private sealed class RelayOnlyDtoSender : IRemoteControlDtoSender
   {
     public Task<bool> TrySendRemoteControlDto(string viewerConnectionId, RemoteControlDesktopWrapper wrapper) =>
-      // Assist sessions never take the hub DTO path; the responder writes everything to the relay.
+      // Assist sessions never take the hub DTO path. The responder writes everything to the relay.
       Task.FromResult(true);
   }
 }

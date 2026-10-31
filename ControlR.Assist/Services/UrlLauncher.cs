@@ -1,12 +1,13 @@
-using System.Diagnostics;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
+using ControlR.Libraries.Shared.Services.Processes;
 using Microsoft.Extensions.Logging;
 
 namespace ControlR.Assist.Services;
 
-internal sealed class UrlLauncher(ILogger<UrlLauncher> logger) : IUrlLauncher
+internal sealed class UrlLauncher(IProcessManager processManager, ILogger<UrlLauncher> logger) : IUrlLauncher
 {
   private readonly ILogger<UrlLauncher> _logger = logger;
+  private readonly IProcessManager _processManager = processManager;
 
   public bool Open(string target)
   {
@@ -17,13 +18,7 @@ internal sealed class UrlLauncher(ILogger<UrlLauncher> logger) : IUrlLauncher
 
     try
     {
-      Process.Start(new ProcessStartInfo
-      {
-        FileName = target,
-        UseShellExecute = true
-      });
-
-      return true;
+      return _processManager.LaunchUri(new Uri(target)) is not null;
     }
     catch (Exception ex)
     {

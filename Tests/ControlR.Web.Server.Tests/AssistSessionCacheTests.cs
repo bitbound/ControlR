@@ -43,7 +43,7 @@ public class AssistSessionCacheTests
   public async Task Create_WhenGeneratedCodeCollides_RegeneratesUntilUnique()
   {
     var attempts = 0;
-    string NextCode() => ++attempts == 1 ? "111111111" : "222222222";
+    string NextCode() => ++attempts <= 2 ? "111111111" : "222222222";
     var cache = new AssistSessionCache(_timeProvider, NextCode);
     var ct = TestContext.Current.CancellationToken;
 

@@ -43,7 +43,16 @@ public partial class HomeView : UserControl
       return;
     }
 
-    await clipboard.SetTextAsync(code.Replace(" ", string.Empty));
+    try
+    {
+      await clipboard.SetTextAsync(code.Replace(" ", string.Empty));
+    }
+    catch (Exception)
+    {
+      // The platform clipboard can fail while another process holds it. Losing the copy feedback
+      // is acceptable; taking the app down mid-session is not.
+      return;
+    }
 
     var feedbackId = ++_copyFeedbackId;
     CopyGlyph.IsVisible = false;

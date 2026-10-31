@@ -504,6 +504,7 @@ else {
     $pngLocations = @(
       ".assets/appicon.png"
       "ControlR.DesktopClient/Assets/appicon.png"
+      "ControlR.Assist/Assets/appicon.png"
     )
 
     foreach ($loc in $pngLocations) {
@@ -529,6 +530,7 @@ else {
     $icoLocations = @(
       ".assets/appicon.ico"
       "ControlR.DesktopClient/Assets/appicon.ico"
+      "ControlR.Assist/Assets/appicon.ico"
       "ControlR.Web.Server/wwwroot/static/favicon.ico"
     )
 
@@ -915,6 +917,27 @@ if (Test-Path -LiteralPath $appAxaml) {
   if ($appContent -ne $appOriginal) {
     Write-WhatIfDiff -OldContent $appOriginal -NewContent $appContent -FilePath $appAxaml
     Write-FileContent -Path $appAxaml -Content $appContent
+  }
+}
+
+$assistAppAxaml = Join-Path $repoRoot "ControlR.Assist/App.axaml"
+if (Test-Path -LiteralPath $assistAppAxaml) {
+  $assistAppOriginal = Get-Content -LiteralPath $assistAppAxaml -Raw -Encoding UTF8
+  $assistAppContent = $assistAppOriginal
+
+  $assistDarkAccentFirst = '(<ColorPaletteResources\s[^>]*?\bAccent=")[0-9A-Fa-f]+([^>]*?\bx:Key="Dark"[^>]*?>)'
+  $assistDarkKeyFirst = '(<ColorPaletteResources\s[^>]*?\bx:Key="Dark"[^>]*?\bAccent=")#[0-9A-Fa-f]+'
+  $assistLightAccentFirst = '(<ColorPaletteResources\s[^>]*?\bAccent=")[0-9A-Fa-f]+([^>]*?\bx:Key="Light"[^>]*?>)'
+  $assistLightKeyFirst = '(<ColorPaletteResources\s[^>]*?\bx:Key="Light"[^>]*?\bAccent=")#[0-9A-Fa-f]+'
+
+  $assistAppContent = $assistAppContent -replace $assistDarkAccentFirst, "`$1#$PrimaryColorDark`$2"
+  $assistAppContent = $assistAppContent -replace $assistDarkKeyFirst, "`$1#$PrimaryColorDark"
+  $assistAppContent = $assistAppContent -replace $assistLightAccentFirst, "`$1#$PrimaryColorLight`$2"
+  $assistAppContent = $assistAppContent -replace $assistLightKeyFirst, "`$1#$PrimaryColorLight"
+
+  if ($assistAppContent -ne $assistAppOriginal) {
+    Write-WhatIfDiff -OldContent $assistAppOriginal -NewContent $assistAppContent -FilePath $assistAppAxaml
+    Write-FileContent -Path $assistAppAxaml -Content $assistAppContent
   }
 }
 

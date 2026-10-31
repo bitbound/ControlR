@@ -33,11 +33,11 @@
     <ApplicationId>app.controlr.assist.dev</ApplicationId>
     <CodesignEntitlements>Entitlements.plist</CodesignEntitlements>
     <!--
-      Untrimmed on Mac too (see the main PropertyGroup), and the trim analyzers that Mac.Build.props
-      turns off for DesktopClient are switched back on here.
+      PublishTrimmed must stay true for a RuntimeIdentifier build, which is how the .app bundle is
+      produced; the macOS SDK rejects anything else. Mac.Build.props already sets LinkMode and
+      TrimMode to none so nothing is actually trimmed, and the trim analyzers that it turns off for
+      DesktopClient are switched back on here.
     -->
-    <PublishTrimmed>false</PublishTrimmed>
-    <TrimMode>none</TrimMode>
     <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
     <SuppressTrimAnalysisWarnings>false</SuppressTrimAnalysisWarnings>
   </PropertyGroup>

@@ -1,6 +1,9 @@
 using ControlR.Assist.ViewModels;
 using ControlR.Assist.Views;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
+using ControlR.Libraries.Avalonia.Services;
+using ControlR.Libraries.Shared.Services.Locks;
+using ControlR.Libraries.Shared.Services.Processes;
 using Microsoft.Extensions.Logging;
 
 namespace ControlR.Assist.Services;
@@ -19,16 +22,22 @@ public static class ServiceCollectionExtensions
     services.AddLogging();
     services.AddSingleton<IAssistSettingsService, AssistSettingsService>();
     services.AddSingleton<IAssistSessionHostFactory, AssistSessionHostFactory>();
+
+    // The session host cannot build its platform services without these, and they live in the app
+    // container for every app that starts one.
+    services.AddSingleton<IUiDispatcher, UiDispatcher>();
+    services.AddSingleton<IAsyncLock, KeyedLock>();
+    services.AddSingleton<IProcessManager, ProcessManager>();
     services.AddSingleton<IAssistSignalRClient, AssistHubClient>();
     services.AddSingleton<INavigationService, NavigationService>();
     services.AddSingleton<IUrlLauncher, UrlLauncher>();
     services.AddSingleton(provider =>
     {
-      var controller = new AssistSessionController(
+      var controller = new AssistSessionCoordinator(
         provider.GetRequiredService<IAssistSignalRClient>(),
         provider.GetRequiredService<IAssistSessionHostFactory>(),
         provider.GetRequiredService<IAssistSettingsService>(),
-        provider.GetRequiredService<ILogger<AssistSessionController>>());
+        provider.GetRequiredService<ILogger<AssistSessionCoordinator>>());
 
       var hubClient = provider.GetRequiredService<IAssistSignalRClient>();
       hubClient.OnConsentCancelled = controller.HandleConsentCancelled;

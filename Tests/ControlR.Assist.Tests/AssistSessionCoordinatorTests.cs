@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ControlR.Assist.Tests;
 
-public class AssistSessionControllerTests
+public class AssistSessionCoordinatorTests
 {
   [Fact]
   public async Task EndSession_ReentrantServerNotification_CompletesWithoutDeadlock()
@@ -99,6 +99,24 @@ public class AssistSessionControllerTests
   }
 
   [Fact]
+  public async Task HandleSessionEnded_KeepsTheEndReasonInStatusMessage()
+  {
+    var hub = new FakeHubClient();
+    var controller = CreateController(hub);
+
+    Assert.True(await RunWithinTimeout(controller.ConnectAsync("server.example.com", CancellationToken.None)));
+    await ActivateSessionAsync(controller, hub);
+    await WaitForStateAsync(controller, AssistSessionState.Active);
+
+    const string reason = "The session was ended by the remote user.";
+    await RunWithinTimeout(controller.HandleSessionEnded(new(hub.LastSessionId, reason)));
+    await WaitForStateAsync(controller, AssistSessionState.Ready);
+
+    Assert.Equal(reason, controller.StatusMessage);
+    await RunWithinTimeout(controller.DisposeAsync());
+  }
+
+  [Fact]
   public async Task HubInvokeThatNeverReturns_FailsWithStatusInsteadOfHanging()
   {
     var hub = new FakeHubClient
@@ -155,7 +173,7 @@ public class AssistSessionControllerTests
     await RunWithinTimeout(controller.DisposeAsync());
   }
 
-  private static async Task ActivateSessionAsync(AssistSessionController controller, FakeHubClient hub)
+  private static async Task ActivateSessionAsync(AssistSessionCoordinator controller, FakeHubClient hub)
   {
     await RunWithinTimeout(controller.HandleSessionStarted(
       new(hub.LastSessionId, "token", "Jane", "jane@example.com")));
@@ -163,12 +181,12 @@ public class AssistSessionControllerTests
     await WaitForStateAsync(controller, AssistSessionState.Active);
   }
 
-  private static AssistSessionController CreateController(FakeHubClient hub) =>
+  private static AssistSessionCoordinator CreateController(FakeHubClient hub) =>
     new(
       hub,
       new FakeHostFactory(),
       new FakeSettingsService(),
-      NullLogger<AssistSessionController>.Instance);
+      NullLogger<AssistSessionCoordinator>.Instance);
 
   private static async Task RunWithinTimeout(Task task)
   {
@@ -186,7 +204,7 @@ public class AssistSessionControllerTests
 
   private static async Task RunWithinTimeout(ValueTask valueTask) => await RunWithinTimeout(valueTask.AsTask());
 
-  private static async Task WaitForStateAsync(AssistSessionController controller, AssistSessionState expected)
+  private static async Task WaitForStateAsync(AssistSessionCoordinator controller, AssistSessionState expected)
   {
     var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(30);
     while (controller.State != expected && DateTime.UtcNow < deadline)

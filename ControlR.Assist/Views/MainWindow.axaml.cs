@@ -24,7 +24,10 @@ public partial class MainWindow : Window
     viewModel.Home.PropertyChanged += OnHomePropertyChanged;
   }
 
-  private HomeViewModel Home => ((MainWindowViewModel)DataContext!).Home;
+  private HomeViewModel Home =>
+    DataContext is MainWindowViewModel viewModel
+      ? viewModel.Home
+      : throw new InvalidOperationException("MainWindow requires a MainWindowViewModel DataContext.");
 
   // SecondaryColor lives in the theme dictionaries, so the current theme variant must be passed.
   private IBrush? SecondaryBrush => this.TryFindResource("SecondaryColor", ActualThemeVariant, out var resource) ? resource as IBrush : null;

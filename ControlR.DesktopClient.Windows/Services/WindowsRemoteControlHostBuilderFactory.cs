@@ -4,7 +4,6 @@ using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.ServiceInterfaces.Toaster;
 using ControlR.Libraries.Api.Contracts.Dtos.IpcDtos;
 using ControlR.Libraries.Avalonia.Services;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
@@ -28,13 +27,12 @@ public class WindowsRemoteControlHostBuilderFactory(
     var builder = Host.CreateApplicationBuilder();
 
     builder.AddCommonRemoteControlServices(
-      appBuilder =>
+      new RemoteControlHostDependencies
       {
-        appBuilder.Services
-          .AddSingleton(_toaster)
-          .AddSingleton(_dispatcher)
-          .AddSingleton(_userInteractionService)
-          .AddSingleton(_remoteControlDtoSender);
+        Toaster = _toaster,
+        UserInteraction = _userInteractionService,
+        DtoSender = _remoteControlDtoSender,
+        Dispatcher = _dispatcher
       },
       options =>
       {
@@ -52,6 +50,7 @@ public class WindowsRemoteControlHostBuilderFactory(
       });
 
     builder.AddRemoteControlPlatformServices();
+    builder.ConfigureRemoteControlHostValidation();
     return builder;
   }
 }

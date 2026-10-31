@@ -12,16 +12,18 @@ namespace ControlR.Web.Server.Tests;
 
 public class AssistSessionCleanupServiceTests
 {
+  private readonly Mock<IAssistHubClient> _assistClientProxy = new();
   private readonly AssistSessionCache _cache;
-  private readonly Mock<IAssistHubClient> _clientProxy = new();
   private readonly Mock<IHubClients<IAssistHubClient>> _hubClients = new();
   private readonly Mock<IHubContext<AssistHub, IAssistHubClient>> _hubContext = new();
   private readonly FakeTimeProvider _timeProvider = new(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
+  private readonly Mock<IAssistHubClient> _viewerClientProxy = new();
 
   public AssistSessionCleanupServiceTests()
   {
     _cache = new AssistSessionCache(_timeProvider);
-    _ = _hubClients.Setup(c => c.Client(It.IsAny<string>())).Returns(_clientProxy.Object);
+    _ = _hubClients.Setup(c => c.Client("assist-conn-1")).Returns(_assistClientProxy.Object);
+    _ = _hubClients.Setup(c => c.Client("viewer-conn-1")).Returns(_viewerClientProxy.Object);
     _ = _hubContext.Setup(c => c.Clients).Returns(_hubClients.Object);
   }
 
@@ -36,9 +38,12 @@ public class AssistSessionCleanupServiceTests
     await RunCleanup();
 
     Assert.Null(await _cache.TryGetAsync(session.SessionId, TestContext.Current.CancellationToken));
-    _clientProxy.Verify(
+    _viewerClientProxy.Verify(
       c => c.AssistSessionEnded(It.Is<AssistSessionEndedDto>(dto => dto.SessionId == session.SessionId)),
-      Times.Exactly(2));
+      Times.Once);
+    _assistClientProxy.Verify(
+      c => c.AssistSessionEnded(It.Is<AssistSessionEndedDto>(dto => dto.SessionId == session.SessionId)),
+      Times.Once);
   }
 
   [Fact]
@@ -52,11 +57,11 @@ public class AssistSessionCleanupServiceTests
 
     var current = await _cache.TryGetAsync(session.SessionId, TestContext.Current.CancellationToken);
     Assert.Equal(AssistSessionStatus.WaitingForViewer, current?.Status);
-    _clientProxy.Verify(
+    _viewerClientProxy.Verify(
       c => c.AssistConsentResponded(It.Is<AssistConsentRespondedDto>(dto =>
         dto.SessionId == session.SessionId && !dto.Approved && dto.Reason == AssistConsentRespondedReason.TimedOut)),
       Times.Once);
-    _clientProxy.Verify(
+    _assistClientProxy.Verify(
       c => c.AssistConsentTimedOut(It.Is<AssistConsentTimedOutDto>(dto => dto.SessionId == session.SessionId)),
       Times.Once);
   }
@@ -72,10 +77,16 @@ public class AssistSessionCleanupServiceTests
 
     var current = await _cache.TryGetAsync(session.SessionId, TestContext.Current.CancellationToken);
     Assert.Equal(AssistSessionStatus.PendingConsent, current?.Status);
-    _clientProxy.Verify(
+    _viewerClientProxy.Verify(
       c => c.AssistConsentResponded(It.IsAny<AssistConsentRespondedDto>()),
       Times.Never);
-    _clientProxy.Verify(
+    _viewerClientProxy.Verify(
+      c => c.AssistConsentTimedOut(It.IsAny<AssistConsentTimedOutDto>()),
+      Times.Never);
+    _assistClientProxy.Verify(
+      c => c.AssistConsentResponded(It.IsAny<AssistConsentRespondedDto>()),
+      Times.Never);
+    _assistClientProxy.Verify(
       c => c.AssistConsentTimedOut(It.IsAny<AssistConsentTimedOutDto>()),
       Times.Never);
   }
@@ -89,7 +100,7 @@ public class AssistSessionCleanupServiceTests
     await RunCleanup();
 
     Assert.Null(await _cache.TryGetAsync(session.SessionId, TestContext.Current.CancellationToken));
-    _clientProxy.Verify(
+    _assistClientProxy.Verify(
       c => c.AssistSessionEnded(It.Is<AssistSessionEndedDto>(dto =>
         dto.SessionId == session.SessionId && dto.Reason.Contains("expired"))),
       Times.Once);
@@ -123,7 +134,8 @@ public class AssistSessionCleanupServiceTests
     cache.Verify(
       c => c.RemoveAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
       Times.Never);
-    _clientProxy.Verify(c => c.AssistSessionEnded(It.IsAny<AssistSessionEndedDto>()), Times.Never);
+    _assistClientProxy.Verify(c => c.AssistSessionEnded(It.IsAny<AssistSessionEndedDto>()), Times.Never);
+    _viewerClientProxy.Verify(c => c.AssistSessionEnded(It.IsAny<AssistSessionEndedDto>()), Times.Never);
   }
 
   private Task RunCleanup()

@@ -21,7 +21,7 @@ public class AssistServerUriNormalizationTests
   [InlineData("://server.example.com")]
   public void Invalid(string? input)
   {
-    Assert.False(AssistSessionController.TryNormalizeServerUri(input, out _));
+    Assert.False(AssistSessionCoordinator.TryNormalizeServerUri(input, out _));
   }
 
   [Theory]
@@ -40,7 +40,7 @@ public class AssistServerUriNormalizationTests
   [InlineData("https://server.example.com/some/path", "https://server.example.com/")]
   public void Valid(string input, string expected)
   {
-    Assert.True(AssistSessionController.TryNormalizeServerUri(input, out var uri));
+    Assert.True(AssistSessionCoordinator.TryNormalizeServerUri(input, out var uri));
     Assert.Equal(expected, uri.ToString());
   }
 }

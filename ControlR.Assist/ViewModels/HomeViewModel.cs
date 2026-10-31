@@ -10,7 +10,7 @@ public sealed partial class HomeViewModel : ViewModelBase, IDisposable
 {
   private const int NewCodeCooldownSeconds = 15;
 
-  private readonly AssistSessionController _controller;
+  private readonly AssistSessionCoordinator _controller;
   private readonly ILogger<HomeViewModel> _logger;
   private readonly INavigationService _navigationService;
   private string? _activeViewerEmail;
@@ -19,7 +19,7 @@ public sealed partial class HomeViewModel : ViewModelBase, IDisposable
   private string? _pendingViewerName;
 
   public HomeViewModel(
-    AssistSessionController controller,
+    AssistSessionCoordinator controller,
     IAssistSettingsService settingsService,
     INavigationService navigationService,
     ILogger<HomeViewModel> logger)
@@ -42,8 +42,6 @@ public sealed partial class HomeViewModel : ViewModelBase, IDisposable
 
   [ObservableProperty]
   public partial string? ConsentEmail { get; set; }
-  public string ConsentPromptText =>
-    SafeFormat.Insert(Localization.ConsentPromptFormat, ConsentViewerName ?? Localization.UnknownViewerLabel);
 
   [ObservableProperty]
   public partial string? ConsentViewerName { get; set; }
@@ -210,7 +208,7 @@ public sealed partial class HomeViewModel : ViewModelBase, IDisposable
   [RelayCommand]
   private void Next()
   {
-    if (!AssistSessionController.TryNormalizeServerUri(ServerUrl, out var normalized))
+    if (!AssistSessionCoordinator.TryNormalizeServerUri(ServerUrl, out var normalized))
     {
       StatusMessage = Localization.StatusInvalidUrl;
       return;
@@ -273,7 +271,6 @@ public sealed partial class HomeViewModel : ViewModelBase, IDisposable
     OnPropertyChanged(nameof(ShowStepCard));
     OnPropertyChanged(nameof(ShowTrustNotice));
     RaiseFlowPropertyChanges();
-    OnPropertyChanged(nameof(ConsentPromptText));
     OnPropertyChanged(nameof(ShowConsentEmail));
   }
 
