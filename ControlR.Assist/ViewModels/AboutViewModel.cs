@@ -5,21 +5,16 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace ControlR.Assist.ViewModels;
 
-public sealed partial class AboutViewModel : ViewModelBase
+public sealed partial class AboutViewModel(
+  IUrlLauncher urlLauncher,
+  IAssistSettingsService settingsService,
+  INavigationService navigationService) : ViewModelBase
 {
-  private readonly INavigationService _navigationService;
-  private readonly IAssistSettingsService _settingsService;
-  private readonly IUrlLauncher _urlLauncher;
+  private readonly INavigationService _navigationService = navigationService;
+  private readonly IAssistSettingsService _settingsService = settingsService;
+  private readonly IUrlLauncher _urlLauncher = urlLauncher;
 
-  public AboutViewModel(IUrlLauncher urlLauncher, IAssistSettingsService settingsService, INavigationService navigationService)
-  {
-    _urlLauncher = urlLauncher;
-    _settingsService = settingsService;
-    _navigationService = navigationService;
-    AppVersion = typeof(AboutViewModel).Assembly.GetName().Version?.ToString(3);
-  }
-
-  public string? AppVersion { get; }
+  public string? AppVersion { get; } = typeof(AboutViewModel).Assembly.GetName().Version?.ToString(3);
 
   public bool HideSponsorshipInfo => BrandingConstants.HideSponsorshipInfo;
 

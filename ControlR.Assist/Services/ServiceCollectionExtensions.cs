@@ -22,7 +22,7 @@ public static class ServiceCollectionExtensions
     services.AddSingleton<IAssistSignalRClient, AssistHubClient>();
     services.AddSingleton<INavigationService, NavigationService>();
     services.AddSingleton<IUrlLauncher, UrlLauncher>();
-    services.AddSingleton<AssistSessionController>(provider =>
+    services.AddSingleton(provider =>
     {
       var controller = new AssistSessionController(
         provider.GetRequiredService<IAssistSignalRClient>(),

@@ -8,9 +8,6 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 {
   private TaskCompletionSource<bool>? _confirmTaskCompletionSource;
 
-  [ObservableProperty]
-  private bool _isConfirmOpen;
-
   public MainWindowViewModel(HomeViewModel homeViewModel, INavigationService navigationService)
   {
     Home = homeViewModel;
@@ -25,6 +22,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
   [ObservableProperty]
   public partial ViewModelBase CurrentViewModel { get; set; }
   public HomeViewModel Home { get; }
+
+  [ObservableProperty]
+  public partial bool IsConfirmOpen { get; set; }
   public string WindowTitle => $"{BrandingConstants.BrandName}  |  {Localization.AssistWindowTitle}";
 
   public Task<bool> ConfirmExitAsync() => ShowConfirmAsync(Localization.ConfirmExitMessage);
