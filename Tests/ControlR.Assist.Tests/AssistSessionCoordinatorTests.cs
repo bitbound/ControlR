@@ -1,6 +1,10 @@
 using ControlR.Assist.Services;
 using ControlR.Libraries.Api.Contracts.Dtos;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
+using ControlR.Libraries.Api.Contracts.Hubs;
+using ControlR.Libraries.Signalr.Client;
+using Microsoft.AspNetCore.Http.Connections.Client;
+using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -219,11 +223,18 @@ public class AssistSessionCoordinatorTests
   {
     public IHost CreateSessionHost(AssistSessionRequest request) => Host.CreateApplicationBuilder().Build();
   }
-  private sealed class FakeHubClient : IAssistSignalRClient
+  private sealed class FakeHubClient : IHubConnection<IAssistHub>, IAssistHub
   {
     private Guid _lastSessionId = Guid.NewGuid();
 
+    event Func<Exception?, Task>? IHubConnection<IAssistHub>.Closed { add { } remove { } }
+    event Func<Exception, Task>? IHubConnection<IAssistHub>.ConnectThrew { add { } remove { } }
+    event Func<string?, Task>? IHubConnection<IAssistHub>.Reconnected { add { } remove { } }
+    event Func<Exception?, Task>? IHubConnection<IAssistHub>.Reconnecting { add { } remove { } }
+
     public int ConsentResponseCallCount { get; private set; }
+    public string? ConnectionId => "test-connection";
+    public HubConnectionState ConnectionState => HubConnectionState.Connected;
     public int CreateSessionCallCount { get; private set; }
     public int EndSessionCallCount { get; private set; }
     public bool HangCreateSession { get; init; }
@@ -231,66 +242,61 @@ public class AssistSessionCoordinatorTests
     public bool LastConsentApproved { get; private set; }
     public Guid LastConsentNonce { get; private set; }
     public Guid LastSessionId => _lastSessionId;
-
-    public Func<Task>? OnConnectionLost { get; set; }
-    public Func<AssistConsentCancelledDto, Task>? OnConsentCancelled { get; set; }
-    public Func<AssistConsentRequestedDto, Task>? OnConsentRequested { get; set; }
-    public Func<AssistConsentTimedOutDto, Task>? OnConsentTimedOut { get; set; }
     public Action<Guid>? OnEndSession { get; set; }
-    public Func<Task>? OnReconnected { get; set; }
-    public Func<AssistSessionEndedDto, Task>? OnSessionEnded { get; set; }
-    public Func<AssistSessionStartedDto, Task>? OnSessionStarted { get; set; }
+    public IAssistHub Server => this;
 
-    public Task<bool> ConnectAsync(Uri serverBaseUri, CancellationToken cancellationToken) => Task.FromResult(true);
+    public Task<HubResult> CancelAssistConsent(CancelAssistConsentRequestDto request) =>
+      Task.FromResult(HubResult.Ok());
 
-    public async Task<HubResult<CreateAssistSessionResponseDto>> CreateAssistSession(CancellationToken cancellationToken)
+    public Task<bool> Connect(
+      Uri hubEndpoint,
+      bool autoRetry,
+      Action<HttpConnectionOptions>? configure = null,
+      CancellationToken cancellationToken = default) => Task.FromResult(true);
+
+    public async Task<HubResult<CreateAssistSessionResponseDto>> CreateAssistSession()
     {
       CreateSessionCallCount++;
 
       if (HangCreateSession)
       {
-        // Simulates an unresponsive server. The controller's own invoke timeout must unstick it.
-        try
-        {
-          await Task.Delay(Timeout.Infinite, cancellationToken);
-        }
-        catch (OperationCanceledException)
-        {
-        }
-
-        return HubResult.Fail<CreateAssistSessionResponseDto>("The assist client is not connected.");
+        // Simulates an unresponsive server. The coordinator's own invoke timeout must unstick it.
+        await Task.Delay(Timeout.Infinite);
       }
 
       _lastSessionId = Guid.NewGuid();
       return HubResult.Ok(new CreateAssistSessionResponseDto("123456789", _lastSessionId));
     }
 
-    public Task DisconnectAsync() => Task.CompletedTask;
-
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
-    public Task<HubResult> EndAssistSession(Guid sessionId, CancellationToken cancellationToken)
+    public Task<HubResult> EndAssistSession(EndAssistSessionRequestDto request)
     {
       EndSessionCallCount++;
 
       // Reproduces the end-session race: the server-side ended notification arrives while the
-      // end call is still in flight. Handlers must not wedge the controller.
-      OnEndSession?.Invoke(sessionId);
+      // end call is still in flight. Handlers must not wedge the coordinator.
+      OnEndSession?.Invoke(request.SessionId);
       return Task.FromResult(HubResult.Ok());
     }
 
-    public Task<HubResult> RespondToAssistConsent(
-      Guid sessionId,
-      bool approved,
-      Guid consentNonce,
-      CancellationToken cancellationToken)
+    public Task<HubResult<JoinAssistSessionResponseDto>> JoinAssistSession(JoinAssistSessionRequestDto request) =>
+      Task.FromResult(HubResult.Fail<JoinAssistSessionResponseDto>("The assist app never joins a session."));
+
+    public Task<HubResult> RespondToAssistConsent(RespondToAssistConsentRequestDto request)
     {
       ConsentResponseCallCount++;
-      LastConsentApproved = approved;
-      LastConsentNonce = consentNonce;
+      LastConsentApproved = request.Approved;
+      LastConsentNonce = request.ConsentNonce;
       return Task.FromResult(HubResult.Ok());
     }
+
+    public Task Send(string methodName, object?[] args, CancellationToken cancellationToken = default) =>
+      Task.CompletedTask;
+
+    public Task WaitForConnected(CancellationToken cancellationToken) => Task.CompletedTask;
   }
+
   private sealed class FakeSettingsService : IAssistSettingsService
   {
     public AssistAppSettings GetSettings() => new();

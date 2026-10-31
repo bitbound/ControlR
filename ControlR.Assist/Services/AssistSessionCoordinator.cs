@@ -1,6 +1,9 @@
 using System.Net;
 using System.Threading.Channels;
+using ControlR.Libraries.Api.Contracts.Dtos;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
+using ControlR.Libraries.Api.Contracts.Hubs;
+using ControlR.Libraries.Signalr.Client;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -27,7 +30,7 @@ public sealed class AssistSessionCoordinator : IAsyncDisposable
   private static readonly TimeSpan _invokeTimeout = TimeSpan.FromSeconds(15);
   private static readonly TimeSpan _queueDrainTimeout = TimeSpan.FromSeconds(5);
 
-  private readonly IAssistSignalRClient _hubClient;
+  private readonly IHubConnection<IAssistHub> _hubConnection;
   private readonly ILogger<AssistSessionCoordinator> _logger;
   private readonly Task _queueLoop;
   private readonly IAssistSessionHostFactory _sessionHostFactory;
@@ -38,14 +41,15 @@ public sealed class AssistSessionCoordinator : IAsyncDisposable
   private Uri? _connectedServerUri;
   private Guid? _consentRespondedSessionId;
   private IHost? _sessionHost;
+  private bool _suppressConnectionLost;
 
   public AssistSessionCoordinator(
-    IAssistSignalRClient hubClient,
+    IHubConnection<IAssistHub> hubConnection,
     IAssistSessionHostFactory sessionHostFactory,
     IAssistSettingsService settingsService,
     ILogger<AssistSessionCoordinator> logger)
   {
-    _hubClient = hubClient;
+    _hubConnection = hubConnection;
     _sessionHostFactory = sessionHostFactory;
     _settingsService = settingsService;
     _logger = logger;
@@ -128,7 +132,8 @@ public sealed class AssistSessionCoordinator : IAsyncDisposable
     }
 
     await StopSessionHostAsync().ConfigureAwait(false);
-    await _hubClient.DisposeAsync().ConfigureAwait(false);
+    _suppressConnectionLost = true;
+    await _hubConnection.DisposeAsync().ConfigureAwait(false);
   }
 
   public Task EndSessionAsync() => EnqueueAsync(EndSessionCoreAsync);
@@ -220,7 +225,16 @@ public sealed class AssistSessionCoordinator : IAsyncDisposable
 
     SetState(AssistSessionState.Connecting, Localization.StatusConnecting);
 
-    if (!await _hubClient.ConnectAsync(serverUri, cancellationToken).ConfigureAwait(false))
+    // Connect replaces any previous connection, and that raises Closed. Suppress the loss report
+    // while we are the ones replacing it.
+    _suppressConnectionLost = true;
+    var connected = await _hubConnection.Connect(
+      serverUri,
+      autoRetry: true,
+      cancellationToken: cancellationToken).ConfigureAwait(false);
+    _suppressConnectionLost = false;
+
+    if (!connected)
     {
       StatusMessage = Localization.StatusUnreachable;
       SetState(AssistSessionState.Disconnected);
@@ -236,7 +250,8 @@ public sealed class AssistSessionCoordinator : IAsyncDisposable
     var created = await CreateSessionAsync(cancellationToken).ConfigureAwait(false);
     if (!created)
     {
-      await _hubClient.DisconnectAsync().ConfigureAwait(false);
+      _suppressConnectionLost = true;
+      await _hubConnection.DisposeAsync().ConfigureAwait(false);
       _connectedServerUri = null;
       SetState(AssistSessionState.Disconnected);
       RaiseStateChanged();
@@ -257,7 +272,9 @@ public sealed class AssistSessionCoordinator : IAsyncDisposable
     CancellationToken cancellationToken,
     string? statusMessage = null)
   {
-    var result = await InvokeHubAsync(ct => _hubClient.CreateAssistSession(ct));
+    var result = await InvokeHubAsync(
+      ct => _hubConnection.Server.CreateAssistSession(),
+      () => HubResult.Fail<CreateAssistSessionResponseDto>(Localization.StatusUnreachable));
     if (!result.IsSuccess || result.Value is null)
     {
       Code = null;
@@ -278,7 +295,8 @@ public sealed class AssistSessionCoordinator : IAsyncDisposable
   {
     await EndCurrentSessionAsync().ConfigureAwait(false);
     await StopSessionHostAsync().ConfigureAwait(false);
-    await _hubClient.DisconnectAsync().ConfigureAwait(false);
+    _suppressConnectionLost = true;
+    await _hubConnection.DisposeAsync().ConfigureAwait(false);
     _connectedServerUri = null;
     Code = null;
     SetConsentPending(null, null, null, null);
@@ -294,7 +312,9 @@ public sealed class AssistSessionCoordinator : IAsyncDisposable
       return;
     }
 
-    _ = await InvokeHubAsync(ct => _hubClient.EndAssistSession(sessionId, ct));
+    _ = await InvokeHubAsync(
+      ct => _hubConnection.Server.EndAssistSession(new(sessionId)),
+      () => HubResult.Fail(Localization.StatusUnreachable));
     _activeSessionId = null;
   }
 
@@ -357,7 +377,7 @@ public sealed class AssistSessionCoordinator : IAsyncDisposable
 
   private async Task HandleConnectionLostCoreAsync()
   {
-    if (State == AssistSessionState.Disconnected)
+    if (State == AssistSessionState.Disconnected || _suppressConnectionLost)
     {
       return;
     }
@@ -484,11 +504,18 @@ public sealed class AssistSessionCoordinator : IAsyncDisposable
       dto.ViewerDisplayName)).ConfigureAwait(false);
   }
 
-  private async Task<THubResult> InvokeHubAsync<THubResult>(Func<CancellationToken, Task<THubResult>> invoke)
+  private async Task<THubResult> InvokeHubAsync<THubResult>(
+    Func<CancellationToken, Task<THubResult>> invoke,
+    Func<THubResult> fallback)
   {
-    // Bounded so a wedged server can never stall the work queue behind us.
+    // Bounded so a wedged server can never stall the work queue behind us. The hub interface has
+    // no CancellationToken parameter, so the bound races our await rather than the wire call.
     using var cts = new CancellationTokenSource(_invokeTimeout);
-    return await invoke(cts.Token).ConfigureAwait(false);
+    var invokeTask = invoke(cts.Token);
+    var completed = await Task.WhenAny(invokeTask, Task.Delay(_invokeTimeout)).ConfigureAwait(false);
+    return ReferenceEquals(completed, invokeTask)
+      ? await invokeTask.ConfigureAwait(false)
+      : fallback();
   }
 
   private void Post(Func<Task> work)
@@ -532,7 +559,9 @@ public sealed class AssistSessionCoordinator : IAsyncDisposable
     _consentRespondedSessionId = sessionId;
 
     var consentNonce = PendingConsentNonce ?? Guid.Empty;
-    var result = await InvokeHubAsync(ct => _hubClient.RespondToAssistConsent(sessionId, approved, consentNonce, ct));
+    var result = await InvokeHubAsync(
+      ct => _hubConnection.Server.RespondToAssistConsent(new(sessionId, approved, consentNonce)),
+      () => HubResult.Fail(Localization.StatusUnreachable));
     if (!result.IsSuccess)
     {
       StatusMessage = result.Reason ?? Localization.StatusConsentResponseFailed;

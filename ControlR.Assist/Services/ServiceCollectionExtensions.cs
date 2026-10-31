@@ -1,9 +1,13 @@
 using ControlR.Assist.ViewModels;
 using ControlR.Assist.Views;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
+using ControlR.Libraries.Api.Contracts.Hubs;
+using ControlR.Libraries.Api.Contracts.Hubs.Clients;
 using ControlR.Libraries.Avalonia.Services;
 using ControlR.Libraries.Shared.Services.Locks;
 using ControlR.Libraries.Shared.Services.Processes;
+using ControlR.Libraries.Signalr.Client;
+using ControlR.Libraries.Signalr.Client.Extensions;
 using Microsoft.Extensions.Logging;
 
 namespace ControlR.Assist.Services;
@@ -28,27 +32,22 @@ public static class ServiceCollectionExtensions
     services.AddSingleton<IUiDispatcher, UiDispatcher>();
     services.AddSingleton<IAsyncLock, KeyedLock>();
     services.AddSingleton<IProcessManager, ProcessManager>();
-    services.AddSingleton<IAssistSignalRClient, AssistHubClient>();
+    services.AddStronglyTypedSignalrClient<IAssistHub, IAssistHubClient, AssistHubClient>(ServiceLifetime.Singleton);
     services.AddSingleton<INavigationService, NavigationService>();
     services.AddSingleton<IUrlLauncher, UrlLauncher>();
     services.AddSingleton(provider =>
     {
-      var controller = new AssistSessionCoordinator(
-        provider.GetRequiredService<IAssistSignalRClient>(),
+      var coordinator = new AssistSessionCoordinator(
+        provider.GetRequiredService<IHubConnection<IAssistHub>>(),
         provider.GetRequiredService<IAssistSessionHostFactory>(),
         provider.GetRequiredService<IAssistSettingsService>(),
         provider.GetRequiredService<ILogger<AssistSessionCoordinator>>());
 
-      var hubClient = provider.GetRequiredService<IAssistSignalRClient>();
-      hubClient.OnConsentCancelled = controller.HandleConsentCancelled;
-      hubClient.OnConsentRequested = controller.HandleConsentRequested;
-      hubClient.OnConsentTimedOut = controller.HandleConsentTimedOut;
-      hubClient.OnConnectionLost = controller.HandleConnectionLost;
-      hubClient.OnSessionEnded = controller.HandleSessionEnded;
-      hubClient.OnSessionStarted = controller.HandleSessionStarted;
-      hubClient.OnReconnected = controller.HandleReconnected;
+      var connection = provider.GetRequiredService<IHubConnection<IAssistHub>>();
+      connection.Closed += _ => coordinator.HandleConnectionLost();
+      connection.Reconnected += _ => coordinator.HandleReconnected();
 
-      return controller;
+      return coordinator;
     });
 
     return services;
