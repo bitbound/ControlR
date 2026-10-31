@@ -9,6 +9,7 @@ namespace ControlR.Assist.ViewModels;
 
 public sealed partial class HomeViewModel : ViewModelBase, IDisposable
 {
+  private const int ConnectTimeoutSeconds = 10;
   private const int NewCodeCooldownSeconds = 15;
 
   private readonly AssistSessionCoordinator _controller;
@@ -18,6 +19,8 @@ public sealed partial class HomeViewModel : ViewModelBase, IDisposable
 
   private string? _activeViewerEmail;
   private string? _activeViewerName;
+  private bool _connectCancelledByUser;
+  private CancellationTokenSource? _connectCts;
   private string? _pendingViewerEmail;
   private string? _pendingViewerName;
 
@@ -118,7 +121,11 @@ public sealed partial class HomeViewModel : ViewModelBase, IDisposable
   [ObservableProperty]
   public partial bool UrlConfirmed { get; set; }
 
-  public void Dispose() => _controller.StateChanged -= HandleStateChanged;
+  public void Dispose()
+  {
+    _controller.StateChanged -= HandleStateChanged;
+    _connectCts?.Cancel();
+  }
 
   private static string? FormatCode(string? code) =>
     code is { Length: 9 } formatted
@@ -127,6 +134,20 @@ public sealed partial class HomeViewModel : ViewModelBase, IDisposable
 
   [RelayCommand]
   private Task AcceptConsentAsync() => _controller.RespondToConsentAsync(approved: true);
+
+  [RelayCommand]
+  private void CancelConnect()
+  {
+    if (_connectCts is null || _connectCts.IsCancellationRequested)
+    {
+      return;
+    }
+
+    // The coordinator reports a cancellation the same way it reports a give-up, so remember which
+    // one this was and keep the timeout wording for the case the user did not ask for.
+    _connectCancelledByUser = true;
+    _connectCts.Cancel();
+  }
 
   [RelayCommand]
   private void ChangeServer()
@@ -140,18 +161,29 @@ public sealed partial class HomeViewModel : ViewModelBase, IDisposable
   [RelayCommand]
   private async Task<bool> ConnectAsync()
   {
+    if (_connectCts is not null)
+    {
+      return false;
+    }
+
+    _connectCancelledByUser = false;
+    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(ConnectTimeoutSeconds));
+    _connectCts = cts;
+
     try
     {
-      using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-
       return await _controller.ConnectAsync(
         BrandingConstants.ControlrServerUrl?.ToString() ?? ServerUrl ?? string.Empty,
         cts.Token);
     }
     catch (OperationCanceledException)
     {
-      _logger.LogError("Connection attempt timed out.");
-      StatusMessage = Localization.ConnectionTimedOut;
+      if (!_connectCancelledByUser)
+      {
+        _logger.LogError("Connection attempt timed out.");
+        StatusMessage = Localization.ConnectionTimedOut;
+      }
+
       return false;
     }
     catch (Exception ex)
@@ -159,6 +191,10 @@ public sealed partial class HomeViewModel : ViewModelBase, IDisposable
       _logger.LogError(ex, "Failed to connect to server.");
       StatusMessage = Localization.StatusFailedToConnect;
       return false;
+    }
+    finally
+    {
+      _connectCts = null;
     }
   }
 

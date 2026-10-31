@@ -162,6 +162,12 @@
             <ProgressBar IsIndeterminate="True" />
             <TextBlock Classes="Small Secondary"
                        Text="{x:Static local:Localization.StatusConnecting}" />
+            <controls:ThemeButton Content="{x:Static local:Localization.CancelButtonText}"
+                                  MinHeight="36"
+                                  HorizontalAlignment="Stretch"
+                                  HorizontalContentAlignment="Center"
+                                  Variant="Outlined"
+                                  Command="{Binding CancelConnectCommand}" />
           </StackPanel>
         </StackPanel>
       </Border>

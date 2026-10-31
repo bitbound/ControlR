@@ -40,6 +40,11 @@ public sealed class AssistSettingsService(ILogger<AssistSettingsService> logger)
   private readonly ILogger<AssistSettingsService> _logger = logger;
   private readonly Lock _writeLock = new();
 
+  /// <summary>
+  /// Where the app writes its settings file and its log file.
+  /// </summary>
+  public static string AppDataDirectoryPath => _settingsDirectory;
+
   public static void ForgetUrl(AssistAppSettings settings, string url)
   {
     settings.ServerUrlHistory ??= [];

@@ -28,14 +28,8 @@ public static class ServiceCollectionExtensions
     {
 #if DEBUG
       // A debug build writes its log to a file so a support session can be diagnosed after the
-      // fact. The file sits next to the settings the app already writes. The brand key is
-      // qualified because a file-level using for it is unused in a release build, where this
-      // block does not compile.
-      builder.AddProvider(new DebugFileLoggerProvider(
-        Path.Combine(
-          Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-          ControlR.Libraries.Branding.BrandingConstants.BrandKey,
-          "Assist")));
+      // fact. The file sits next to the settings the app already writes.
+      builder.AddProvider(new DebugFileLoggerProvider(AssistSettingsService.AppDataDirectoryPath));
 #endif
     });
 

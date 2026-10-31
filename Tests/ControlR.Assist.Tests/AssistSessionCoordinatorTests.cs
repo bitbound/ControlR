@@ -14,6 +14,24 @@ namespace ControlR.Assist.Tests;
 public class AssistSessionCoordinatorTests
 {
   [Fact]
+  public async Task Connect_CallerCancelsDuringHandshake_ReturnsToDisconnected()
+  {
+    var hub = new FakeHubClient
+    {
+      HangConnect = true
+    };
+    var controller = CreateController(hub);
+
+    using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(250));
+    var connected = await RunWithinTimeout(controller.ConnectAsync("server.example.com", cts.Token));
+
+    Assert.False(connected);
+    Assert.Equal(AssistSessionState.Disconnected, controller.State);
+    Assert.Equal(Localization.StatusConnectCancelled, controller.StatusMessage);
+    await RunWithinTimeout(controller.DisposeAsync());
+  }
+
+  [Fact]
   public async Task EndSession_ReentrantServerNotification_CompletesWithoutDeadlock()
   {
     var hub = new FakeHubClient();
@@ -243,6 +261,7 @@ public class AssistSessionCoordinatorTests
     public int ConsentResponseCallCount { get; private set; }
     public int CreateSessionCallCount { get; private set; }
     public int EndSessionCallCount { get; private set; }
+    public bool HangConnect { get; init; }
     public bool HangCreateSession { get; init; }
     public bool IsConnected => true;
     public bool LastConsentApproved { get; private set; }
@@ -254,11 +273,20 @@ public class AssistSessionCoordinatorTests
     public Task<HubResult> CancelAssistConsent(CancelAssistConsentRequestDto request) =>
       Task.FromResult(HubResult.Ok());
 
-    public Task<bool> Connect(
+    public async Task<bool> Connect(
       Uri hubEndpoint,
       bool autoRetry,
       Action<HttpConnectionOptions>? configure = null,
-      CancellationToken cancellationToken = default) => Task.FromResult(true);
+      CancellationToken cancellationToken = default)
+    {
+      if (HangConnect)
+      {
+        // Simulates a server that keeps the hub retrying. Only the caller's token ends the attempt.
+        await Task.Delay(Timeout.Infinite, cancellationToken);
+      }
+
+      return true;
+    }
 
     public async Task<HubResult<CreateAssistSessionResponseDto>> CreateAssistSession()
     {

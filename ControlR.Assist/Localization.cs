@@ -66,9 +66,11 @@ public static class Localization
   public static string LanguageRestartNote => GetString();
   public static string LightTheme => GetString();
   public static string LinkLicenseText => GetString();
+  public static string LogsLabel => GetString();
   public static string NewCodeButtonText => GetString();
   public static string NewCodeCooldownFormat => GetString();
   public static string NextButtonText => GetString();
+  public static string OpenLogFolderButtonText => GetString();
   public static string RemoveSavedServerTooltip => GetString();
   public static string SavedServersLabel => GetString();
   public static string ServerUrlHelp => GetString();
@@ -77,6 +79,7 @@ public static class Localization
   public static string SessionActiveCaption => GetString();
   public static string Settings => GetString();
   public static string StatusAccessCodeExpired => GetString();
+  public static string StatusConnectCancelled => GetString();
   public static string StatusConnectedToViewer => GetString();
   public static string StatusConnecting => GetString();
   public static string StatusConnectionLost => GetString();
@@ -86,6 +89,7 @@ public static class Localization
   public static string StatusEndedByTechnician => GetString();
   public static string StatusFailedToConnect => GetString();
   public static string StatusInvalidUrl => GetString();
+  public static string StatusLogFolderFailed => GetString();
   public static string StatusReconnected => GetString();
   public static string StatusSessionCreateFailed => GetString();
   public static string StatusSessionEnded => GetString();

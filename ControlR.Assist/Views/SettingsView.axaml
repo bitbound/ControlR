@@ -59,6 +59,23 @@
                    Text="{x:Static local:Localization.LanguageRestartNote}" />
       </StackPanel>
 
+      <StackPanel Spacing="8"
+                  IsVisible="{Binding ShowLogFolder}">
+        <TextBlock Text="{x:Static local:Localization.LogsLabel}" FontWeight="SemiBold" />
+
+        <controls:ThemeButton HorizontalAlignment="Left"
+                              MinHeight="36"
+                              Padding="12,0"
+                              Variant="Outlined"
+                              Content="{x:Static local:Localization.OpenLogFolderButtonText}"
+                              Command="{Binding OpenLogFolderCommand}" />
+
+        <TextBlock Classes="Small Secondary"
+                   TextWrapping="Wrap"
+                   IsVisible="{Binding LogFolderError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                   Text="{Binding LogFolderError}" />
+      </StackPanel>
+
     </StackPanel>
   </ScrollViewer>
 </UserControl>

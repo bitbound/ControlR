@@ -238,15 +238,31 @@ public sealed class AssistSessionCoordinator : IAsyncDisposable
     // Connect replaces any previous connection, and that raises Closed. Suppress the loss report
     // while we are the ones replacing it.
     _suppressConnectionLost = true;
-    var connected = await _hubConnection.Connect(
-      serverUri,
-      autoRetry: true,
-      cancellationToken: cancellationToken).ConfigureAwait(false);
-    _suppressConnectionLost = false;
+
+    bool connected;
+    var cancelled = false;
+    try
+    {
+      connected = await _hubConnection.Connect(
+        serverUri,
+        autoRetry: true,
+        cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+    catch (OperationCanceledException)
+    {
+      // An unresponsive server keeps the hub retrying until the caller gives up. Without this the
+      // cancellation escapes and leaves the app sitting in the Connecting state with no way out.
+      connected = false;
+      cancelled = true;
+    }
+    finally
+    {
+      _suppressConnectionLost = false;
+    }
 
     if (!connected)
     {
-      StatusMessage = Localization.StatusUnreachable;
+      StatusMessage = cancelled ? Localization.StatusConnectCancelled : Localization.StatusUnreachable;
       SetState(AssistSessionState.Disconnected);
       RaiseStateChanged();
       return false;
@@ -254,7 +270,10 @@ public sealed class AssistSessionCoordinator : IAsyncDisposable
 
     var savedSettings = _settingsService.GetSettings();
     AssistSettingsService.RememberUrl(savedSettings, serverUri.ToString());
-    await _settingsService.SaveAsync(savedSettings, cancellationToken).ConfigureAwait(false);
+
+    // The connect already succeeded, so the history is worth recording even if the caller gave up
+    // on the rest of the handshake. A cancellable save is another way to strand the Connecting state.
+    await _settingsService.SaveAsync(savedSettings, CancellationToken.None).ConfigureAwait(false);
 
     _connectedServerUri = serverUri;
     var created = await CreateSessionAsync(cancellationToken).ConfigureAwait(false);
@@ -503,7 +522,7 @@ public sealed class AssistSessionCoordinator : IAsyncDisposable
     var name = string.IsNullOrWhiteSpace(dto.ViewerDisplayName) ?
       Localization.UnknownViewerLabel :
       dto.ViewerDisplayName;
-    StatusMessage = SafeFormat.Insert(Localization.StatusConnectedToViewer, name);
+    StatusMessage = string.Format(Localization.StatusConnectedToViewer, name);
     SetState(AssistSessionState.Active);
     RaiseStateChanged();
 
