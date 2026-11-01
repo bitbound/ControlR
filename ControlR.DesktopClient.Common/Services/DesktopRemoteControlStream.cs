@@ -50,7 +50,7 @@ internal sealed class DesktopRemoteControlStream(
   private readonly IRemoteControlViewerCommandHandler _viewerCommandHandler = viewerCommandHandler;
 
   /// <summary>
-  /// Relay handling for the viewer's remote control commands, retagged for the command handler.
+  /// Relay subscription for the viewer's remote control commands.
   /// </summary>
   private IDisposable? _relayDtoRegistration;
 
@@ -187,8 +187,7 @@ internal sealed class DesktopRemoteControlStream(
 
   private async Task HandleRelayDto(RemoteControlDesktopWrapper wrapper)
   {
-    // The relay has no return channel, so these viewers never learn whether their commands
-    // landed. The relay transport is typed for event wrappers, so retag the message as the
+    // The relay transport is typed for the desktop wrapper, so retag the message as the
     // command kind the viewer sent.
     var commandWrapper = new RemoteControlViewerWrapper
     {
@@ -302,8 +301,7 @@ internal sealed class DesktopRemoteControlStream(
 
   private async Task SendDto(RemoteControlDesktopWrapper wrapper, CancellationToken cancellationToken)
   {
-    // Every desktop-issued DTO rides the relay back to the viewer, both screen frames and command
-    // results.
+    // Every desktop-issued DTO rides the relay back to the viewer, frames and results alike.
     await Send(wrapper, cancellationToken);
   }
 

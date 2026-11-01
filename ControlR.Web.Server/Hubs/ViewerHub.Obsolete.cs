@@ -1,5 +1,5 @@
 // Deprecated hub methods kept so that a consumer shipping on its own schedule can still call them.
-// Each one forwards to its numbered successor.  Nothing new belongs here.
+// Each one forwards to its numbered successor. Nothing new belongs here.
 
 using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;

@@ -20,8 +20,8 @@ public partial class ViewerHub
   ];
 
   // Commands arrive at input rate, so the device's permissions are resolved once and reused.
-  // Keyed by device alone because every input of the evaluation is fixed for the connection,
-  // so a session-supplied discriminator could only add entries holding an identical answer.
+  // The cache is keyed by device alone because every evaluation input is fixed for the connection.
+  // A session discriminator would only add entries holding an identical answer.
   private ConcurrentDictionary<Guid, IReadOnlySet<string>> RemoteControlAuthorizations
   {
     get

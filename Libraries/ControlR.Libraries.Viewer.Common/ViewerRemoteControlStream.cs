@@ -214,10 +214,9 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
 
   public Task SendPointerMove(double normalizedX, double normalizedY, CancellationToken cancellationToken)
   {
-    // Pointer moves arrive at input rate and each one is superseded by the next, so a backlog of
-    // them only delays the commands queued behind it.  Keep only the newest position and let a
-    // single sender drain it.  Discrete events carry their own coordinates, so they reposition
-    // the pointer themselves and do not depend on an earlier move having landed.
+    // Pointer moves arrive at input rate and each supersedes the last, so only the newest position
+    // is kept and a single sender drains it. Discrete events carry their own coordinates and do
+    // not depend on an earlier move having landed.
     Volatile.Write(ref _pendingPointerMove, new MovePointerDto(normalizedX, normalizedY));
 
     if (Interlocked.Exchange(ref _pointerMovePumpRunning, 1) == 1)
