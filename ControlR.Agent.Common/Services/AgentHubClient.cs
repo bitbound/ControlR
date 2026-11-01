@@ -212,7 +212,7 @@ internal class AgentHubClient(
         dto.TargetProcessId,
         result.Reason ?? "Unknown error");
 
-      return HubResult.Fail(result.Reason ?? "Failed to create remote control session on the desktop client.");
+      return result.ToHubResult();
     }
     catch (Exception ex)
     {

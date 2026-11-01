@@ -3,8 +3,9 @@ using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 namespace ControlR.Libraries.Api.Contracts.Authz;
 
 /// <summary>
-/// Single source of truth for which device permission a viewer command requires, so an
-/// enforcement point reading this map cannot drift from the grant model.
+/// Map from a viewer command to the device permission it requires. No product code reads this
+/// yet. The UI checks the same permissions per control (#423), and the planned enforcement (#424)
+/// will read this map so the two cannot drift from the grant model.
 /// </summary>
 public static class RemoteControlCommandPermissions
 {
