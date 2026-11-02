@@ -1,5 +1,5 @@
 // Deprecated hub methods kept so that a consumer shipping on its own schedule can still call them.
-// Each one forwards to its numbered successor.  Nothing new belongs here.
+// Each one forwards to its numbered successor. Nothing new belongs here.
 
 using ControlR.Libraries.Api.Contracts.Dtos.Devices;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
@@ -76,19 +76,18 @@ public partial class ViewerHub
   }
 
   [Obsolete("Use RequestRemoteControlSession3. (deprecated 2026-09-03, v0.28.x)")]
-  public Task<HubResult> RequestRemoteControlSession(
+  public async Task<HubResult> RequestRemoteControlSession(
     Guid deviceId,
     RemoteControlSessionRequestDto sessionRequestDto)
   {
-    return RequestRemoteControlSessionCore(
-      sessionRequestDto with { DeviceId = deviceId },
-      false);
+    return await RequestRemoteControlSessionCore(
+      sessionRequestDto with { DeviceId = deviceId });
   }
 
   [Obsolete("Use RequestRemoteControlSession3. (deprecated 2026-10-20, v0.30.x)")]
-  public Task<HubResult> RequestRemoteControlSession2(RemoteControlSessionRequestDto sessionRequestDto)
+  public async Task<HubResult> RequestRemoteControlSession2(RemoteControlSessionRequestDto sessionRequestDto)
   {
-    return RequestRemoteControlSessionCore(sessionRequestDto, false);
+    return await RequestRemoteControlSessionCore(sessionRequestDto);
   }
 
   [Obsolete("Use RequestVncSession2. (deprecated 2026-09-03, v0.28.x)")]

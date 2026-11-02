@@ -23,7 +23,6 @@ public partial interface IViewerHub
   Task<HubResult<PwshCompletionsResponseDto>> GetPwshCompletions(PwshCompletionsRequestDto request);
 
   Task<HubResult> InvokeCtrlAltDel2(InvokeCtrlAltDelViewerRequestDto request);
-  Task<HubResult> InvokeRemoteControlDtoOnAgent(SendRemoteControlDtoToAgentRequestDto request);
 
   Task<HubResult> RefreshDeviceInfo2(RefreshDeviceInfoRequestDto request);
 
@@ -38,8 +37,6 @@ public partial interface IViewerHub
   Task<HubResult> SendChatMessage2(ChatMessageHubDto dto);
 
   Task<HubResult> SendPowerStateChange2(SendPowerStateChangeRequestDto request);
-
-  Task<HubResult> SendRemoteControlDtoToAgent(SendRemoteControlDtoToAgentRequestDto request);
 
   Task<HubResult> SendTerminalInput2(SendTerminalInputRequestDto request);
 

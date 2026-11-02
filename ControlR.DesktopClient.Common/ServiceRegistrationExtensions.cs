@@ -29,8 +29,7 @@ public static class ServiceRegistrationExtensions
 
     builder.Services
       .AddSingleton(dependencies.Toaster)
-      .AddSingleton(dependencies.UserInteraction)
-      .AddSingleton(dependencies.DtoSender);
+      .AddSingleton(dependencies.UserInteraction);
 
     if (dependencies.Dispatcher is not null)
     {

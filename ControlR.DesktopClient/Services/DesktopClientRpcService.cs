@@ -1,9 +1,9 @@
 using Avalonia.Controls.ApplicationLifetimes;
 using ControlR.DesktopClient.Common.Services;
+using ControlR.DesktopClient.Models;
 using ControlR.Libraries.Ipc.Interfaces;
 using ControlR.Libraries.Api.Contracts.Dtos.HubDtos;
 using ControlR.Libraries.Api.Contracts.Dtos.IpcDtos;
-using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Shared.Primitives;
 using Microsoft.Extensions.Logging;
 
@@ -145,40 +145,9 @@ public class DesktopClientRpcService(
     }
   }
 
-  public async Task<Result> ReceiveRemoteControlDto(Guid sessionId, RemoteControlViewerWrapper dto)
-  {
-    if (!_remoteControlHostManager.TryGetSession(sessionId, out var session))
-    {
-      _logger.LogWarning("No remote control session found for session ID {SessionId}.", sessionId);
-      return Result.Fail($"No remote control session found for session ID {sessionId}.");
-    }
-
-    if (session.Host.Services.GetService<IRemoteControlViewerCommandHandler>() is not { } handler)
-    {
-      _logger.LogWarning("Remote control DTO handler not found for session ID {SessionId}.", sessionId);
-      return Result.Fail($"Remote control DTO handler not found for session ID {sessionId}.");
-    }
-
-    return await handler.Handle(dto);
-  }
-
   public async Task<Result> ReceiveRemoteControlRequest(RemoteControlRequestIpcDto dto)
   {
-    var permissionState = await CheckOsPermissions(
-        new CheckOsPermissionsIpcDto(
-            dto.TargetProcessId,
-            DesktopClientPermissionScope.RemoteControl));
-
-    if (!permissionState.ArePermissionsGranted)
-    {
-      _logger.LogWarning(
-          "Remote control denied for process ID {ProcessId}. Reason: {Reason}",
-          dto.TargetProcessId,
-          permissionState.Reason ?? "Unknown reason");
-      return Result.Fail(permissionState.Reason ?? "Remote control permission is not granted.");
-    }
-
-    return (await _remoteControlHostManager.StartHost(dto)).ToResult();
+    return (await StartSessionHostAsync(dto)).ToResult();
   }
 
   public async Task<CheckOsPermissionsResponseIpcDto> RequestRemoteControlPermission(RequestRemoteControlPermissionIpcDto dto)
@@ -221,5 +190,24 @@ public class DesktopClientRpcService(
     {
       _logger.LogError(ex, "Error while handling shutdown command.");
     }
+  }
+
+  private async Task<Result<RemoteControlSession>> StartSessionHostAsync(RemoteControlRequestIpcDto dto)
+  {
+    var permissionState = await CheckOsPermissions(
+        new CheckOsPermissionsIpcDto(
+            dto.TargetProcessId,
+            DesktopClientPermissionScope.RemoteControl));
+
+    if (!permissionState.ArePermissionsGranted)
+    {
+      _logger.LogWarning(
+          "Remote control denied for process ID {ProcessId}. Reason: {Reason}",
+          dto.TargetProcessId,
+          permissionState.Reason ?? "Unknown reason");
+      return Result.Fail<RemoteControlSession>(permissionState.Reason ?? "Remote control permission is not granted.");
+    }
+
+    return await _remoteControlHostManager.StartHost(dto);
   }
 }

@@ -2,7 +2,6 @@ using ControlR.DesktopClient.Common;
 using ControlR.DesktopClient.Common.ServiceInterfaces;
 using ControlR.DesktopClient.Common.ServiceInterfaces.Toaster;
 using ControlR.DesktopClient.Common.Services;
-using ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 using ControlR.Libraries.Avalonia.Services;
 using ControlR.Libraries.Shared.Extensions;
 using ControlR.Libraries.Shared.Constants;
@@ -56,7 +55,6 @@ public sealed class AssistSessionHostFactory(
       {
         Toaster = new LogToaster(_loggerFactory.CreateLogger<LogToaster>()),
         UserInteraction = new HeadlessUserInteractionService(),
-        DtoSender = new RelayOnlyDtoSender(),
         Consent = new AutoApproveConsentService(),
         Dispatcher = _dispatcher,
         AsyncLock = _asyncLock
@@ -68,10 +66,6 @@ public sealed class AssistSessionHostFactory(
         options.NotifyUser = false;
         options.ViewerName = request.ViewerDisplayName;
         options.ViewerConnectionId = null;
-
-        // The technician's browser is a legacy-style viewer for this session. It has no agent
-        // behind it, so it sends remote control DTOs on the relay instead of through the hub.
-        options.ViewerSupportsRemoteControlDtoHub = false;
         options.WebSocketUri = BuildResponderRelayUri(request);
       },
       options =>
@@ -144,11 +138,5 @@ public sealed class AssistSessionHostFactory(
 
     public Task ShowToast(string title, string message, ToastIcon toastIcon, Action onClick, TimeSpan? closeAfter = null) =>
       ShowToast(title, message, toastIcon, closeAfter);
-  }
-  private sealed class RelayOnlyDtoSender : IRemoteControlDtoSender
-  {
-    public Task<bool> TrySendRemoteControlDto(string viewerConnectionId, RemoteControlDesktopWrapper wrapper) =>
-      // Assist sessions never take the hub DTO path. The responder writes everything to the relay.
-      Task.FromResult(true);
   }
 }
