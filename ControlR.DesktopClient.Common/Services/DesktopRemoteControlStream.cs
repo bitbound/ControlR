@@ -187,11 +187,12 @@ internal sealed class DesktopRemoteControlStream(
 
   private async Task HandleRelayDto(RemoteControlDesktopWrapper wrapper)
   {
-    // The relay transport is typed for the desktop wrapper, so retag the message as the
-    // command kind the viewer sent.
+    // Bridge the tag by name through the wire space. The relay has no direction marker, so a
+    // stale frame tag arrives as a wire value with no viewer name and maps to None, which the
+    // handler logs and drops.
     var commandWrapper = new RemoteControlViewerWrapper
     {
-      DtoType = (RemoteControlViewerDtoType)(int)wrapper.DtoType,
+      DtoType = wrapper.DtoType.ToWire().ToViewerDtoType(),
       Payload = wrapper.Payload,
       SendTimestamp = wrapper.SendTimestamp
     };

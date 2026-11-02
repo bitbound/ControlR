@@ -1,0 +1,41 @@
+namespace ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
+
+/// <summary>
+/// The shared relay tag space. The relay wire carries one numeric tag for both directions, which is
+/// the shape released in v0.29.3.0. The viewer and desktop kind enums are halves of it, bridged by
+/// name through <see cref="RemoteControlWireDtoTypeExtensions"/>. Member values are wire contract
+/// and must not change.
+/// </summary>
+public enum RemoteControlWireDtoType
+{
+  None = 0,
+  ChangeDisplays = 17,
+  CloseRemoteControlSession = 19,
+  ClipboardText = 21,
+  DisplayData = 23,
+  MovePointer = 26,
+  MouseButtonEvent = 27,
+  KeyEvent = 28,
+  TypeText = 29,
+  ResetKeyboardState = 30,
+  WheelScroll = 31,
+  ScreenRegion = 32,
+  MouseClick = 33,
+  CursorChanged = 34,
+  RequestClipboardText = 35,
+  WindowsSessionEnding = 36,
+  WindowsSessionSwitched = 37,
+  Ack = 39,
+  CaptureMetricsChanged = 40,
+  RequestKeyFrame = 41,
+  VideoStreamPacket = 42,
+  ToggleBlockInput = 43,
+  ToastNotification = 44,
+  BlockInputResult = 45,
+  TogglePrivacyScreen = 46,
+  PrivacyScreenResult = 47,
+  SessionDisconnectRequested = 48,
+  RemoteControlSessionError = 49,
+  ScreenRegions = 50,
+  UpdateCaptureSettings = 51
+}

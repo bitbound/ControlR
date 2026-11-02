@@ -324,11 +324,11 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
       throw new InvalidOperationException("Remote control session has not been initialized.");
     }
 
-    // The relay is typed on the desktop wrapper. The responder retags the message back to the
-    // viewer command kind when it reads the payload.
+    // The relay is typed on the desktop wrapper. Bridge the command tag by name through the wire
+    // space, then encode it into the desktop field. The responder bridges it back.
     var relayWrapper = new RemoteControlDesktopWrapper
     {
-      DtoType = (RemoteControlDesktopDtoType)(int)wrapper.DtoType,
+      DtoType = wrapper.DtoType.ToWire().ToDesktopDtoType(),
       Payload = wrapper.Payload,
       SendTimestamp = wrapper.SendTimestamp
     };
