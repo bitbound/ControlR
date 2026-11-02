@@ -9,24 +9,15 @@ namespace ControlR.Libraries.Api.Contracts.Authz;
 /// </summary>
 public static class RemoteControlCommandPermissions
 {
-  public static IReadOnlyList<RemoteControlViewerDtoType> GetAllowedDtoTypes(
-    IReadOnlySet<string> allowedPermissions)
+  public static string GetRequiredPermission(RemoteControlDtoType dtoType) => dtoType switch
   {
-    return Enum.GetValues<RemoteControlViewerDtoType>()
-      .Where(x => x != RemoteControlViewerDtoType.None && allowedPermissions.Contains(GetRequiredPermission(x)))
-      .OrderBy(x => (int)x)
-      .ToArray();
-  }
-
-  public static string GetRequiredPermission(RemoteControlViewerDtoType dtoType) => dtoType switch
-  {
-    RemoteControlViewerDtoType.ClipboardText => PermissionNames.DeviceClipboardWrite,
-    RemoteControlViewerDtoType.RequestClipboardText => PermissionNames.DeviceClipboardRead,
-    RemoteControlViewerDtoType.ToggleBlockInput => PermissionNames.DeviceRemoteControlBlockInput,
-    RemoteControlViewerDtoType.TogglePrivacyScreen => PermissionNames.DeviceRemoteControlPrivacyScreen,
-    RemoteControlViewerDtoType.RequestKeyFrame
-      or RemoteControlViewerDtoType.UpdateCaptureSettings
-      or RemoteControlViewerDtoType.CloseRemoteControlSession => PermissionNames.DeviceRemoteControlConnect,
+    RemoteControlDtoType.ClipboardText => PermissionNames.DeviceClipboardWrite,
+    RemoteControlDtoType.RequestClipboardText => PermissionNames.DeviceClipboardRead,
+    RemoteControlDtoType.ToggleBlockInput => PermissionNames.DeviceRemoteControlBlockInput,
+    RemoteControlDtoType.TogglePrivacyScreen => PermissionNames.DeviceRemoteControlPrivacyScreen,
+    RemoteControlDtoType.RequestKeyFrame
+      or RemoteControlDtoType.UpdateCaptureSettings
+      or RemoteControlDtoType.CloseRemoteControlSession => PermissionNames.DeviceRemoteControlConnect,
     _ => PermissionNames.DeviceRemoteControlInteract
   };
 }

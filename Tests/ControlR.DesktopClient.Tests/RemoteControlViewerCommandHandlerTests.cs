@@ -45,8 +45,8 @@ public class RemoteControlViewerCommandHandlerTests
     Assert.True(result.IsSuccess);
   }
 
-  private static RemoteControlViewerWrapper CreateClipboardWrapper(string text) =>
-    RemoteControlViewerWrapper.Create(new ClipboardTextDto(text, Guid.NewGuid()), RemoteControlViewerDtoType.ClipboardText);
+  private static RemoteControlDtoWrapper CreateClipboardWrapper(string text) =>
+    RemoteControlDtoWrapper.Create(new ClipboardTextDto(text, Guid.NewGuid()), RemoteControlDtoType.ClipboardText);
 
   private static RemoteControlViewerCommandHandler CreateSut(IClipboardManager clipboardManager) =>
     new(

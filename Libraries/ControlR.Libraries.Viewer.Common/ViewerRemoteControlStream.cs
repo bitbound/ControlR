@@ -63,7 +63,7 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
   {
     _logger = logger;
 
-    messenger.Register<DtoReceivedMessage<RemoteControlDesktopWrapper>>(this, HandleRemoteControlDtoReceived);
+    messenger.Register<DtoReceivedMessage<RemoteControlDtoWrapper>>(this, HandleRemoteControlDtoReceived);
   }
 
   public Task Connect(
@@ -97,7 +97,7 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
       async () =>
       {
         var dto = new RequestClipboardTextDto();
-        var wrapper = RemoteControlViewerWrapper.Create(dto, RemoteControlViewerDtoType.RequestClipboardText);
+        var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.RequestClipboardText);
         return await InvokeDto(wrapper, cancellationToken);
       });
   }
@@ -108,7 +108,7 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
       async () =>
       {
         var dto = new RequestKeyFrameDto();
-        var wrapper = RemoteControlViewerWrapper.Create(dto, RemoteControlViewerDtoType.RequestKeyFrame);
+        var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.RequestKeyFrame);
         await SendDto(wrapper, cancellationToken);
       });
   }
@@ -118,7 +118,7 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
     return await TryInvoke(
       async () =>
       {
-        var wrapper = RemoteControlViewerWrapper.Create(settings, RemoteControlViewerDtoType.UpdateCaptureSettings);
+        var wrapper = RemoteControlDtoWrapper.Create(settings, RemoteControlDtoType.UpdateCaptureSettings);
         return await InvokeDto(wrapper, cancellationToken);
       });
   }
@@ -129,7 +129,7 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
       async () =>
       {
         var dto = new ChangeDisplaysDto(displayId);
-        var wrapper = RemoteControlViewerWrapper.Create(dto, RemoteControlViewerDtoType.ChangeDisplays);
+        var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.ChangeDisplays);
         return await InvokeDto(wrapper, cancellationToken);
       });
   }
@@ -140,7 +140,7 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
       async () =>
       {
         var dto = new ClipboardTextDto(text, sessionId);
-        var wrapper = RemoteControlViewerWrapper.Create(dto, RemoteControlViewerDtoType.ClipboardText);
+        var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.ClipboardText);
         return await InvokeDto(wrapper, cancellationToken);
       });
   }
@@ -151,7 +151,7 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
       async () =>
       {
         var dto = new CloseStreamingSessionRequestDto();
-        var wrapper = RemoteControlViewerWrapper.Create(dto, RemoteControlViewerDtoType.CloseRemoteControlSession);
+        var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.CloseRemoteControlSession);
         await SendDto(wrapper, cancellationToken);
       });
   }
@@ -162,7 +162,7 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
       async () =>
       {
         var dto = new ResetKeyboardStateDto();
-        var wrapper = RemoteControlViewerWrapper.Create(dto, RemoteControlViewerDtoType.ResetKeyboardState);
+        var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.ResetKeyboardState);
         await SendDto(wrapper, cancellationToken);
       });
   }
@@ -179,7 +179,7 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
       async () =>
       {
         var dto = new KeyEventDto(key, code ?? string.Empty, isPressed, inputMode, modifiers);
-        var wrapper = RemoteControlViewerWrapper.Create(dto, RemoteControlViewerDtoType.KeyEvent);
+        var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.KeyEvent);
         await SendDto(wrapper, cancellationToken);
       });
   }
@@ -195,7 +195,7 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
       async () =>
       {
         var dto = new MouseButtonEventDto(button, isPressed, normalizedX, normalizedY);
-        var wrapper = RemoteControlViewerWrapper.Create(dto, RemoteControlViewerDtoType.MouseButtonEvent);
+        var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.MouseButtonEvent);
         await SendDto(wrapper, cancellationToken);
       });
   }
@@ -207,7 +207,7 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
       async () =>
       {
         var dto = new MouseClickDto(button, isDoubleClick, normalizedX, normalizedY);
-        var wrapper = RemoteControlViewerWrapper.Create(dto, RemoteControlViewerDtoType.MouseClick);
+        var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.MouseClick);
         await SendDto(wrapper, cancellationToken);
       });
   }
@@ -233,7 +233,7 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
       async () =>
       {
         var dto = new ToggleBlockInputDto(isEnabled);
-        var wrapper = RemoteControlViewerWrapper.Create(dto, RemoteControlViewerDtoType.ToggleBlockInput);
+        var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.ToggleBlockInput);
         return await InvokeDto(wrapper, cancellationToken);
       });
   }
@@ -244,7 +244,7 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
       async () =>
       {
         var dto = new TogglePrivacyScreenDto(isEnabled);
-        var wrapper = RemoteControlViewerWrapper.Create(dto, RemoteControlViewerDtoType.TogglePrivacyScreen);
+        var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.TogglePrivacyScreen);
         return await InvokeDto(wrapper, cancellationToken);
       });
   }
@@ -255,7 +255,7 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
       async () =>
       {
         var dto = new TypeTextDto(text);
-        var wrapper = RemoteControlViewerWrapper.Create(dto, RemoteControlViewerDtoType.TypeText);
+        var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.TypeText);
         await SendDto(wrapper, cancellationToken);
       });
   }
@@ -267,20 +267,20 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
       async () =>
       {
         var dto = new WheelScrollDto(normalizedX, normalizedY, scrollY, scrollX);
-        var wrapper = RemoteControlViewerWrapper.Create(dto, RemoteControlViewerDtoType.WheelScroll);
+        var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.WheelScroll);
         await SendDto(wrapper, cancellationToken);
       });
   }
 
-  private Task HandleRemoteControlDtoReceived(object subscriber, DtoReceivedMessage<RemoteControlDesktopWrapper> message)
+  private Task HandleRemoteControlDtoReceived(object subscriber, DtoReceivedMessage<RemoteControlDtoWrapper> message)
   {
     return InvokeMessageHandlers(message.Dto);
   }
 
-  private async Task<HubResult> InvokeDto(RemoteControlViewerWrapper wrapper, CancellationToken cancellationToken)
+  private async Task<HubResult> InvokeDto(RemoteControlDtoWrapper wrapper, CancellationToken cancellationToken)
   {
     // The relay carries no return channel, so the command is fire-and-forget. Any result the
-    // responder produces arrives as a desktop wrapper through the normal message handlers.
+        // responder produces arrives through the normal message handlers.
     return await TryInvoke(
       async () =>
       {
@@ -298,7 +298,7 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
         await TrySend(
           async () =>
           {
-            var wrapper = RemoteControlViewerWrapper.Create(move, RemoteControlViewerDtoType.MovePointer);
+            var wrapper = RemoteControlDtoWrapper.Create(move, RemoteControlDtoType.MovePointer);
             await SendDto(wrapper, cancellationToken);
           });
       }
@@ -317,22 +317,14 @@ public class ViewerRemoteControlStream : ManagedRelayStream, IViewerRemoteContro
     }
   }
 
-  private async Task SendDto(RemoteControlViewerWrapper wrapper, CancellationToken cancellationToken)
+  private async Task SendDto(RemoteControlDtoWrapper wrapper, CancellationToken cancellationToken)
   {
     if (_session is not { })
     {
       throw new InvalidOperationException("Remote control session has not been initialized.");
     }
 
-    // The relay is typed on the desktop wrapper. Bridge the command tag by name through the wire
-    // space, then encode it into the desktop field. The responder bridges it back.
-    var relayWrapper = new RemoteControlDesktopWrapper
-    {
-      DtoType = wrapper.DtoType.ToWire().ToDesktopDtoType(),
-      Payload = wrapper.Payload,
-      SendTimestamp = wrapper.SendTimestamp
-    };
-    await Send(relayWrapper, cancellationToken);
+    await Send(wrapper, cancellationToken);
   }
 
   private async Task<HubResult> TryInvoke(Func<Task<HubResult>> func, [CallerMemberName] string callerName = "")

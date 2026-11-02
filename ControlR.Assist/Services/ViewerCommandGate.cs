@@ -23,26 +23,26 @@ public sealed class ViewerCommandGate(
   AssistInputGate gate,
   ILogger<ViewerCommandGate> logger) : IRemoteControlViewerCommandHandler
 {
-  private static readonly HashSet<RemoteControlViewerDtoType> _neverAllowedDtoTypes =
+  private static readonly HashSet<RemoteControlDtoType> _neverAllowedDtoTypes =
   [
-    RemoteControlViewerDtoType.ToggleBlockInput,
-    RemoteControlViewerDtoType.TogglePrivacyScreen
+    RemoteControlDtoType.ToggleBlockInput,
+    RemoteControlDtoType.TogglePrivacyScreen
   ];
 
-  private static readonly HashSet<RemoteControlViewerDtoType> _viewOnlyDroppedDtoTypes =
+  private static readonly HashSet<RemoteControlDtoType> _viewOnlyDroppedDtoTypes =
   [
-    RemoteControlViewerDtoType.KeyEvent,
-    RemoteControlViewerDtoType.MouseClick,
-    RemoteControlViewerDtoType.MouseButtonEvent,
-    RemoteControlViewerDtoType.MovePointer,
-    RemoteControlViewerDtoType.ResetKeyboardState,
-    RemoteControlViewerDtoType.TypeText,
-    RemoteControlViewerDtoType.WheelScroll,
-    RemoteControlViewerDtoType.RequestClipboardText,
-    RemoteControlViewerDtoType.ClipboardText
+    RemoteControlDtoType.KeyEvent,
+    RemoteControlDtoType.MouseClick,
+    RemoteControlDtoType.MouseButtonEvent,
+    RemoteControlDtoType.MovePointer,
+    RemoteControlDtoType.ResetKeyboardState,
+    RemoteControlDtoType.TypeText,
+    RemoteControlDtoType.WheelScroll,
+    RemoteControlDtoType.RequestClipboardText,
+    RemoteControlDtoType.ClipboardText
   ];
 
-  public async Task<Result> Handle(RemoteControlViewerWrapper wrapper)
+  public async Task<Result> Handle(RemoteControlDtoWrapper wrapper)
   {
     if (_neverAllowedDtoTypes.Contains(wrapper.DtoType))
     {

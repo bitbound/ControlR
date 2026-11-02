@@ -1,12 +1,10 @@
 namespace ControlR.Libraries.Api.Contracts.Dtos.RemoteControlDtos;
 
 /// <summary>
-/// The shared relay tag space. The relay wire carries one numeric tag for both directions, which is
-/// the shape released in v0.29.3.0. The viewer and desktop kind enums are halves of it, bridged by
-/// name through <see cref="RemoteControlWireDtoTypeExtensions"/>. Member values are wire contract
-/// and must not change.
+/// The relay carries one numeric tag space for both directions. Member values are wire contract and
+/// must not change.
 /// </summary>
-public enum RemoteControlWireDtoType
+public enum RemoteControlDtoType
 {
   None = 0,
   ChangeDisplays = 17,
