@@ -134,9 +134,9 @@
     }
   }
 
-  private Task HandleDtoReceived(RemoteControlDesktopWrapper wrapper)
+  private Task HandleDtoReceived(RemoteControlDtoWrapper wrapper)
   {
-    if (wrapper.DtoType != RemoteControlDesktopDtoType.PrivacyScreenResult)
+    if (wrapper.DtoType != RemoteControlDtoType.PrivacyScreenResult)
     {
       return Task.CompletedTask;
     }

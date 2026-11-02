@@ -65,7 +65,7 @@ internal sealed class DesktopRemoteControlStream(
       }
 
       var dto = new SessionDisconnectRequestedDto();
-      var wrapper = RemoteControlDesktopWrapper.Create(dto, RemoteControlDesktopDtoType.SessionDisconnectRequested);
+      var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.SessionDisconnectRequested);
       await SendDto(wrapper, _appLifetime.ApplicationStopping).ConfigureAwait(false);
     }
     catch (Exception ex)
@@ -166,7 +166,7 @@ internal sealed class DesktopRemoteControlStream(
         message.YHotspot,
         _startupOptions.Value.SessionId);
 
-      var wrapper = RemoteControlDesktopWrapper.Create(dto, RemoteControlDesktopDtoType.CursorChanged);
+      var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.CursorChanged);
       await SendDto(wrapper, _appLifetime.ApplicationStopping);
     }
     catch (OperationCanceledException ex)
@@ -185,18 +185,9 @@ internal sealed class DesktopRemoteControlStream(
     await SendDisplayData();
   }
 
-  private async Task HandleRelayDto(RemoteControlDesktopWrapper wrapper)
+  private async Task HandleRelayDto(RemoteControlDtoWrapper wrapper)
   {
-    // Bridge the tag by name through the wire space. The relay has no direction marker, so a
-    // stale frame tag arrives as a wire value with no viewer name and maps to None, which the
-    // handler logs and drops.
-    var commandWrapper = new RemoteControlViewerWrapper
-    {
-      DtoType = wrapper.DtoType.ToWire().ToViewerDtoType(),
-      Payload = wrapper.Payload,
-      SendTimestamp = wrapper.SendTimestamp
-    };
-    await _viewerCommandHandler.Handle(commandWrapper);
+    await _viewerCommandHandler.Handle(wrapper);
   }
 
   private async Task HandleSendDtoToViewerMessage(
@@ -212,7 +203,7 @@ internal sealed class DesktopRemoteControlStream(
     {
       var dto = new ToastNotificationDto(message.Message, message.Severity);
 
-      var wrapper = RemoteControlDesktopWrapper.Create(dto, RemoteControlDesktopDtoType.ToastNotification);
+      var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.ToastNotification);
       await SendDto(wrapper, _appLifetime.ApplicationStopping);
     }
     catch (Exception ex)
@@ -226,7 +217,7 @@ internal sealed class DesktopRemoteControlStream(
     try
     {
       var dto = new WindowsSessionEndingDto();
-      var wrapper = RemoteControlDesktopWrapper.Create(dto, RemoteControlDesktopDtoType.WindowsSessionEnding);
+      var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.WindowsSessionEnding);
       await SendDto(wrapper, _appLifetime.ApplicationStopping);
     }
     catch (Exception ex)
@@ -240,7 +231,7 @@ internal sealed class DesktopRemoteControlStream(
     try
     {
       var dto = new WindowsSessionSwitchedDto();
-      var wrapper = RemoteControlDesktopWrapper.Create(dto, RemoteControlDesktopDtoType.WindowsSessionSwitched);
+      var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.WindowsSessionSwitched);
       await SendDto(wrapper, _appLifetime.ApplicationStopping);
     }
     catch (Exception ex)
@@ -283,7 +274,7 @@ internal sealed class DesktopRemoteControlStream(
       });
       var dto = new DisplayDataDto([.. displayDtos]);
 
-      var wrapper = RemoteControlDesktopWrapper.Create(dto, RemoteControlDesktopDtoType.DisplayData);
+      var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.DisplayData);
       await SendDto(wrapper, _appLifetime.ApplicationStopping);
     }
     catch (OperationCanceledException ex)
@@ -300,7 +291,7 @@ internal sealed class DesktopRemoteControlStream(
     }
   }
 
-  private async Task SendDto(RemoteControlDesktopWrapper wrapper, CancellationToken cancellationToken)
+  private async Task SendDto(RemoteControlDtoWrapper wrapper, CancellationToken cancellationToken)
   {
     // Every desktop-issued DTO rides the relay back to the viewer, frames and results alike.
     await Send(wrapper, cancellationToken);
@@ -319,7 +310,7 @@ internal sealed class DesktopRemoteControlStream(
             CurrentQuality: _desktopCapturer.GetCurrentQuality(),
             ExtraData: _captureMetrics.GetExtraMetricsData());
 
-          var wrapper = RemoteControlDesktopWrapper.Create(captureMetrics, RemoteControlDesktopDtoType.CaptureMetricsChanged);
+          var wrapper = RemoteControlDtoWrapper.Create(captureMetrics, RemoteControlDtoType.CaptureMetricsChanged);
           await SendDto(wrapper, cancellationToken);
         }
         catch (OperationCanceledException ex)
@@ -378,7 +369,7 @@ internal sealed class DesktopRemoteControlStream(
       }
 
       var dto = new RemoteControlSessionErrorDto(message, IsFatal: true);
-      var wrapper = RemoteControlDesktopWrapper.Create(dto, RemoteControlDesktopDtoType.RemoteControlSessionError);
+      var wrapper = RemoteControlDtoWrapper.Create(dto, RemoteControlDtoType.RemoteControlSessionError);
 
       using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
       await SendDto(wrapper, cts.Token);
