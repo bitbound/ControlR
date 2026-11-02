@@ -65,7 +65,7 @@ public class ViewerCommandGateTests
     };
 
     var allTypes = Enum.GetValues<RemoteControlDtoType>();
-    var viewerCommands = neverAllowed.Concat(droppedWhileViewOnly).Concat(alwaysPassed).ToArray();
+    var viewerCommands = neverAllowed.Concat(droppedWhileViewOnly).Concat(alwaysPassed).Distinct().ToArray();
     var classified = viewerCommands.Concat(nonCommandTags);
     Assert.Equal(allTypes.OrderBy(x => x), classified.Distinct().OrderBy(x => x));
 
