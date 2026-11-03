@@ -11,7 +11,6 @@ public class ServiceTemplateTmpDirTests
 
   [Theory]
   [InlineData("LaunchDaemon.plist", "<key>TMPDIR</key>")]
-  [InlineData("InstallerDaemon.plist", "<key>TMPDIR</key>")]
   [InlineData("controlr.agent.service", "Environment=TMPDIR=/var/tmp")]
   public async Task DaemonTemplates_PinTmpDirForElevatedContexts(string resource, string expectedLine)
   {

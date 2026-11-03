@@ -6,7 +6,6 @@ using ControlR.Libraries.Shared.Services.FileSystem;
 using ControlR.Libraries.Shared.Services.Processes;
 using ControlR.Libraries.Branding;
 using Microsoft.Extensions.Options;
-using System.Diagnostics;
 using System.Runtime.Versioning;
 using ControlR.Libraries.Shared.Services.Encryption;
 
@@ -58,6 +57,12 @@ internal class AgentInstallerMac(
         _logger.LogError("Install command must be run with sudo.");
         return Result.Fail<AgentInstallOutcome>("Install command must be run with sudo.");
       }
+
+      // This install boots out the agent that spawned it, and launchd tears down the whole process
+      // group of a dying job. Leaving that group before any of that starts is what lets this process
+      // survive. The result is unread because EPERM is expected and correct when this process is
+      // already a session leader, which is the case for a manual run from a terminal.
+      _ = Libc.Setsid();
 
       var appBundleInstallPath = GetInstalledAppBundlePath();
       var tempExtractDirectory = GetTempExtractDirectory();
@@ -122,13 +127,11 @@ internal class AgentInstallerMac(
       var agentPlistFile = (await GetLaunchDaemonFile()).Trim();
       var desktopPlistPath = GetLaunchAgentFilePath();
       var desktopPlistFile = (await GetLaunchAgentFile()).Trim();
-      var installerPlistPath = GetInstallerDaemonFilePath();
-      var installerPlistFile = (await GetInstallerDaemonFile(request)).Trim();
 
       _logger.LogInformation("Writing plist files.");
       await WriteFileIfChanged(agentPlistPath, agentPlistFile);
       await WriteFileIfChanged(desktopPlistPath, desktopPlistFile);
-      await WriteFileIfChanged(installerPlistPath, installerPlistFile);
+      RemoveInstallerDaemonFile();
       await UpdateAppSettings(request.ServerUri, request.TenantId, request.DeviceId);
 
       var createResult = await CreateDeviceOnServer(request.InstallerKeyId, request.InstallerKeySecret, request.TagIds, request.CustomerId);
@@ -285,12 +288,10 @@ internal class AgentInstallerMac(
 
       var serviceFilePath = GetLaunchDaemonFilePath();
       var desktopFilePath = GetLaunchAgentFilePath();
-      var installerFilePath = GetInstallerDaemonFilePath();
 
       _logger.LogInformation("Booting out services.");
       await _serviceControl.StopDesktopClientService(throwOnFailure: false);
       await _serviceControl.StopAgentService(throwOnFailure: false);
-      await StopInstallerDaemonService();
 
       if (_fileSystem.FileExists(serviceFilePath))
       {
@@ -302,10 +303,7 @@ internal class AgentInstallerMac(
         _fileSystem.DeleteFile(desktopFilePath);
       }
 
-      if (_fileSystem.FileExists(installerFilePath))
-      {
-        _fileSystem.DeleteFile(installerFilePath);
-      }
+      RemoveInstallerDaemonFile();
 
       var appBundleInstallPath = GetInstalledAppBundlePath();
       if (_fileSystem.DirectoryExists(appBundleInstallPath))
@@ -398,33 +396,22 @@ internal class AgentInstallerMac(
     return FilesystemPathProvider.GetMacAppBundlePath();
   }
 
-  private async Task<string> GetInstallerDaemonFile(AgentInstallRequest request)
+  /// <summary>
+  /// Deletes the installer LaunchDaemon that an earlier build installed. That daemon existed only to run
+  /// the installer outside the agent's own job, and the installer now does that by leaving the process
+  /// group it was spawned in. The file goes without a bootout, because an install that this very job
+  /// launched would be killed by one. A definition with no RunAtLoad and no activation trigger is inert
+  /// once its file is gone.
+  /// REMOVE AFTER THE FLEET CONVERTS. Tracking issue: publisher-scoped install paths.
+  /// </summary>
+  private void RemoveInstallerDaemonFile()
   {
-    var template = await _embeddedResourceAccessor.GetResourceAsString(
-      typeof(AgentInstallerMac).Assembly,
-      "InstallerDaemon.plist");
-
-    template = template
-      .Replace("{{SERVICE_NAME}}", GetInstallerDaemonServiceName())
-      .Replace("{{INSTALLER_PATH}}", GetUpdaterInstallerPath())
-      .Replace("{{SERVER_URI}}", request.ServerUri.ToString())
-      .Replace("{{TENANT_ID}}", request.TenantId.ToString());
-
-    if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
+    var installerDaemonFilePath = GetInstallerDaemonFilePath();
+    if (_fileSystem.FileExists(installerDaemonFilePath))
     {
-      var lines = template.Split('\n');
-      lines = [.. lines.Where(line =>
-        !line.Contains("{{INSTANCE_ID}}") &&
-        !line.Contains("<string>--instance-id</string>"))];
-
-      template = string.Join("\n", lines);
+      _logger.LogInformation("Deleting obsolete installer LaunchDaemon at {FilePath}.", installerDaemonFilePath);
+      _fileSystem.DeleteFile(installerDaemonFilePath);
     }
-    else
-    {
-      template = template.Replace("{{INSTANCE_ID}}", _instanceOptions.Value.InstanceId);
-    }
-
-    return template;
   }
 
   private string GetInstallerDaemonFilePath()
@@ -435,16 +422,6 @@ internal class AgentInstallerMac(
     }
 
     return $"/Library/LaunchDaemons/{BrandingConstants.MacServicePrefix}.agent.installer.{_instanceOptions.Value.InstanceId}.plist";
-  }
-
-  private string GetInstallerDaemonServiceName()
-  {
-    if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
-    {
-      return $"{BrandingConstants.MacServicePrefix}.agent.installer";
-    }
-
-    return $"{BrandingConstants.MacServicePrefix}.agent.installer.{_instanceOptions.Value.InstanceId}";
   }
 
   private string GetLaunchAgentFilePath()
@@ -516,19 +493,6 @@ internal class AgentInstallerMac(
     return Path.Combine(_macInstallerTempDirectory, instanceSegment, "bundle");
   }
 
-  private string GetUpdaterInstallerPath()
-  {
-    var instanceSegment = string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId)
-      ? AppConstants.DefaultInstanceId
-      : _instanceOptions.Value.InstanceId;
-
-    return _fileSystem.JoinPaths(
-      '/',
-      _macInstallerTempDirectory,
-      instanceSegment,
-      AppConstants.GetInstallerFileName(SystemPlatform.MacOs));
-  }
-
   private void SetAgentPermissions(string installedAgentPath)
   {
     if (!OperatingSystem.IsMacOS())
@@ -571,26 +535,6 @@ internal class AgentInstallerMac(
 
       _fileSystem.SetUnixFileMode(executablePath, executableFileMode);
       _logger.LogDebug("Set executable permissions on {FilePath}", executablePath);
-    }
-  }
-
-  private async Task StopInstallerDaemonService()
-  {
-    try
-    {
-      var psi = new ProcessStartInfo
-      {
-        FileName = "sudo",
-        UseShellExecute = true,
-        WorkingDirectory = "/tmp",
-        Arguments = $"launchctl bootout system/{GetInstallerDaemonServiceName()}"
-      };
-
-      await ProcessManager.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
-    }
-    catch
-    {
-      // The installer daemon may not already be loaded.
     }
   }
 

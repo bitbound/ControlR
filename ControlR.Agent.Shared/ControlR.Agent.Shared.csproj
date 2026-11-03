@@ -1,6 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
-    <None Remove="Resources\InstallerDaemon.plist" />
     <None Remove="Resources\LaunchAgent.plist" />
     <None Remove="Resources\LaunchDaemon.plist" />
     <None Remove="Resources\controlr.agent.service" />
@@ -8,7 +7,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Resources\InstallerDaemon.plist" />
     <EmbeddedResource Include="Resources\LaunchAgent.plist" />
     <EmbeddedResource Include="Resources\LaunchDaemon.plist" />
     <EmbeddedResource Include="Resources\controlr.agent.service" />
