@@ -16,7 +16,7 @@ public interface IAgentServiceRegistration
   /// a deleted service stays in pending-delete until its last handle closes, and a create issued in that
   /// window fails.
   /// </summary>
-  Task<Result> RepointAsync(string serviceName, string agentExecutablePath, string runArguments);
+  Task<Result> Repoint(string serviceName, string agentExecutablePath, string runArguments);
 
   /// <summary>
   /// Returns the directory the service is registered to run from, or null when no service of that name
@@ -32,7 +32,7 @@ internal sealed class AgentServiceRegistration(
   IRegistryAccessor registryAccessor,
   ILogger<AgentServiceRegistration> logger) : IAgentServiceRegistration
 {
-  public async Task<Result> RepointAsync(string serviceName, string agentExecutablePath, string runArguments)
+  public async Task<Result> Repoint(string serviceName, string agentExecutablePath, string runArguments)
   {
     using var _ = logger.BeginMemberScope();
 

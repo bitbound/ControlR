@@ -154,7 +154,7 @@ internal class AgentInstallerWindows(
       // service that does not exist for as long as a handle to the deleted one is open.
       if (relocation is not null)
       {
-        var repointResult = await _agentServiceRegistration.RepointAsync(serviceName, targetAgentPath, subcommand);
+        var repointResult = await _agentServiceRegistration.Repoint(serviceName, targetAgentPath, subcommand);
         if (!repointResult.IsSuccess)
         {
           Logger.LogError("Failed to point the {ServiceName} service at the relocated install.", serviceName);
