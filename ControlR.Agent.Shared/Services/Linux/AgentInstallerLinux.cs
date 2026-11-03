@@ -77,7 +77,7 @@ internal class AgentInstallerLinux(
 
       await _serviceControl.StopDesktopClientService(throwOnFailure: false);
 
-      // REMOVE AFTER THE FLEET CONVERTS. Tracking issue: publisher-scoped install paths.
+      // TODO: Temporary migration code for v0.31.x
       var relocation = _legacyPathMigration.Plan();
       if (relocation is not null && !_legacyPathMigration.TryStageSettings(relocation).IsSuccess)
       {
@@ -208,7 +208,7 @@ internal class AgentInstallerLinux(
 
       if (relocation is not null)
       {
-        // REMOVE AFTER THE FLEET CONVERTS. Tracking issue: publisher-scoped install paths.
+        // TODO: Temporary migration code for v0.31.x
         // Only now, with the relocated unit confirmed active. Until this point the old install is
         // complete on disk, which is what lets a failure at any earlier step be recovered by starting it.
         _legacyPathMigration.RemoveRelocatedInstall(relocation);

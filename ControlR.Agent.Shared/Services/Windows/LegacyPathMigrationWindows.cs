@@ -13,7 +13,7 @@ namespace ControlR.Agent.Shared.Services.Windows;
 public sealed record WindowsPathRelocation(string InstallDirectory, string SettingsDirectory);
 
 /// <summary>
-/// REMOVE AFTER THE FLEET CONVERTS. Tracking issue: publisher-scoped install paths.
+/// TODO: Temporary migration code for v0.31.x
 /// </summary>
 /// <remarks>
 /// <para>

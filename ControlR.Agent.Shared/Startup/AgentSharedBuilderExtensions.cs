@@ -33,7 +33,7 @@ public static class AgentSharedBuilderExtensions
       services.AddSingleton<IElevationChecker, ElevationCheckerWin>();
       services.AddSingleton<IRegistryAccessor, RegistryAccessor>();
       services.AddSingleton<IAgentServiceRegistration, AgentServiceRegistration>();
-      // REMOVE AFTER THE FLEET CONVERTS. Tracking issue: publisher-scoped install paths.
+      // TODO: Temporary migration code for v0.31.x
       services.AddSingleton<ILegacyPathMigrationWindows, LegacyPathMigrationWindows>();
     }
     else if (OperatingSystem.IsLinux())
@@ -44,7 +44,7 @@ public static class AgentSharedBuilderExtensions
       services.AddSingleton<IHeadlessServerDetector, HeadlessServerDetector>();
       services.AddSingleton<IServiceControl, ServiceControlLinux>();
       services.AddSingleton<ILinuxDesktopClientProcessLocator, LinuxDesktopClientProcessLocator>();
-      // REMOVE AFTER THE FLEET CONVERTS. Tracking issue: publisher-scoped install paths.
+      // TODO: Temporary migration code for v0.31.x
       services.AddSingleton<ILegacyPathMigrationUnix, LegacyPathMigrationUnix>();
     }
     else if (OperatingSystem.IsMacOS())
@@ -52,7 +52,7 @@ public static class AgentSharedBuilderExtensions
       services.AddSingleton<IAgentInstaller, AgentInstallerMac>();
       services.AddSingleton<IServiceControl, ServiceControlMac>();
       services.AddSingleton<IElevationChecker, ElevationCheckerMac>();
-      // REMOVE AFTER THE FLEET CONVERTS. Tracking issue: publisher-scoped install paths.
+      // TODO: Temporary migration code for v0.31.x
       services.AddSingleton<ILegacyPathMigrationUnix, LegacyPathMigrationUnix>();
     }
 

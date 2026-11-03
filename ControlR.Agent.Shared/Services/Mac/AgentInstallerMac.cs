@@ -71,7 +71,7 @@ internal class AgentInstallerMac(
         ?? throw new DirectoryNotFoundException("Unable to determine the agent install directory.");
       var bundleStateDirectory = GetBundleStateDirectory();
 
-      // REMOVE AFTER THE FLEET CONVERTS. Tracking issue: publisher-scoped install paths.
+      // TODO: Temporary migration code for v0.31.x
       var relocation = _legacyPathMigration.Plan();
       if (relocation is not null && !_legacyPathMigration.TryStageSettings(relocation).IsSuccess)
       {
@@ -168,7 +168,7 @@ internal class AgentInstallerMac(
 
       if (relocation is not null)
       {
-        // REMOVE AFTER THE FLEET CONVERTS. Tracking issue: publisher-scoped install paths.
+        // TODO: Temporary migration code for v0.31.x
         // Only now, with the relocated service confirmed started. Until this point the old install is
         // complete on disk, which is what lets a failure at any earlier step be recovered by starting it.
         _legacyPathMigration.RemoveRelocatedInstall(relocation);
@@ -481,7 +481,7 @@ internal class AgentInstallerMac(
   /// group it was spawned in. The file goes without a bootout, because an install that this very job
   /// launched would be killed by one. A definition with no RunAtLoad and no activation trigger is inert
   /// once its file is gone.
-  /// REMOVE AFTER THE FLEET CONVERTS. Tracking issue: publisher-scoped install paths.
+  /// TODO: Temporary migration code for v0.31.x
   /// </summary>
   private void RemoveInstallerDaemonFile()
   {
