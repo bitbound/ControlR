@@ -149,7 +149,7 @@ public class AgentMaintenanceServiceTests
       .Setup(x => x.GetAgentAppSettingsPath())
       .Returns(installedSettingsPath);
     fixture.PathProvider
-      .Setup(x => x.GetSettingsDirectoryFor("Acme Remote", "instance-1"))
+      .Setup(x => x.GetSettingsDirectoryFor("AcmeCorp", "Acme Remote", "instance-1"))
       .Returns("/etc/acme_remote/instance-1");
 
     var installerBytes = new byte[] { 1, 2, 3, 4, 5 };
@@ -353,7 +353,7 @@ public class AgentMaintenanceServiceTests
       .Setup(x => x.GetAgentAppSettingsPath())
       .Returns(@"C:\ProgramData\ControlR\instance-1\appsettings.json");
     fixture.PathProvider
-      .Setup(x => x.GetSettingsDirectoryFor("OtherBrand", "instance-1"))
+      .Setup(x => x.GetSettingsDirectoryFor("OtherPublisher", "OtherBrand", "instance-1"))
       .Returns(@"C:\ProgramData\OtherBrand\instance-1");
 
     // An install with no signing key could never authenticate as this device under a new brand, and the
@@ -402,7 +402,7 @@ public class AgentMaintenanceServiceTests
       .Setup(x => x.GetAgentAppSettingsPath())
       .Returns(installedSettingsPath);
     fixture.PathProvider
-      .Setup(x => x.GetSettingsDirectoryFor("OtherBrand", "instance-1"))
+      .Setup(x => x.GetSettingsDirectoryFor("OtherPublisher", "OtherBrand", "instance-1"))
       .Returns(@"C:\ProgramData\OtherBrand\instance-1");
 
     var installerBytes = new byte[] { 1, 2, 3, 4, 5 };
@@ -496,7 +496,7 @@ public class AgentMaintenanceServiceTests
       .Setup(x => x.GetAgentAppSettingsPath())
       .Returns(installedSettingsPath);
     fixture.PathProvider
-      .Setup(x => x.GetSettingsDirectoryFor("ControlR", "other"))
+      .Setup(x => x.GetSettingsDirectoryFor("Bitbound", "ControlR", "other"))
       .Returns(@"C:\ProgramData\ControlR\other");
 
     // The tenant moved this deployment to a different instance id. The brand did not change, so only

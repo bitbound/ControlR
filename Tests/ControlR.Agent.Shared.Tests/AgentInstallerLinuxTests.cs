@@ -24,7 +24,7 @@ public class AgentInstallerLinuxTests
   {
     var pathProvider = new Mock<IFileSystemPathProvider>();
     pathProvider
-      .Setup(x => x.GetAgentInstallDirectoryFor("Acme Remote", "exp"))
+      .Setup(x => x.GetAgentInstallDirectoryFor(null, "Acme Remote", "exp"))
       .Returns("/usr/local/bin/Acme_Remote/exp");
 
     var sut = CreateSut(
@@ -34,7 +34,7 @@ public class AgentInstallerLinuxTests
       pathProvider.Object,
       Mock.Of<IElevationChecker>());
 
-    var path = sut.GetPreviousBrandDesktopClientPath("Acme Remote", "exp");
+    var path = sut.GetPreviousBrandDesktopClientPath(null, "Acme Remote", "exp");
 
     // The replaced install's client lives under its own brand key and instance id, and is named for
     // that brand, so a migration that changes either one still finds it.
@@ -205,7 +205,7 @@ public class AgentInstallerLinuxTests
       processLocator.Object,
       serviceControl.Object);
 
-    var result = await sut.StopPreviousBrandDesktopClients("Acme Remote", "exp");
+    var result = await sut.StopPreviousBrandDesktopClients(null, "Acme Remote", "exp");
 
     Assert.True(result.IsSuccess);
     Assert.Equal(["unit-stop", "kill"], steps);
@@ -235,7 +235,7 @@ public class AgentInstallerLinuxTests
       processLocator.Object,
       serviceControl.Object);
 
-    var result = await sut.StopPreviousBrandDesktopClients("Acme Remote", "exp");
+    var result = await sut.StopPreviousBrandDesktopClients(null, "Acme Remote", "exp");
 
     // Killing while the unit is still active hands systemd a Restart=on-failure, so an unconfirmed
     // stop has to stop the whole step, not just be logged.
@@ -326,7 +326,7 @@ public class AgentInstallerLinuxTests
   {
     var pathProvider = new Mock<IFileSystemPathProvider>();
     pathProvider
-      .Setup(x => x.GetAgentInstallDirectoryFor("Acme Remote", "exp"))
+      .Setup(x => x.GetAgentInstallDirectoryFor(null, "Acme Remote", "exp"))
       .Returns("/usr/local/bin/Acme_Remote/exp");
     return pathProvider;
   }

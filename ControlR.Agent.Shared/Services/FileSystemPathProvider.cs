@@ -406,7 +406,7 @@ public class FileSystemPathProvider(
       throw new PlatformNotSupportedException();
     }
 
-    return GetWindowsDataRoot();
+    return AppendSubDirectories(GetWindowsDataRoot());
   }
 
   private string AppendSubDirectories(string rootDir)
