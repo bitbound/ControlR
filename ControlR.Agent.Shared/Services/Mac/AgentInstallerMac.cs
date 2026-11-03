@@ -396,24 +396,6 @@ internal class AgentInstallerMac(
     return FilesystemPathProvider.GetMacAppBundlePath();
   }
 
-  /// <summary>
-  /// Deletes the installer LaunchDaemon that an earlier build installed. That daemon existed only to run
-  /// the installer outside the agent's own job, and the installer now does that by leaving the process
-  /// group it was spawned in. The file goes without a bootout, because an install that this very job
-  /// launched would be killed by one. A definition with no RunAtLoad and no activation trigger is inert
-  /// once its file is gone.
-  /// REMOVE AFTER THE FLEET CONVERTS. Tracking issue: publisher-scoped install paths.
-  /// </summary>
-  private void RemoveInstallerDaemonFile()
-  {
-    var installerDaemonFilePath = GetInstallerDaemonFilePath();
-    if (_fileSystem.FileExists(installerDaemonFilePath))
-    {
-      _logger.LogInformation("Deleting obsolete installer LaunchDaemon at {FilePath}.", installerDaemonFilePath);
-      _fileSystem.DeleteFile(installerDaemonFilePath);
-    }
-  }
-
   private string GetInstallerDaemonFilePath()
   {
     if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
@@ -491,6 +473,24 @@ internal class AgentInstallerMac(
       : _instanceOptions.Value.InstanceId;
 
     return Path.Combine(_macInstallerTempDirectory, instanceSegment, "bundle");
+  }
+
+  /// <summary>
+  /// Deletes the installer LaunchDaemon that an earlier build installed. That daemon existed only to run
+  /// the installer outside the agent's own job, and the installer now does that by leaving the process
+  /// group it was spawned in. The file goes without a bootout, because an install that this very job
+  /// launched would be killed by one. A definition with no RunAtLoad and no activation trigger is inert
+  /// once its file is gone.
+  /// REMOVE AFTER THE FLEET CONVERTS. Tracking issue: publisher-scoped install paths.
+  /// </summary>
+  private void RemoveInstallerDaemonFile()
+  {
+    var installerDaemonFilePath = GetInstallerDaemonFilePath();
+    if (_fileSystem.FileExists(installerDaemonFilePath))
+    {
+      _logger.LogInformation("Deleting obsolete installer LaunchDaemon at {FilePath}.", installerDaemonFilePath);
+      _fileSystem.DeleteFile(installerDaemonFilePath);
+    }
   }
 
   private void SetAgentPermissions(string installedAgentPath)
