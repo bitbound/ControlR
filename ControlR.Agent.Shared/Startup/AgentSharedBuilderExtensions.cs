@@ -32,6 +32,9 @@ public static class AgentSharedBuilderExtensions
       services.AddSingleton<IServiceControl, ServiceControlWindows>();
       services.AddSingleton<IElevationChecker, ElevationCheckerWin>();
       services.AddSingleton<IRegistryAccessor, RegistryAccessor>();
+      services.AddSingleton<IAgentServiceRegistration, AgentServiceRegistration>();
+      // REMOVE AFTER THE FLEET CONVERTS. Tracking issue: publisher-scoped install paths.
+      services.AddSingleton<ILegacyPathMigrationWindows, LegacyPathMigrationWindows>();
     }
     else if (OperatingSystem.IsLinux())
     {

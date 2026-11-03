@@ -24,6 +24,8 @@ internal class AgentInstallerWindows(
   IDeviceInfoProvider deviceDataGenerator,
   IFileSystemPathProvider fileSystemPathProvider,
   IRegistryAccessor registryAccessor,
+  IAgentServiceRegistration agentServiceRegistration,
+  ILegacyPathMigrationWindows legacyPathMigration,
   IOptions<InstanceOptions> instanceOptions,
   IFileSystem fileSystem,
   IOptionsAccessor optionsAccessor,
@@ -37,7 +39,9 @@ internal class AgentInstallerWindows(
   private static readonly TimeSpan _desktopProcessExitTimeout = TimeSpan.FromSeconds(15);
   private static readonly SemaphoreSlim _installLock = new(1, 1);
 
+  private readonly IAgentServiceRegistration _agentServiceRegistration = agentServiceRegistration;
   private readonly IElevationChecker _elevationChecker = elevationChecker;
+  private readonly ILegacyPathMigrationWindows _legacyPathMigration = legacyPathMigration;
   private readonly IHostApplicationLifetime _lifetime = lifetime;
   private readonly IProcessManager _processes = processes;
   private readonly IRegistryAccessor _registryAccessor = registryAccessor;
@@ -74,6 +78,22 @@ internal class AgentInstallerWindows(
       var installDir = GetInstallDirectory();
       var targetAgentPath = FilesystemPathProvider.GetAgentExecutablePath();
       var targetDesktopClientPath = Path.Combine(installDir, "DesktopClient", AppConstants.DesktopClientFileName);
+
+      // An install that is already on this machine is registered to run from wherever it was put, and
+      // that is the only record of where it is. The service is stopped and its files replaced by a move,
+      // never by a second registration beside the one already there.
+      var (relocation, registeredElsewhere) = PlanRelocation(installDir);
+      if (relocation is null && registeredElsewhere)
+      {
+        return Result.Fail<AgentInstallOutcome>(
+          "The agent service is registered to run from a directory that is not this install's, and this build " +
+          "cannot name that layout. Nothing on this machine was changed.");
+      }
+
+      if (relocation is not null && !_legacyPathMigration.TryStageSettings(relocation))
+      {
+        return Result.Fail<AgentInstallOutcome>("Could not carry this install's settings to the new path.");
+      }
 
       var stopResult = StopAgentService();
       if (!stopResult.IsSuccess)
@@ -128,15 +148,31 @@ internal class AgentInstallerWindows(
       }
 
       var serviceName = GetServiceName();
-      var createString = $"sc.exe create \"{serviceName}\" binPath= \"\\\"{targetAgentPath}\\\" {subcommand}\" start= auto";
-      var configString = $"sc.exe failure \"{serviceName}\" reset= 5 actions= restart/5000";
 
-      var result = await _processes.GetProcessOutput("cmd.exe", $"/c {createString} & {configString}");
-
-      if (!result.IsSuccess)
+      // A relocated install keeps its registration, which is what keeps its failure actions, its
+      // dependency-free start type, and its place in Services view intact. Create and delete would leave a
+      // service that does not exist for as long as a handle to the deleted one is open.
+      if (relocation is not null)
       {
-        Logger.LogResult(result);
-        return Result.Fail<AgentInstallOutcome>("Failed to register the agent service.");
+        var repointResult = await _agentServiceRegistration.RepointAsync(serviceName, targetAgentPath, subcommand);
+        if (!repointResult.IsSuccess)
+        {
+          Logger.LogError("Failed to point the {ServiceName} service at the relocated install.", serviceName);
+          return Result.Fail<AgentInstallOutcome>("Failed to repoint the agent service.");
+        }
+      }
+      else
+      {
+        var createString = $"sc.exe create \"{serviceName}\" binPath= \"\\\"{targetAgentPath}\\\" {subcommand}\" start= auto";
+        var configString = $"sc.exe failure \"{serviceName}\" reset= 5 actions= restart/5000";
+
+        var result = await _processes.GetProcessOutput("cmd.exe", $"/c {createString} & {configString}");
+
+        if (!result.IsSuccess)
+        {
+          Logger.LogResult(result);
+          return Result.Fail<AgentInstallOutcome>("Failed to register the agent service.");
+        }
       }
 
       var bundleExtractDir = FilesystemPathProvider.GetDotnetExtractDirectory();
@@ -163,6 +199,13 @@ internal class AgentInstallerWindows(
       {
         Logger.LogError("The {BrandName} service did not start.", BrandingConstants.BrandName);
         return startResult.ToResult(AgentInstallOutcome.Installed);
+      }
+
+      if (relocation is not null)
+      {
+        // Only now, with the relocated service confirmed running. Until this point the old install is
+        // complete on disk, which is what lets a failure at any earlier step be recovered by starting it.
+        _legacyPathMigration.RemoveRelocatedInstall(relocation);
       }
 
       Logger.LogInformation("Install completed.");
@@ -313,6 +356,11 @@ internal class AgentInstallerWindows(
         : RegistryView.Registry32);
   }
 
+  private static bool IsSameDirectory(string first, string second)
+  {
+    return string.Equals(first.TrimEnd('\\'), second.TrimEnd('\\'), StringComparison.OrdinalIgnoreCase);
+  }
+
   private void CreateUninstallKey()
   {
     var installDir = GetInstallDirectory();
@@ -347,6 +395,8 @@ internal class AgentInstallerWindows(
   {
     return FilesystemPathProvider.GetAgentInstallDirectory();
   }
+
+
 
   private string GetServiceName()
   {
@@ -392,6 +442,33 @@ internal class AgentInstallerWindows(
     };
     _processes.Start(psi);
     return true;
+  }
+
+  /// <summary>
+  /// Decides whether the service already on this machine has to be moved onto the directory this build
+  /// computes, and whether this build is able to do that.
+  /// </summary>
+  /// <param name="installDirectory">The directory this build installs into.</param>
+  /// <returns>
+  /// The install to move, when the service is registered elsewhere and that place is a layout this build
+  /// can name; nothing to move, when no service is registered or the one registered is already here; and
+  /// a flag that the service is registered elsewhere without being movable, which the caller has to refuse
+  /// rather than register a second service over it.
+  /// </returns>
+  private (WindowsPathRelocation? Relocation, bool RegisteredElsewhere) PlanRelocation(string installDirectory)
+  {
+    if (_systemEnvironment.IsDebug)
+    {
+      return (null, false);
+    }
+
+    var registeredDirectory = _agentServiceRegistration.TryGetRegisteredDirectory(GetServiceName());
+    if (registeredDirectory is null || IsSameDirectory(registeredDirectory, installDirectory))
+    {
+      return (null, false);
+    }
+
+    return (_legacyPathMigration.Plan(registeredDirectory), true);
   }
 
   private async Task<string> PrepareRepairStage(string bundleZipPath, string installDir)
