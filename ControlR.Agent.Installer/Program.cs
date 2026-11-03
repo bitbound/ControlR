@@ -282,13 +282,17 @@ static async Task<int> RunInstall(
     // this installer is not the right binary to be running here. Brands are compared by the key that
     // names every directory, service, and registry key, so two names that reduce to the same key are
     // the same install and this installer is still the right binary.
-    if (!BrandNames.AreSameInstall(metadata.BrandName, BrandingConstants.BrandName))
+    if (!BrandNames.AreSameInstall(metadata.BrandName, BrandingConstants.BrandName)
+        || !InstallPathNames.AreSameVendor(metadata.Publisher, BrandingConstants.Publisher))
     {
       logger.LogCritical(
-        "Refusing to install: server bundle is for brand {ServerBrandName}, but this installer is brand {InstallerBrandName}. " +
+        "Refusing to install: server bundle is brand {ServerBrandName} from publisher {ServerPublisher}, but this installer " +
+        "is brand {InstallerBrandName} from publisher {InstallerPublisher}. " +
         "Nothing on this machine was changed.",
         metadata.BrandName,
-        BrandingConstants.BrandName);
+        metadata.Publisher,
+        BrandingConstants.BrandName,
+        BrandingConstants.Publisher);
       return 1;
     }
 

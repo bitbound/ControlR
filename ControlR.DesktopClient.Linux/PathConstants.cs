@@ -19,8 +19,10 @@ public static class PathConstants
   {
     var isRoot = Libc.Geteuid() == 0;
     var rootDir = isRoot
-       ? $"/var/log/{BrandingConstants.UnixLogDirectoryName}"
-       : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), BrandingConstants.UnixHiddenDirectoryName);
+       ? $"/var/log/{InstallPathNames.LowercaseUnixDirectoryTail(BrandingConstants.Publisher, BrandingConstants.BrandName)}"
+       : Path.Combine(
+          Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+          InstallPathNames.UnixHiddenHomeTail(BrandingConstants.Publisher, BrandingConstants.BrandName));
 
     rootDir = AppendInstanceId(rootDir, instanceId);
     var logsDir = isRoot ? rootDir : Path.Combine(rootDir, "logs");
@@ -54,8 +56,10 @@ public static class PathConstants
   private static string GetSettingsDirectory(string? instanceId)
   {
     var rootDir = Libc.Geteuid() == 0
-      ? $"/etc/{BrandingConstants.UnixConfigDirectoryName}"
-      : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), BrandingConstants.UnixHiddenDirectoryName);
+      ? $"/etc/{InstallPathNames.LowercaseUnixDirectoryTail(BrandingConstants.Publisher, BrandingConstants.BrandName)}"
+      : Path.Combine(
+          Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+          InstallPathNames.UnixHiddenHomeTail(BrandingConstants.Publisher, BrandingConstants.BrandName));
 
     return AppendInstanceId(rootDir, instanceId);
   }

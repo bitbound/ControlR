@@ -45,7 +45,7 @@ public static class PathConstants
   {
     var rootDir = Path.Combine(
       Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-      BrandingConstants.WindowsInstallDirectoryName);
+      InstallPathNames.WindowsDirectoryTail(BrandingConstants.Publisher, BrandingConstants.BrandName));
 
     var sessionDir = AppendSubDirectories(rootDir, instanceId);
 

@@ -172,24 +172,26 @@ Agent logs can be streamed in real-time from the Remote Logs page, which can be 
 
 Logs for the agent and desktop client are detailed below. On Windows, the path depends on whether the app is running in Debug or Release mode. On macOS and Linux, the path depends on whether the app is running as root.
 
+Every path below sits under a publisher directory, `{publisher}/{brand_name}`, which is `Bitbound/ControlR` for this project and the vendor's own names for a customized build. An agent already installed before that directory existed moves itself onto it during its next automatic update.
+
 Under normal user circumstances, the main agent will run in Release mode as SYSTEM/root. For Mac and Linux, the desktop client will normally run as the user for the current GUI session.  For Windows, the desktop client runs as SYSTEM due to permissions required for capturing and controlling full-screen UAC prompts and the WinLogon desktop.
 
 **Main Agent**
 - **Windows**
-  - Release: `C:\ProgramData\ControlR\{hostname}\Logs\ControlR.Agent\LogFile{date}.log`
-  - Debug: `C:\ProgramData\ControlR\Debug\{hostname}\Logs\ControlR.Agent\LogFile{date}.log`
+  - Release: `C:\ProgramData\Bitbound\ControlR\{hostname}\Logs\ControlR.Agent\LogFile{date}.log`
+  - Debug: `C:\ProgramData\Bitbound\ControlR\Debug\{hostname}\Logs\ControlR.Agent\LogFile{date}.log`
 - **macOS / Linux**
-  - Running as root: `/var/log/controlr/{hostname}/ControlR.Agent/LogFile{date}.log`
-  - Running as user: `~/.controlr/logs/{hostname}/ControlR.Agent/LogFile{date}.log`
+  - Running as root: `/var/log/bitbound/controlr/{hostname}/ControlR.Agent/LogFile{date}.log`
+  - Running as user: `~/.bitbound/controlr/logs/{hostname}/ControlR.Agent/LogFile{date}.log`
 
 **Desktop Client**
 - **Windows**
-  - Release: `C:\ProgramData\ControlR\{instance}\{username}\DesktopClient\Logs\LogFile{date}.log`
-  - Debug: `C:\ProgramData\ControlR\Debug\{instance}\{username}\DesktopClient\Logs\LogFile{date}.log`
+  - Release: `C:\ProgramData\Bitbound\ControlR\{instance}\{username}\DesktopClient\Logs\LogFile{date}.log`
+  - Debug: `C:\ProgramData\Bitbound\ControlR\Debug\{instance}\{username}\DesktopClient\Logs\LogFile{date}.log`
   - `{username}` is the user signed in to the desktop session. It reads `System` while the machine is at the sign-in screen.
 - **macOS / Linux**
-  - Running as root: `/var/log/controlr/{hostname}/ControlR.DesktopClient/LogFile{date}.log`
-  - Running as user: `~/.controlr/logs/{hostname}/ControlR.DesktopClient/LogFile{date}.log`
+  - Running as root: `/var/log/bitbound/controlr/{hostname}/ControlR.DesktopClient/LogFile{date}.log`
+  - Running as user: `~/.bitbound/controlr/logs/{hostname}/ControlR.DesktopClient/LogFile{date}.log`
 
 ## Permissions
 

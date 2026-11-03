@@ -95,6 +95,12 @@ internal class AgentMaintenanceService(
 
       var isSameBrand = BrandNames.AreSameInstall(metadata.BrandName, BrandingConstants.BrandName);
 
+      // The publisher names the directory the install lives in, so a bundle from a different vendor is a
+      // different install even when the brand is the same. Comparing brand alone would land the new
+      // bundle in the old vendor directory and leave the paths the new build computes with nothing in
+      // them.
+      var isSameVendor = InstallPathNames.AreSameVendor(metadata.Publisher, BrandingConstants.Publisher);
+
       // The server is authoritative, so an install has to follow it onto the brand and the instance id
       // it names. The brand arrives with the bundle, but the instance id is a tenant setting that the
       // anonymous bundle endpoint cannot answer, so it comes from the endpoint this device signs for.
@@ -107,7 +113,7 @@ internal class AgentMaintenanceService(
         GetEffectiveInstanceId(currentInstanceId),
         StringComparison.Ordinal);
 
-      var isMigration = !isSameBrand || isInstanceMigration;
+      var isMigration = !isSameBrand || !isSameVendor || isInstanceMigration;
 
       if (isMigration)
       {

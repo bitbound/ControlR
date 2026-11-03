@@ -100,7 +100,10 @@ internal sealed class Program
 
     Log.Logger = new LoggerConfiguration()
       .WriteTo.File(
-        Path.Combine(Path.GetTempPath(), BrandingConstants.BrandKey, "Bootstrap.log"),
+        Path.Combine(
+          Path.GetTempPath(),
+          InstallPathNames.UnixDirectoryTail(BrandingConstants.Publisher, BrandingConstants.BrandName),
+          "Bootstrap.log"),
         rollingInterval: RollingInterval.Day,
         shared: true)
       .CreateBootstrapLogger();

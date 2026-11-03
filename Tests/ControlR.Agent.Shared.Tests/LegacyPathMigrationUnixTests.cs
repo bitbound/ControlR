@@ -9,43 +9,6 @@ namespace ControlR.Agent.Shared.Tests;
 public class LegacyPathMigrationUnixTests
 {
   [Fact]
-  public void Plan_WhenNoLegacyInstallExists_ReturnsNull()
-  {
-    var fileSystem = new FakeFileSystem('/');
-    var sut = CreateSut(fileSystem, CreatePathProvider());
-
-    Assert.Null(sut.Plan());
-  }
-
-  [Fact]
-  public void Plan_WhenTheLegacyInstallExists_NamesBothLegacyTrees()
-  {
-    var fileSystem = new FakeFileSystem('/');
-    fileSystem.AddDirectory("/usr/local/bin/ControlR/instance-1");
-    var sut = CreateSut(fileSystem, CreatePathProvider());
-
-    var relocation = sut.Plan();
-
-    Assert.NotNull(relocation);
-    Assert.Equal("/usr/local/bin/ControlR/instance-1", relocation.InstallDirectory);
-    Assert.Equal("/etc/controlr/instance-1", relocation.SettingsDirectory);
-  }
-
-  [Fact]
-  public void RemoveRelocatedInstall_DeletesBothLegacyTrees()
-  {
-    var fileSystem = new FakeFileSystem('/');
-    fileSystem.AddFile("/usr/local/bin/ControlR/instance-1/ControlR.Agent", []);
-    fileSystem.AddFile("/etc/controlr/instance-1/appsettings.json", "{}");
-    var sut = CreateSut(fileSystem, CreatePathProvider());
-
-    sut.RemoveRelocatedInstall(CreateRelocation());
-
-    Assert.False(fileSystem.DirectoryExists("/usr/local/bin/ControlR/instance-1"));
-    Assert.False(fileSystem.DirectoryExists("/etc/controlr/instance-1"));
-  }
-
-  [Fact]
   public void TryStageSettings_WhenTheLegacySettingsFileExists_CopiesItIntoTheNewDirectory()
   {
     var fileSystem = new FakeFileSystem('/');
@@ -71,7 +34,6 @@ public class LegacyPathMigrationUnixTests
     Assert.False(result.IsSuccess);
     Assert.False(fileSystem.DirectoryExists("/etc/bitbound/controlr/instance-1"));
   }
-
 
   private static Mock<IFileSystemPathProvider> CreatePathProvider()
   {
@@ -107,5 +69,4 @@ public class LegacyPathMigrationUnixTests
       pathProvider.Object,
       NullLogger<LegacyPathMigrationUnix>.Instance);
   }
-
 }

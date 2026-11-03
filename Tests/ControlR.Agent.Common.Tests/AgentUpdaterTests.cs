@@ -542,25 +542,34 @@ public class AgentMaintenanceServiceTests
   }
 
   [Fact]
-  public async Task CheckForUpdate_WhenServerPublisherDiffers_StillDownloadsInstaller()
+  public async Task CheckForUpdate_WhenServerPublisherDiffers_MigratesAndNamesTheInstallBeingReplaced()
   {
     var fixture = new AgentMaintenanceServiceFixture();
-    fixture.FileSystem.AddFile(fixture.BundleHashPath, "OLD_HASH");
+    var installedSettingsPath = @"C:\ProgramData\Bitbound\ControlR\instance-1\appsettings.json";
+    var handedOffSettingsPath = @"C:\ProgramData\OtherPublisher\ControlR\instance-1\appsettings.json";
 
-    // The publisher is not a gate. The brand and the instance id decide whether this is a migration,
-    // and a same-brand bundle from a different publisher is still this install's brand.
-    fixture.ServeWindowsBundle("NEW_HASH", publisher: "WrongPublisher");
+    fixture.FileSystem.AddFile(fixture.BundleHashPath, "OLD_HASH");
+    fixture.FileSystem.AddFile(installedSettingsPath, "{\"PrivateKey\":\"key\"}");
+
+    fixture.PathProvider
+      .Setup(x => x.GetAgentAppSettingsPath())
+      .Returns(installedSettingsPath);
+    fixture.PathProvider
+      .Setup(x => x.GetSettingsDirectoryFor("OtherPublisher", "ControlR", "instance-1"))
+      .Returns(@"C:\ProgramData\OtherPublisher\ControlR\instance-1");
+
+    // The publisher names the directory the install lives in, so a same-brand bundle from a different
+    // vendor is a different install. Comparing brand alone would extract the new bundle into this
+    // vendor's directory while the new build looked for itself in the other one.
+    fixture.ServeWindowsBundle("NEW_HASH", publisher: "OtherPublisher");
 
     var updater = fixture.CreateMaintenanceService();
 
     await updater.CheckForUpdate(force: true, cancellationToken: TestContext.Current.CancellationToken);
 
-    fixture.DownloadsApi.Verify(
-      x => x.DownloadFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
-      Times.Once);
-    fixture.ProcessManager.Verify(
-      x => x.Start(It.IsAny<string>(), It.IsAny<string>()),
-      Times.Once);
+    Assert.True(fixture.FileSystem.FileExists(handedOffSettingsPath));
+    Assert.Contains("\"--previous-brand-name\" \"ControlR\"", fixture.LaunchedInstallerArguments, StringComparison.Ordinal);
+    Assert.Contains("\"--previous-publisher\" \"Bitbound\"", fixture.LaunchedInstallerArguments, StringComparison.Ordinal);
   }
 
   private sealed class AgentMaintenanceServiceFixture
