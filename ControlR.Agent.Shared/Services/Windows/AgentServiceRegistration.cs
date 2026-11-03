@@ -8,7 +8,7 @@ namespace ControlR.Agent.Shared.Services.Windows;
 /// control manager's start and stop paths.
 /// </summary>
 [SupportedOSPlatform("windows")]
-internal interface IAgentServiceRegistration
+public interface IAgentServiceRegistration
 {
   /// <summary>
   /// Points an existing service at a new executable and its run arguments, leaving every other part of

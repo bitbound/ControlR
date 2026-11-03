@@ -27,6 +27,7 @@ internal class AgentInstallerMac(
   IOptionsMonitor<AgentAppOptions> appOptions,
   IOptions<InstanceOptions> instanceOptions,
   IEd25519KeyProvider keyProvider,
+  ILegacyPathMigrationUnix legacyPathMigration,
   ILogger<AgentInstallerMac> logger)
   : AgentInstallerBase(fileSystem, fileSystemPathProvider, controlrApi, deviceDataGenerator, optionsAccessor, processManager, systemEnvironment, appOptions, logger, keyProvider), IAgentInstaller
 {
@@ -36,6 +37,7 @@ internal class AgentInstallerMac(
   private readonly IEmbeddedResourceAccessor _embeddedResourceAccessor = embeddedResourceAccessor;
   private readonly IFileSystem _fileSystem = fileSystem;
   private readonly IOptions<InstanceOptions> _instanceOptions = instanceOptions;
+  private readonly ILegacyPathMigrationUnix _legacyPathMigration = legacyPathMigration;
   private readonly ILogger<AgentInstallerMac> _logger = logger;
   private readonly IServiceControl _serviceControl = serviceControl;
 
@@ -63,6 +65,13 @@ internal class AgentInstallerMac(
       var installedAgentDirectory = Path.GetDirectoryName(installedAgentPath)
         ?? throw new DirectoryNotFoundException("Unable to determine the agent install directory.");
       var bundleStateDirectory = GetBundleStateDirectory();
+
+      // REMOVE AFTER THE FLEET CONVERTS. Tracking issue: publisher-scoped install paths.
+      var relocation = _legacyPathMigration.Plan();
+      if (relocation is not null && !_legacyPathMigration.TryStageSettings(relocation).IsSuccess)
+      {
+        return Result.Fail<AgentInstallOutcome>("Could not carry this install's settings to the new path.");
+      }
 
       await _serviceControl.StopDesktopClientService(throwOnFailure: false);
       await _serviceControl.StopAgentService(throwOnFailure: false);
@@ -153,6 +162,14 @@ internal class AgentInstallerMac(
       }
 
       await _serviceControl.StartDesktopClientService(throwOnFailure: false);
+
+      if (relocation is not null)
+      {
+        // REMOVE AFTER THE FLEET CONVERTS. Tracking issue: publisher-scoped install paths.
+        // Only now, with the relocated service confirmed started. Until this point the old install is
+        // complete on disk, which is what lets a failure at any earlier step be recovered by starting it.
+        _legacyPathMigration.RemoveRelocatedInstall(relocation);
+      }
 
       _logger.LogInformation("Installer finished.");
       return Result.Ok(AgentInstallOutcome.Installed);

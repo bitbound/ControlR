@@ -44,12 +44,16 @@ public static class AgentSharedBuilderExtensions
       services.AddSingleton<IHeadlessServerDetector, HeadlessServerDetector>();
       services.AddSingleton<IServiceControl, ServiceControlLinux>();
       services.AddSingleton<ILinuxDesktopClientProcessLocator, LinuxDesktopClientProcessLocator>();
+      // REMOVE AFTER THE FLEET CONVERTS. Tracking issue: publisher-scoped install paths.
+      services.AddSingleton<ILegacyPathMigrationUnix, LegacyPathMigrationUnix>();
     }
     else if (OperatingSystem.IsMacOS())
     {
       services.AddSingleton<IAgentInstaller, AgentInstallerMac>();
       services.AddSingleton<IServiceControl, ServiceControlMac>();
       services.AddSingleton<IElevationChecker, ElevationCheckerMac>();
+      // REMOVE AFTER THE FLEET CONVERTS. Tracking issue: publisher-scoped install paths.
+      services.AddSingleton<ILegacyPathMigrationUnix, LegacyPathMigrationUnix>();
     }
 
     return services;

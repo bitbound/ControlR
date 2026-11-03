@@ -10,7 +10,7 @@ namespace ControlR.Agent.Shared.Services.Windows;
 /// </summary>
 /// <param name="InstallDirectory">Where that install's executable is registered to run from.</param>
 /// <param name="SettingsDirectory">Where that install keeps appsettings.json, which holds its signing key.</param>
-internal sealed record WindowsPathRelocation(string InstallDirectory, string SettingsDirectory);
+public sealed record WindowsPathRelocation(string InstallDirectory, string SettingsDirectory);
 
 /// <summary>
 /// REMOVE AFTER THE FLEET CONVERTS. Tracking issue: publisher-scoped install paths.
@@ -30,7 +30,7 @@ internal sealed record WindowsPathRelocation(string InstallDirectory, string Set
 /// </para>
 /// </remarks>
 [SupportedOSPlatform("windows")]
-internal interface ILegacyPathMigrationWindows
+public interface ILegacyPathMigrationWindows
 {
   /// <summary>
   /// Resolves the relocation for a service that is registered to run outside the directory this build

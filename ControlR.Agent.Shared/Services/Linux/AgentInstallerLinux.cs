@@ -29,6 +29,7 @@ internal class AgentInstallerLinux(
   IOptions<InstanceOptions> instanceOptions,
   IEd25519KeyProvider keyProvider,
   ILinuxDesktopClientProcessLocator processLocator,
+  ILegacyPathMigrationUnix legacyPathMigration,
   ILogger<AgentInstallerLinux> logger)
   : AgentInstallerBase(fileSystem, fileSystemPathProvider, controlrApi, deviceDataGenerator, optionsAcccessor, processManager, systemEnvironment, appOptions, logger, keyProvider), IAgentInstaller
 {
@@ -39,6 +40,7 @@ internal class AgentInstallerLinux(
   private readonly IElevationChecker _elevationChecker = elevationChecker;
   private readonly IEmbeddedResourceAccessor _embeddedResourceAccessor = embeddedResourceAccessor;
   private readonly IFileSystem _fileSystem = fileSystem;
+  private readonly ILegacyPathMigrationUnix _legacyPathMigration = legacyPathMigration;
   private readonly IHostApplicationLifetime _lifetime = lifetime;
   private readonly ILogger<AgentInstallerLinux> _logger = logger;
   private readonly ILinuxDesktopClientProcessLocator _processLocator = processLocator;
@@ -75,7 +77,19 @@ internal class AgentInstallerLinux(
 
       await _serviceControl.StopDesktopClientService(throwOnFailure: false);
 
-      if (_fileSystem.DirectoryExists(installDir))
+      // REMOVE AFTER THE FLEET CONVERTS. Tracking issue: publisher-scoped install paths.
+      var relocation = _legacyPathMigration.Plan();
+      if (relocation is not null && !_legacyPathMigration.TryStageSettings(relocation).IsSuccess)
+      {
+        return Result.Fail<AgentInstallOutcome>("Could not carry this install's settings to the new path.");
+      }
+
+      var legacyInstallDirectory = relocation?.InstallDirectory;
+
+      // The unit name is brand-derived, so the same unit that is about to be rewritten is what is running
+      // the old install. It has to be stopped whether or not this build's own directory exists yet, or the
+      // relocated agent starts beside the one it is replacing and both sign as the same device.
+      if (_fileSystem.DirectoryExists(installDir) || legacyInstallDirectory is not null)
       {
         await ProcessManager
           .Start("sudo", $"systemctl stop {serviceName}")
@@ -86,7 +100,15 @@ internal class AgentInstallerLinux(
         // is replaced. Kill by path so the new install does not start beside a stale client.
         StopDesktopClientProcesses(GetDesktopClientPath(installDir));
 
-        _fileSystem.DeleteDirectory(installDir, true);
+        if (legacyInstallDirectory is not null)
+        {
+          StopDesktopClientProcesses(GetDesktopClientPath(legacyInstallDirectory));
+        }
+
+        if (_fileSystem.DirectoryExists(installDir))
+        {
+          _fileSystem.DeleteDirectory(installDir, true);
+        }
       }
 
       _fileSystem.CreateDirectory(installDir);
@@ -183,6 +205,14 @@ internal class AgentInstallerLinux(
 
       _logger.LogInformation("Starting desktop user services for logged-in users.");
       await _serviceControl.StartDesktopClientService(throwOnFailure: false);
+
+      if (relocation is not null)
+      {
+        // REMOVE AFTER THE FLEET CONVERTS. Tracking issue: publisher-scoped install paths.
+        // Only now, with the relocated unit confirmed active. Until this point the old install is
+        // complete on disk, which is what lets a failure at any earlier step be recovered by starting it.
+        _legacyPathMigration.RemoveRelocatedInstall(relocation);
+      }
 
       _logger.LogInformation("Install completed.");
       return Result.Ok(AgentInstallOutcome.Installed);

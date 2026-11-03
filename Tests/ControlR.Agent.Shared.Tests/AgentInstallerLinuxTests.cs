@@ -13,6 +13,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
+using ControlR.Agent.Shared.Services.Base;
 
 namespace ControlR.Agent.Shared.Tests;
 
@@ -378,6 +379,7 @@ public class AgentInstallerLinuxTests
       Microsoft.Extensions.Options.Options.Create(new InstanceOptions()),
       Mock.Of<IEd25519KeyProvider>(),
       processLocator,
+      Mock.Of<ILegacyPathMigrationUnix>(),
       NullLogger<AgentInstallerLinux>.Instance);
   }
 }
