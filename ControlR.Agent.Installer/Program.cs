@@ -57,6 +57,8 @@ const string PreviousBrandNameDescription = "Brand name of the agent install bei
 const string PreviousBrandNameLongAlias = "--previous-brand-name";
 const string PreviousInstanceIdDescription = "Instance ID of the agent install being replaced, set only during a migration. Omit when that install used the default instance ID. That install is removed once this brand is installed and running.";
 const string PreviousInstanceIdLongAlias = "--previous-instance-id";
+const string PreviousPublisherDescription = "Publisher of the agent install being replaced, which is the vendor directory its paths sit under. Omit when that install predates the vendor directory. Set only during a migration.";
+const string PreviousPublisherLongAlias = "--previous-publisher";
 const string TempDirectoryPrefix = "controlr-install-";
 const string TempBundleFileName = "ControlR.Agent.bundle.zip";
 
@@ -149,6 +151,12 @@ static Command GetInstallCommand()
     Description = PreviousInstanceIdDescription,
   };
 
+  var previousPublisherOption = new Option<string?>(PreviousPublisherLongAlias)
+  {
+    Required = false,
+    Description = PreviousPublisherDescription,
+  };
+
   var installCommand = new Command(InstallCommandName, InstallCommandDescription)
   {
     serverUriOption,
@@ -161,6 +169,7 @@ static Command GetInstallCommand()
     customerIdOption,
     previousBrandNameOption,
     previousInstanceIdOption,
+    previousPublisherOption,
   };
 
   installCommand.SetAction(async parseResult =>
@@ -181,7 +190,8 @@ static Command GetInstallCommand()
       installRequest,
       parseResult.GetValue(instanceIdOption),
       parseResult.GetValue(previousBrandNameOption),
-      parseResult.GetValue(previousInstanceIdOption));
+      parseResult.GetValue(previousInstanceIdOption),
+      parseResult.GetValue(previousPublisherOption));
   });
 
   return installCommand;
@@ -230,7 +240,8 @@ static async Task<int> RunInstall(
   AgentInstallRequest request,
   string? instanceId,
   string? previousBrandArg,
-  string? previousInstanceIdArg)
+  string? previousInstanceIdArg,
+  string? previousPublisherArg)
 {
   using var host = CreateInstallerHost(instanceId, request.ServerUri);
   var logger = host.Services.GetRequiredService<ILoggerFactory>().CreateLogger("ControlR.Agent.Installer");
@@ -242,6 +253,7 @@ static async Task<int> RunInstall(
   // Declared out here so the catch can roll the replaced install back too.
   string? previousBrand = null;
   string? previousInstanceId = null;
+  string? previousPublisher = null;
 
   try
   {
@@ -282,14 +294,18 @@ static async Task<int> RunInstall(
 
     // A migration is indicated by the install being replaced, which the resident install passes in.
     var previousInstall = PreviousInstall.Resolve(
+      previousPublisherArg,
       previousBrandArg,
       previousInstanceIdArg,
+      BrandingConstants.Publisher,
       BrandingConstants.BrandName,
       instanceId);
 
     if (previousInstall is null)
     {
-      if (!string.IsNullOrWhiteSpace(previousBrandArg) || !string.IsNullOrWhiteSpace(previousInstanceIdArg))
+      if (!string.IsNullOrWhiteSpace(previousBrandArg) ||
+          !string.IsNullOrWhiteSpace(previousInstanceIdArg) ||
+          !string.IsNullOrWhiteSpace(previousPublisherArg))
       {
         logger.LogWarning("Ignoring the previous-install arguments because they describe this same install.");
       }
@@ -298,6 +314,7 @@ static async Task<int> RunInstall(
     {
       previousBrand = previousInstall.BrandName;
       previousInstanceId = previousInstall.InstanceId;
+      previousPublisher = previousInstall.Publisher;
     }
 
     if (previousBrand is not null)
@@ -339,13 +356,14 @@ static async Task<int> RunInstall(
       CustomerId = request.CustomerId,
       PreviousBrandName = previousBrand,
       PreviousInstanceId = previousInstanceId,
+      PreviousPublisher = previousPublisher,
     };
 
     var installResult = await installer.Install(installRequest);
     if (!installResult.IsSuccess)
     {
       logger.LogError("Installation failed. Reason: {Reason}", installResult.Reason);
-      await RecoverFromFailedInstall(host, installer, logger, previousBrand, previousInstanceId);
+      await RecoverFromFailedInstall(host, installer, logger, previousPublisher, previousBrand, previousInstanceId);
       return 1;
     }
 
@@ -364,7 +382,7 @@ static async Task<int> RunInstall(
     {
       // Best effort. This install is already working, so a failure here must not report a failed
       // install. A leftover old-brand service is recoverable; reporting success as failure is not.
-      await installer.RetirePreviousBrand(previousBrand, previousInstanceId);
+      await installer.RetirePreviousBrand(previousPublisher, previousBrand, previousInstanceId);
     }
 
     return 0;
@@ -374,7 +392,7 @@ static async Task<int> RunInstall(
     logger.LogError(ex, "Installation failed.");
 
     var installer = host.Services.GetRequiredService<IAgentInstaller>();
-    await RecoverFromFailedInstall(host, installer, logger, previousBrand, previousInstanceId);
+    await RecoverFromFailedInstall(host, installer, logger, previousPublisher, previousBrand, previousInstanceId);
     return 1;
   }
   finally
@@ -400,6 +418,7 @@ static async Task RecoverFromFailedInstall(
   IHost host,
   IAgentInstaller installer,
   ILogger logger,
+  string? previousPublisher,
   string? previousBrand,
   string? previousInstanceId)
 {
@@ -407,7 +426,7 @@ static async Task RecoverFromFailedInstall(
   {
     if (previousBrand is not null)
     {
-      await installer.RestorePreviousBrand(previousBrand, previousInstanceId);
+      await installer.RestorePreviousBrand(previousPublisher, previousBrand, previousInstanceId);
       return;
     }
 

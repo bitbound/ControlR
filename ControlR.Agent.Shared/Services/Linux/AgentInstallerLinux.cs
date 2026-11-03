@@ -139,7 +139,10 @@ internal class AgentInstallerLinux(
       // Only one agent may hold the device's connection on the server, so the replaced install stops
       // before this one starts. Starting beside an install that could not be stopped would leave both
       // signing as the same device, so fail and let the caller put the replaced install back.
-      var stopPreviousBrandResult = await StopPreviousBrandService(request.PreviousBrandName, request.PreviousInstanceId);
+      var stopPreviousBrandResult = await StopPreviousBrandService(
+        request.PreviousPublisher,
+        request.PreviousBrandName,
+        request.PreviousInstanceId);
       if (!stopPreviousBrandResult.IsSuccess)
       {
         return Result.Fail<AgentInstallOutcome>($"Failed to stop the {request.PreviousBrandName} install being replaced.");
@@ -147,12 +150,13 @@ internal class AgentInstallerLinux(
 
       // The replaced install's agent cannot be trusted to kill its own login screen client. Older
       // builds never did, and a crashed agent could not. Kill the replaced install's clients
-      // directly. They are found by the path that install used, which is keyed on its own brand and
-      // instance id, so a migration that changes either one still finds them and never touches
-      // another install's.
+      // directly. They are found by the path that install used, which is keyed on its own publisher,
+      // brand, and instance id, so a migration that changes any one of them still finds them and never
+      // touches another install's.
       if (!string.IsNullOrWhiteSpace(request.PreviousBrandName))
       {
         var stopPreviousDesktopResult = await StopPreviousBrandDesktopClients(
+          request.PreviousPublisher,
           request.PreviousBrandName,
           request.PreviousInstanceId);
 
@@ -345,9 +349,9 @@ internal class AgentInstallerLinux(
     return template;
   }
 
-  internal string GetPreviousBrandDesktopClientPath(string previousBrandName, string? previousInstanceId)
+  internal string GetPreviousBrandDesktopClientPath(string? previousPublisher, string previousBrandName, string? previousInstanceId)
   {
-    var installDirectory = FilesystemPathProvider.GetAgentInstallDirectoryFor(previousBrandName, previousInstanceId);
+    var installDirectory = FilesystemPathProvider.GetAgentInstallDirectoryFor(previousPublisher, previousBrandName, previousInstanceId);
 
     // The replaced install names its own client for its own brand, which is not this build's name
     // when the migration changed the brand.
@@ -362,7 +366,7 @@ internal class AgentInstallerLinux(
   /// a unit left active relaunches exactly what the kill just took down. A failed unit stop therefore
   /// aborts before any kill, and the caller treats it like the replaced agent failing to stop.
   /// </summary>
-  internal async Task<Result> StopPreviousBrandDesktopClients(string previousBrandName, string? previousInstanceId)
+  internal async Task<Result> StopPreviousBrandDesktopClients(string? previousPublisher, string previousBrandName, string? previousInstanceId)
   {
     try
     {
@@ -377,7 +381,7 @@ internal class AgentInstallerLinux(
       return Result.Fail($"Failed to stop the {previousBrandName} desktop client service being replaced.");
     }
 
-    StopDesktopClientProcesses(GetPreviousBrandDesktopClientPath(previousBrandName, previousInstanceId));
+    StopDesktopClientProcesses(GetPreviousBrandDesktopClientPath(previousPublisher, previousBrandName, previousInstanceId));
 
     return Result.Ok();
   }

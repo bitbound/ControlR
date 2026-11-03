@@ -36,7 +36,7 @@ internal abstract class AgentInstallerBase(
   /// Starts the service of the install being replaced. Used to roll back when this install cannot
   /// start, so a failed migration does not leave the machine with no running agent.
   /// </summary>
-  public async Task<Result> RestorePreviousBrand(string previousBrandName, string? previousInstanceId)
+  public async Task<Result> RestorePreviousBrand(string? previousPublisher, string previousBrandName, string? previousInstanceId)
   {
     using var _ = Logger.BeginMemberScope();
 
@@ -46,6 +46,7 @@ internal abstract class AgentInstallerBase(
       previousInstanceId);
 
     var result = await RunPreviousBrandAgentCommand(
+      previousPublisher,
       previousBrandName,
       previousInstanceId,
       "start-service",
@@ -69,7 +70,7 @@ internal abstract class AgentInstallerBase(
   /// <summary>
   /// Removes the install being replaced, and the settings directory its uninstall leaves behind.
   /// </summary>
-  public async Task<Result> RetirePreviousBrand(string previousBrandName, string? previousInstanceId)
+  public async Task<Result> RetirePreviousBrand(string? previousPublisher, string previousBrandName, string? previousInstanceId)
   {
     using var _ = Logger.BeginMemberScope();
 
@@ -79,6 +80,7 @@ internal abstract class AgentInstallerBase(
       previousInstanceId);
 
     var result = await RunPreviousBrandAgentCommand(
+      previousPublisher,
       previousBrandName,
       previousInstanceId,
       "uninstall",
@@ -97,7 +99,10 @@ internal abstract class AgentInstallerBase(
     // in plaintext. Remove it so the retired brand does not keep holding it.
     try
     {
-      var settingsDirectory = FilesystemPathProvider.GetSettingsDirectoryFor(previousBrandName, previousInstanceId);
+      var settingsDirectory = FilesystemPathProvider.GetSettingsDirectoryFor(
+        previousPublisher,
+        previousBrandName,
+        previousInstanceId);
 
       if (FileSystem.DirectoryExists(settingsDirectory))
       {
@@ -198,7 +203,10 @@ internal abstract class AgentInstallerBase(
   /// agent may hold the device's connection on the server, and both would otherwise keep taking it, so
   /// the caller has to be able to refuse to continue when this fails.
   /// </summary>
-  protected async Task<Result> StopPreviousBrandService(string? previousBrandName, string? previousInstanceId)
+  protected async Task<Result> StopPreviousBrandService(
+    string? previousPublisher,
+    string? previousBrandName,
+    string? previousInstanceId)
   {
     if (string.IsNullOrWhiteSpace(previousBrandName))
     {
@@ -212,6 +220,7 @@ internal abstract class AgentInstallerBase(
       previousInstanceId);
 
     var result = await RunPreviousBrandAgentCommand(
+      previousPublisher,
       previousBrandName,
       previousInstanceId,
       "stop-service",
@@ -340,19 +349,25 @@ internal abstract class AgentInstallerBase(
 
   /// <summary>
   /// Runs one of the replaced install's own commands against itself. The install is addressed by the
-  /// brand and instance id it was created with, which is not always this install's, because a
-  /// migration can move either. Staged to a temp copy first, because run from its own install
+  /// publisher, brand, and instance id it was created with, which is not always this install's, because a
+  /// migration can move any of them. A null publisher names an install created before the publisher became
+  /// a directory. Staged to a temp copy first, because run from its own install
   /// directory that agent copies itself elsewhere, re-launches detached, and returns before doing
   /// anything. Asking it to act on itself is also what keeps another brand's service names, unit
   /// files, and registry keys out of this code.
   /// </summary>
   private async Task<Result> RunPreviousBrandAgentCommand(
+    string? previousPublisher,
     string previousBrandName,
     string? previousInstanceId,
     string command,
     TimeSpan timeout)
   {
-    var installDirectory = FilesystemPathProvider.GetAgentInstallDirectoryFor(previousBrandName, previousInstanceId);
+    var installDirectory = FilesystemPathProvider.GetAgentInstallDirectoryFor(
+      previousPublisher,
+      previousBrandName,
+      previousInstanceId);
+
     var agentPath = GetAgentPath(installDirectory, _systemEnvironment.Platform, previousBrandName);
 
     if (!FileSystem.FileExists(agentPath))

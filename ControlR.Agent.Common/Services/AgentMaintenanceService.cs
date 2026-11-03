@@ -123,7 +123,7 @@ internal class AgentMaintenanceService(
         // Without it that install registers a fresh device and signs with a key the server has never
         // been told about, and the existing device record can never authenticate again, so refuse
         // rather than try.
-        if (!WriteSettingsFileForBrand(metadata.BrandName, targetInstanceId))
+        if (!WriteSettingsFileForBrand(metadata.Publisher, metadata.BrandName, targetInstanceId))
         {
           _logger.LogCritical(
             "Refusing to migrate. The settings file for brand {ServerBrandName} and instance id {TargetInstanceId} " +
@@ -337,11 +337,15 @@ internal class AgentMaintenanceService(
     if (isMigration)
     {
       // The replacing install picks its identity up from the settings file this agent already staged
-      // for it, so what has to travel is which install to stop and remove. Both values are sent,
-      // because either the brand or the instance id may be the only one that changed, and the
-      // installer has to be told a migration is happening in both cases.
+      // for it, so what has to travel is which install to stop and remove. All three values are sent,
+      // because any one of them may be the only one that changed, and the installer has to be told a
+      // migration is happening in every case. The publisher is what the installer needs to find this
+      // install's directory once the publisher is a directory in that path.
       arguments.Add("--previous-brand-name");
       arguments.Add(BrandingConstants.BrandName);
+
+      arguments.Add("--previous-publisher");
+      arguments.Add(BrandingConstants.Publisher);
 
       if (!string.IsNullOrWhiteSpace(currentInstanceId))
       {
@@ -589,7 +593,7 @@ internal class AgentMaintenanceService(
   /// The server only trusts the public key it already stored for a known device, so losing the key
   /// would leave the endpoint unable to authenticate again.
   /// </summary>
-  private bool WriteSettingsFileForBrand(string newBrandName, string? newInstanceId)
+  private bool WriteSettingsFileForBrand(string newPublisherName, string newBrandName, string? newInstanceId)
   {
     try
     {
@@ -607,7 +611,11 @@ internal class AgentMaintenanceService(
         return false;
       }
 
-      var destinationDirectory = _fileSystemPathProvider.GetSettingsDirectoryFor(newBrandName, newInstanceId);
+      var destinationDirectory = _fileSystemPathProvider.GetSettingsDirectoryFor(
+        newPublisherName,
+        newBrandName,
+        newInstanceId);
+
       var destinationPath = Path.Combine(destinationDirectory, "appsettings.json");
 
       _fileSystem.CreateDirectory(destinationDirectory);

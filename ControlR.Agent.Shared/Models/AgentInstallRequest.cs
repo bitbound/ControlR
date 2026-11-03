@@ -22,6 +22,14 @@ public sealed record AgentInstallRequest
   /// </summary>
   public string? PreviousInstanceId { get; init; }
 
+  /// <summary>
+  /// Publisher of the install this one replaces, which is the vendor directory its paths sit under.
+  /// Null names an install created before the publisher became a directory. Set only during a migration,
+  /// together with <see cref="PreviousBrandName"/>, because the pair is what locates the install to stop
+  /// and remove.
+  /// </summary>
+  public string? PreviousPublisher { get; init; }
+
   public required Uri ServerUri { get; init; }
   public Guid[]? TagIds { get; init; }
   public required Guid TenantId { get; init; }

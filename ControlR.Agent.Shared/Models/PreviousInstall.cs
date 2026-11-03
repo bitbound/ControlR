@@ -11,7 +11,12 @@ namespace ControlR.Agent.Shared.Models;
 /// Instance id of the install being replaced, or null when it used the default instance id. This is
 /// not always the instance id this installer is going to.
 /// </param>
-public sealed record PreviousInstall(string BrandName, string? InstanceId)
+/// <param name="Publisher">
+/// Publisher of the install being replaced, which is the vendor directory its paths sit under. An
+/// install created before the publisher became a directory has no value to name here, and the caller
+/// resolves that install by its own means rather than through this record.
+/// </param>
+public sealed record PreviousInstall(string BrandName, string? InstanceId, string? Publisher)
 {
   /// <summary>
   /// Resolves the install being replaced. An argument that was not supplied describes an install
@@ -24,22 +29,27 @@ public sealed record PreviousInstall(string BrandName, string? InstanceId)
   /// would remove what was just written.
   /// </returns>
   public static PreviousInstall? Resolve(
+    string? previousPublisher,
     string? previousBrandName,
     string? previousInstanceId,
+    string installerPublisher,
     string installerBrandName,
     string? installerInstanceId)
   {
+    var suppliedPublisher = string.IsNullOrWhiteSpace(previousPublisher) ? null : previousPublisher;
     var suppliedBrandName = string.IsNullOrWhiteSpace(previousBrandName) ? null : previousBrandName;
     var suppliedInstanceId = string.IsNullOrWhiteSpace(previousInstanceId) ? null : previousInstanceId;
 
-    if (suppliedBrandName is null && suppliedInstanceId is null)
+    if (suppliedPublisher is null && suppliedBrandName is null && suppliedInstanceId is null)
     {
       return null;
     }
 
+    var publisher = suppliedPublisher ?? installerPublisher;
     var brandName = suppliedBrandName ?? installerBrandName;
 
     if (BrandNames.AreSameInstall(brandName, installerBrandName) &&
+        string.Equals(publisher, installerPublisher, StringComparison.Ordinal) &&
         string.Equals(
           GetEffectiveInstanceId(suppliedInstanceId),
           GetEffectiveInstanceId(installerInstanceId),
@@ -48,7 +58,7 @@ public sealed record PreviousInstall(string BrandName, string? InstanceId)
       return null;
     }
 
-    return new PreviousInstall(brandName, suppliedInstanceId);
+    return new PreviousInstall(brandName, suppliedInstanceId, publisher);
   }
 
   private static string GetEffectiveInstanceId(string? instanceId)

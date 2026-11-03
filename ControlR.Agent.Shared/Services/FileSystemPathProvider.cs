@@ -21,17 +21,18 @@ public interface IFileSystemPathProvider
   /// </summary>
   string GetAgentInstallDirectory();
   /// <summary>
-  /// Returns the install directory that <paramref name="brandName"/> and <paramref name="instanceId"/>
-  /// would use on this machine. Like <see cref="GetSettingsDirectoryFor"/>, this describes a brand
-  /// other than the one compiled into this build.
+  /// Returns the install directory that <paramref name="publisherName"/> and <paramref name="brandName"/>
+  /// would use on this machine. Like <see cref="GetSettingsDirectoryFor"/>, this describes a brand other
+  /// than the one compiled into this build, and a vendor directory is part of that brand's path, so both
+  /// names are needed to address an install that is not this one.
   /// </summary>
-  string GetAgentInstallDirectoryFor(string brandName, string? instanceId);
+  string GetAgentInstallDirectoryFor(string? publisherName, string brandName, string? instanceId);
   /// <summary>
   /// Returns the path to the agent's current log file.
   /// </summary>
   string GetAgentLogFilePath();
   /// <summary>
-  /// Returns the directory where agent logs are stored. On Windows this is under CommonApplicationData; on Linux/macOS it is under /var/log/controlr for elevated processes or ~/.controlr/logs for user processes.
+  /// Returns the directory where agent logs are stored. On Windows this is under CommonApplicationData; on Linux/macOS it is under /var/log for elevated processes or ~/.controlr/logs for user processes.
   /// </summary>
   string GetAgentLogsDirectoryPath();
   /// <summary>
@@ -83,11 +84,11 @@ public interface IFileSystemPathProvider
   /// </summary>
   string GetServiceFilePath();
   /// <summary>
-  /// Returns the settings directory that <paramref name="brandName"/> and <paramref name="instanceId"/>
+  /// Returns the settings directory that <paramref name="publisherName"/> and <paramref name="brandName"/>
   /// would use on this machine, which is where a rebrand migration reads appsettings.json from.
   /// Unlike the other members, this describes a brand other than the one compiled into this build.
   /// </summary>
-  string GetSettingsDirectoryFor(string brandName, string? instanceId);
+  string GetSettingsDirectoryFor(string? publisherName, string brandName, string? instanceId);
   /// <summary>
   /// Returns the path to the agent executable inside a macOS app bundle (for copying out during install).
   /// </summary>
@@ -97,15 +98,15 @@ public interface IFileSystemPathProvider
   /// </summary>
   string GetUninstallKeyPath();
   /// <summary>
-  /// Returns the log directory for the desktop client running under the specified user on Linux/macOS (e.g. /home/{username}/.controlr/{instanceId}/logs/ControlR.DesktopClient).
+  /// Returns the log directory for the desktop client running under the specified user on Linux/macOS (e.g. /home/{username}/.bitbound/controlr/{instanceId}/logs/ControlR.DesktopClient).
   /// </summary>
   string GetUnixDesktopClientLogsDirectory(string username);
   /// <summary>
-  /// Returns the log directory for the desktop client running as root on Linux/macOS (e.g. /var/log/controlr/{instanceId}/ControlR.DesktopClient).
+  /// Returns the log directory for the desktop client running as root on Linux/macOS (e.g. /var/log/bitbound/controlr/{instanceId}/ControlR.DesktopClient).
   /// </summary>
   string GetUnixDesktopClientLogsDirectoryForRoot();
   /// <summary>
-  /// Returns the log directory for the desktop client running under the specified user on Windows,
+  /// Returns the log directory for the desktop client running as the specified user on Windows,
   /// under CommonApplicationData with debug and instance subdirectories.
   /// </summary>
   string GetWindowsDesktopClientLogsDirectory(string username);
@@ -133,25 +134,25 @@ public class FileSystemPathProvider(
 
   public string GetAgentExecutablePath()
   {
-    return Path.Combine(GetAgentInstallDirectory(), AppConstants.GetAgentFileName(_systemEnvironment.Platform));
+    return _fileSystem.JoinPaths(GetPathSeparator(), GetAgentInstallDirectory(), AppConstants.GetAgentFileName(_systemEnvironment.Platform));
   }
 
   public string GetAgentInstallDirectory()
   {
-    return GetAgentInstallDirectoryFor(BrandingConstants.BrandName, GetInstanceId());
+    return GetAgentInstallDirectoryFor(BrandingConstants.Publisher, BrandingConstants.BrandName, GetInstanceId());
   }
 
-  public string GetAgentInstallDirectoryFor(string brandName, string? instanceId)
+  public string GetAgentInstallDirectoryFor(string? publisherName, string brandName, string? instanceId)
   {
-    var brandKey = ResolveBrandKey(brandName);
+    var brandDirectories = InstallPathNames.Directories(publisherName, brandName);
 
     var baseDir = _systemEnvironment.IsDebug
-      ? Path.Combine(Path.GetTempPath(), brandKey, "Install")
+      ? _fileSystem.JoinPaths(GetPathSeparator(), [Path.GetTempPath().TrimEnd(GetPathSeparator()), .. brandDirectories])
       : _systemEnvironment.Platform switch
       {
-        SystemPlatform.Windows => Path.Combine(Path.GetPathRoot(Environment.SystemDirectory) ?? "C:\\", "Program Files", brandKey),
-        SystemPlatform.Linux => $"/usr/local/bin/{brandKey}",
-        SystemPlatform.MacOs => $"/Library/Application Support/{brandKey}",
+        SystemPlatform.Windows => _fileSystem.JoinPaths(GetPathSeparator(), [_systemEnvironment.GetProgramFilesDirectory(), .. brandDirectories]),
+        SystemPlatform.Linux => _fileSystem.JoinPaths(GetPathSeparator(), ["/usr/local/bin", .. brandDirectories]),
+        SystemPlatform.MacOs => _fileSystem.JoinPaths(GetPathSeparator(), ["/Library/Application Support", .. brandDirectories]),
         _ => throw new PlatformNotSupportedException()
       };
 
@@ -159,7 +160,7 @@ public class FileSystemPathProvider(
       ? AppConstants.DefaultInstanceId
       : instanceId.SanitizeForFileSystem();
 
-    return Path.Combine(baseDir, resolvedInstanceId);
+    return _fileSystem.JoinPaths(GetPathSeparator(), baseDir, resolvedInstanceId);
   }
 
   public string GetAgentLogFilePath()
@@ -171,11 +172,7 @@ public class FileSystemPathProvider(
   {
     if (_systemEnvironment.IsWindows())
     {
-      var logsDir = _fileSystem.JoinPaths(GetPathSeparator(),
-        _systemEnvironment.GetCommonApplicationDataDirectory(),
-        BrandingConstants.WindowsLogDirectoryName);
-
-      logsDir = AppendSubDirectories(logsDir);
+      var logsDir = AppendSubDirectories(GetWindowsDataRoot());
       return _fileSystem.JoinPaths(GetPathSeparator(), logsDir, "Logs", BrandingConstants.AgentBaseName);
     }
 
@@ -184,7 +181,7 @@ public class FileSystemPathProvider(
       var isElevated = _elevationChecker.IsElevated();
       var rootDir = isElevated
         ? GetUnixLogDirectoryRoot()
-        : _fileSystem.JoinPaths(GetPathSeparator(), _systemEnvironment.GetProfileDirectory(), BrandingConstants.UnixHiddenDirectoryName);
+        : GetUnixUserDataRoot();
 
       rootDir = AppendSubDirectories(rootDir);
       var logsDir = isElevated ? rootDir : _fileSystem.JoinPaths(GetPathSeparator(), rootDir, "logs");
@@ -223,7 +220,7 @@ public class FileSystemPathProvider(
     }
 
     var startupDir = _systemEnvironment.StartupDirectory;
-    return Path.Combine(startupDir, BrandingConstants.DesktopClientDirectoryName);
+    return _fileSystem.JoinPaths(GetPathSeparator(), startupDir, BrandingConstants.DesktopClientDirectoryName);
   }
 
   public string GetDesktopExecutablePath()
@@ -233,13 +230,13 @@ public class FileSystemPathProvider(
     return _systemEnvironment.Platform switch
     {
       SystemPlatform.MacOs => _fileSystem.JoinPaths('/', desktopDir, PathConstants.MacDesktopExecutableRelativePath),
-      _ => Path.Combine(desktopDir, AppConstants.DesktopClientFileName)
+      _ => _fileSystem.JoinPaths(GetPathSeparator(), desktopDir, AppConstants.DesktopClientFileName)
     };
   }
 
   public string GetDotnetExtractDirectory()
   {
-    return Path.Combine(GetAgentInstallDirectory(), ".net");
+    return _fileSystem.JoinPaths(GetPathSeparator(), GetAgentInstallDirectory(), ".net");
   }
 
   public string GetEffectiveInstanceId()
@@ -258,11 +255,7 @@ public class FileSystemPathProvider(
   {
     if (_systemEnvironment.IsWindows())
     {
-      var logsDir = _fileSystem.JoinPaths(GetPathSeparator(),
-        _systemEnvironment.GetCommonApplicationDataDirectory(),
-        BrandingConstants.WindowsLogDirectoryName);
-
-      logsDir = AppendSubDirectories(logsDir);
+      var logsDir = AppendSubDirectories(GetWindowsDataRoot());
       return _fileSystem.JoinPaths(GetPathSeparator(), logsDir, "Logs", BrandingConstants.InstallerBaseName);
     }
 
@@ -271,7 +264,7 @@ public class FileSystemPathProvider(
       var isElevated = _elevationChecker.IsElevated();
       var rootDir = isElevated
         ? GetUnixLogDirectoryRoot()
-        : _fileSystem.JoinPaths(GetPathSeparator(), _systemEnvironment.GetProfileDirectory(), BrandingConstants.UnixHiddenDirectoryName);
+        : GetUnixUserDataRoot();
 
       rootDir = AppendSubDirectories(rootDir);
       var logsDir = isElevated ? rootDir : _fileSystem.JoinPaths(GetPathSeparator(), rootDir, "logs");
@@ -301,30 +294,23 @@ public class FileSystemPathProvider(
     };
   }
 
-  public string GetSettingsDirectoryFor(string brandName, string? instanceId)
+  public string GetSettingsDirectoryFor(string? publisherName, string brandName, string? instanceId)
   {
-    var brandKey = ResolveBrandKey(brandName);
-    var unixBrandKey = brandKey.ToLowerInvariant();
     var resolvedInstanceId = string.IsNullOrWhiteSpace(instanceId)
       ? AppConstants.DefaultInstanceId
       : instanceId.SanitizeForFileSystem();
 
     if (_systemEnvironment.IsWindows())
     {
-      var rootDir = _fileSystem.JoinPaths(
-        GetPathSeparator(),
-        _systemEnvironment.GetCommonApplicationDataDirectory(),
-        brandKey);
-
-      return AppendSubDirectories(rootDir, resolvedInstanceId);
+      return AppendSubDirectories(GetWindowsDataRoot(publisherName, brandName), resolvedInstanceId);
     }
 
     // ReSharper disable once InvertIf
     if (_systemEnvironment.IsLinux() || _systemEnvironment.IsMacOS())
     {
       var rootDir = _elevationChecker.IsElevated()
-        ? $"/etc/{unixBrandKey}"
-        : _fileSystem.JoinPaths(GetPathSeparator(), _systemEnvironment.GetProfileDirectory(), $".{unixBrandKey}");
+        ? _fileSystem.JoinPaths(GetPathSeparator(), ["/etc", .. InstallPathNames.LowercaseDirectories(publisherName, brandName)])
+        : GetUnixUserDataRoot(publisherName, brandName);
 
       return AppendSubDirectories(rootDir, resolvedInstanceId);
     }
@@ -364,7 +350,16 @@ public class FileSystemPathProvider(
     var instanceId = GetEffectiveInstanceId();
     var homeRoot = _systemEnvironment.IsMacOS() ? "/Users" : "/home";
 
-    return _fileSystem.JoinPaths(GetPathSeparator(), homeRoot, username, BrandingConstants.UnixHiddenDirectoryName, instanceId, "logs", BrandingConstants.DesktopClientBaseName);
+    return _fileSystem.JoinPaths(
+      GetPathSeparator(),
+      [
+        homeRoot,
+        username,
+        .. InstallPathNames.HiddenHomeDirectories(BrandingConstants.Publisher, BrandingConstants.BrandName),
+        instanceId,
+        "logs",
+        BrandingConstants.DesktopClientBaseName
+      ]);
   }
 
   public string GetUnixDesktopClientLogsDirectoryForRoot()
@@ -411,16 +406,7 @@ public class FileSystemPathProvider(
       throw new PlatformNotSupportedException();
     }
 
-    var rootDir = _fileSystem.JoinPaths(GetPathSeparator(),
-         _systemEnvironment.GetCommonApplicationDataDirectory(),
-         BrandingConstants.WindowsLogDirectoryName);
-
-    if (_systemEnvironment.IsDebug)
-    {
-      rootDir = _fileSystem.JoinPaths(GetPathSeparator(), rootDir, "Debug");
-    }
-
-    return _fileSystem.JoinPaths(GetPathSeparator(), rootDir, GetEffectiveInstanceId());
+    return GetWindowsDataRoot();
   }
 
   private string AppendSubDirectories(string rootDir)
@@ -474,7 +460,7 @@ public class FileSystemPathProvider(
 
   private string GetSettingsDirectory()
   {
-    return GetSettingsDirectoryFor(BrandingConstants.BrandName, GetEffectiveInstanceId());
+    return GetSettingsDirectoryFor(BrandingConstants.Publisher, BrandingConstants.BrandName, GetEffectiveInstanceId());
   }
 
   // macOS exposes /var as a link to /private/var. The log-contents guard refuses
@@ -482,17 +468,41 @@ public class FileSystemPathProvider(
   private string GetUnixLogDirectoryRoot()
   {
     var varLogDirectory = _systemEnvironment.IsMacOS() ? "/private/var/log" : "/var/log";
-    return $"{varLogDirectory}/{BrandingConstants.UnixLogDirectoryName}";
+
+    return _fileSystem.JoinPaths(
+      GetPathSeparator(),
+      [varLogDirectory, .. InstallPathNames.LowercaseDirectories(BrandingConstants.Publisher, BrandingConstants.BrandName)]);
   }
 
-  private string ResolveBrandKey(string brandName)
+  /// <summary>
+  /// The brand-owned directory in the current user's profile on Linux and macOS, used for settings and
+  /// logs when the process is not elevated.
+  /// </summary>
+  private string GetUnixUserDataRoot()
   {
-    if (string.IsNullOrWhiteSpace(brandName))
-    {
-      throw new ArgumentException("Brand name is required.", nameof(brandName));
-    }
-
-    return BrandingConstants.SanitizeBrandKey(brandName);
+    return GetUnixUserDataRoot(BrandingConstants.Publisher, BrandingConstants.BrandName);
   }
 
+  private string GetUnixUserDataRoot(string? publisherName, string brandName)
+  {
+    return _fileSystem.JoinPaths(
+      GetPathSeparator(),
+      [_systemEnvironment.GetProfileDirectory(), .. InstallPathNames.HiddenHomeDirectories(publisherName, brandName)]);
+  }
+
+  /// <summary>
+  /// The CommonApplicationData directory this install's brand owns, which holds both its settings and
+  /// its logs. The desktop client's per-user directories live under here too.
+  /// </summary>
+  private string GetWindowsDataRoot()
+  {
+    return GetWindowsDataRoot(BrandingConstants.Publisher, BrandingConstants.BrandName);
+  }
+
+  private string GetWindowsDataRoot(string? publisherName, string brandName)
+  {
+    return _fileSystem.JoinPaths(
+      GetPathSeparator(),
+      [_systemEnvironment.GetCommonApplicationDataDirectory(), .. InstallPathNames.Directories(publisherName, brandName)]);
+  }
 }
