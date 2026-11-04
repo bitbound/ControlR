@@ -20,6 +20,52 @@ internal class ServiceControlLinux(
     private readonly ILogger<ServiceControlLinux> _logger = logger;
     private readonly IProcessManager _processManager = processManager;
 
+    public async Task ReloadUserDaemons(bool throwOnFailure)
+    {
+        // Check if running on headless server
+        var isHeadless = await _headlessServerDetector.IsHeadlessServer();
+        if (isHeadless)
+        {
+            _logger.LogInformation("Running on headless Ubuntu server. Desktop client service is not applicable.");
+            return;
+        }
+
+        try
+        {
+            var uids = (await _loggedInUserProvider.GetLoggedInUsers())
+                .Select(user => user.Uid)
+                .ToList();
+            if (uids.Count == 0)
+            {
+                _logger.LogInformation("No logged-in users found. No user daemon configuration to reload.");
+                return;
+            }
+
+            _logger.LogInformation("Reloading systemd user daemon configuration for {UserCount} logged-in users.", uids.Count);
+
+            var tasks = new List<Task>();
+            foreach (var uid in uids)
+            {
+                tasks.Add(ReloadUserDaemonForUser(uid));
+            }
+
+            await Task.WhenAll(tasks);
+            _logger.LogInformation("Systemd user daemon configuration reloaded for all logged-in users.");
+        }
+        catch (Exception ex)
+        {
+            if (throwOnFailure)
+            {
+                _logger.LogError(ex, "Failed to reload systemd user daemon configuration.");
+                throw;
+            }
+            else
+            {
+                _logger.LogInformation(ex, "Failed to reload systemd user daemon configuration.");
+            }
+        }
+    }
+
     public async Task StartAgentService(bool throwOnFailure)
     {
         try
@@ -220,16 +266,36 @@ internal class ServiceControlLinux(
         return $"{BrandingConstants.LinuxDesktopServiceName.Replace(".service", "")}-{_instanceOptions.Value.InstanceId}.service";
     }
 
+    private async Task ReloadUserDaemonForUser(string uid)
+    {
+        var exitCode = await RunSystemctlForUserAsync(uid, "daemon-reload");
+
+        if (exitCode != 0)
+        {
+            throw new InvalidOperationException($"systemctl --user daemon-reload for user {uid} exited with code {exitCode}.");
+        }
+
+        _logger.LogInformation("Systemd user daemon configuration reloaded for user {UID}.", uid);
+    }
+
+    private Task<int> RunSystemctlForUserAsync(string uid, string arguments)
+    {
+        // Run in the user's own manager rather than the system one, which needs both the target uid and
+        // the runtime directory that belongs to it.
+        return _processManager.StartAndWaitForExit(
+            "sudo",
+            $"-u #{uid} XDG_RUNTIME_DIR=/run/user/{uid} systemctl --user {arguments}",
+            false,
+            _serviceStatusTimeout);
+    }
+
     private async Task StartDesktopClientForUser(string uid, string serviceName, bool throwOnFailure)
     {
         try
         {
             _logger.LogInformation("Starting desktop client service for user {UID}: {ServiceName}", uid, serviceName);
 
-            // Use sudo to run as the specific user with proper XDG_RUNTIME_DIR
-            await _processManager.StartAndWaitForExit("sudo",
-                $"-u #{uid} XDG_RUNTIME_DIR=/run/user/{uid} systemctl --user start {serviceName}",
-                false, _serviceStatusTimeout);
+            await RunSystemctlForUserAsync(uid, $"start {serviceName}");
 
             _logger.LogInformation("Desktop client service started for user {UID}.", uid);
         }
@@ -253,10 +319,7 @@ internal class ServiceControlLinux(
         {
             _logger.LogInformation("Stopping desktop client service for user {UID}: {ServiceName}", uid, serviceName);
 
-            // Use sudo to run as the specific user with proper XDG_RUNTIME_DIR
-            var exitCode = await _processManager.StartAndWaitForExit("sudo",
-                $"-u #{uid} XDG_RUNTIME_DIR=/run/user/{uid} systemctl --user stop {serviceName}",
-                false, _serviceStatusTimeout);
+            var exitCode = await RunSystemctlForUserAsync(uid, $"stop {serviceName}");
 
             // The overload returns the exit code rather than throwing on it. Check it, because a
             // caller that goes on to kill the client's processes treats a stopped unit as a

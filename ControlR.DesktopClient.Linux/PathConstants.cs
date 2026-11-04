@@ -15,12 +15,23 @@ namespace ControlR.DesktopClient.Linux;
 /// </summary>
 public static class PathConstants
 {
+  /// <summary>
+  /// TODO: Temporary migration code for v0.31.x
+  /// The settings directory this client used before the publisher became a directory in it.
+  /// </summary>
+  public static string GetLegacySettingsDirectory(string? instanceId)
+  {
+    return GetSettingsDirectory(publisher: null, instanceId);
+  }
+
   public static string GetLogsPath(string? instanceId)
   {
     var isRoot = Libc.Geteuid() == 0;
     var rootDir = isRoot
-       ? $"/var/log/{BrandingConstants.UnixLogDirectoryName}"
-       : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), BrandingConstants.UnixHiddenDirectoryName);
+       ? $"/var/log/{InstallPathNames.LowercaseUnixDirectoryTail(BrandingConstants.Publisher, BrandingConstants.BrandName)}"
+       : Path.Combine(
+          Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+          InstallPathNames.UnixHiddenHomeTail(BrandingConstants.Publisher, BrandingConstants.BrandName));
 
     rootDir = AppendInstanceId(rootDir, instanceId);
     var logsDir = isRoot ? rootDir : Path.Combine(rootDir, "logs");
@@ -29,12 +40,12 @@ public static class PathConstants
 
   public static string GetSettingsPath(string? instanceId)
   {
-    return Path.Combine(GetSettingsDirectory(instanceId), "settings.json");
+    return Path.Combine(GetSettingsDirectory(BrandingConstants.Publisher, instanceId), "settings.json");
   }
 
   public static string GetWaylandRemoteDesktopRestoreTokenPath(string? instanceId)
   {
-    var dir = GetSettingsDirectory(instanceId);
+    var dir = GetSettingsDirectory(BrandingConstants.Publisher, instanceId);
     return Path.Combine(dir, "wayland-remotedesktop-restore-token");
   }
 
@@ -51,11 +62,13 @@ public static class PathConstants
       : instanceId;
   }
 
-  private static string GetSettingsDirectory(string? instanceId)
+  private static string GetSettingsDirectory(string? publisher, string? instanceId)
   {
     var rootDir = Libc.Geteuid() == 0
-      ? $"/etc/{BrandingConstants.UnixConfigDirectoryName}"
-      : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), BrandingConstants.UnixHiddenDirectoryName);
+      ? $"/etc/{InstallPathNames.LowercaseUnixDirectoryTail(publisher, BrandingConstants.BrandName)}"
+      : Path.Combine(
+          Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+          InstallPathNames.UnixHiddenHomeTail(publisher, BrandingConstants.BrandName));
 
     return AppendInstanceId(rootDir, instanceId);
   }

@@ -36,7 +36,7 @@ internal abstract class AgentInstallerBase(
   /// Starts the service of the install being replaced. Used to roll back when this install cannot
   /// start, so a failed migration does not leave the machine with no running agent.
   /// </summary>
-  public async Task<Result> RestorePreviousBrand(string previousBrandName, string? previousInstanceId)
+  public async Task<Result> RestorePreviousBrand(string? previousPublisher, string previousBrandName, string? previousInstanceId)
   {
     using var _ = Logger.BeginMemberScope();
 
@@ -46,6 +46,7 @@ internal abstract class AgentInstallerBase(
       previousInstanceId);
 
     var result = await RunPreviousBrandAgentCommand(
+      previousPublisher,
       previousBrandName,
       previousInstanceId,
       "start-service",
@@ -67,9 +68,9 @@ internal abstract class AgentInstallerBase(
   }
 
   /// <summary>
-  /// Removes the install being replaced, and the settings directory its uninstall leaves behind.
+  /// Removes the install being replaced, along with the directories its uninstall leaves behind.
   /// </summary>
-  public async Task<Result> RetirePreviousBrand(string previousBrandName, string? previousInstanceId)
+  public async Task<Result> RetirePreviousBrand(string? previousPublisher, string previousBrandName, string? previousInstanceId)
   {
     using var _ = Logger.BeginMemberScope();
 
@@ -78,36 +79,36 @@ internal abstract class AgentInstallerBase(
       previousBrandName,
       previousInstanceId);
 
-    var result = await RunPreviousBrandAgentCommand(
-      previousBrandName,
-      previousInstanceId,
-      "uninstall",
-      TimeSpan.FromMinutes(10));
-
-    if (!result.IsSuccess)
+    // The publisher is a directory in the replaced install's paths and nothing else, so an install that
+    // keeps this brand and this instance id was registered under the same service, unit, plist, and
+    // uninstall key names as this one. Its own uninstall would remove the identity this install took over,
+    // so that install is retired by deleting its files.
+    if (!SharesThisInstallIdentity(previousBrandName, previousInstanceId))
     {
-      Logger.LogError(
-        "Failed to remove the {PreviousBrandName} install: {Reason}. This install is running; the old service and its files need manual removal.",
+      var result = await RunPreviousBrandAgentCommand(
+        previousPublisher,
         previousBrandName,
-        result.Reason);
-      return result;
-    }
+        previousInstanceId,
+        "uninstall",
+        TimeSpan.FromMinutes(10));
 
-    // Uninstall deliberately keeps the settings directory, and that file holds the device signing key
-    // in plaintext. Remove it so the retired brand does not keep holding it.
-    try
-    {
-      var settingsDirectory = FilesystemPathProvider.GetSettingsDirectoryFor(previousBrandName, previousInstanceId);
-
-      if (FileSystem.DirectoryExists(settingsDirectory))
+      if (!result.IsSuccess)
       {
-        FileSystem.DeleteDirectory(settingsDirectory, true);
+        Logger.LogError(
+          "Failed to remove the {PreviousBrandName} install: {Reason}. This install is running; the old service and its files need manual removal.",
+          previousBrandName,
+          result.Reason);
+        return result;
       }
     }
-    catch (Exception ex)
-    {
-      Logger.LogWarning(ex, "Failed to delete the retired install's settings directory.");
-    }
+
+    // Both directories survive the uninstall, which keeps them by design, and the settings one holds the
+    // device signing key in plaintext. Remove them so the retired install does not keep holding them.
+    TryDeleteDirectory(
+      FilesystemPathProvider.GetAgentInstallDirectoryFor(previousPublisher, previousBrandName, previousInstanceId));
+
+    TryDeleteDirectory(
+      FilesystemPathProvider.GetSettingsDirectoryFor(previousPublisher, previousBrandName, previousInstanceId));
 
     Logger.LogInformation("Removed the {PreviousBrandName} install.", previousBrandName);
     return Result.Ok();
@@ -198,7 +199,10 @@ internal abstract class AgentInstallerBase(
   /// agent may hold the device's connection on the server, and both would otherwise keep taking it, so
   /// the caller has to be able to refuse to continue when this fails.
   /// </summary>
-  protected async Task<Result> StopPreviousBrandService(string? previousBrandName, string? previousInstanceId)
+  protected async Task<Result> StopPreviousBrandService(
+    string? previousPublisher,
+    string? previousBrandName,
+    string? previousInstanceId)
   {
     if (string.IsNullOrWhiteSpace(previousBrandName))
     {
@@ -212,6 +216,7 @@ internal abstract class AgentInstallerBase(
       previousInstanceId);
 
     var result = await RunPreviousBrandAgentCommand(
+      previousPublisher,
       previousBrandName,
       previousInstanceId,
       "stop-service",
@@ -340,19 +345,25 @@ internal abstract class AgentInstallerBase(
 
   /// <summary>
   /// Runs one of the replaced install's own commands against itself. The install is addressed by the
-  /// brand and instance id it was created with, which is not always this install's, because a
-  /// migration can move either. Staged to a temp copy first, because run from its own install
+  /// publisher, brand, and instance id it was created with, which is not always this install's, because a
+  /// migration can move any of them. A null publisher names an install created before the publisher became
+  /// a directory. Staged to a temp copy first, because run from its own install
   /// directory that agent copies itself elsewhere, re-launches detached, and returns before doing
   /// anything. Asking it to act on itself is also what keeps another brand's service names, unit
   /// files, and registry keys out of this code.
   /// </summary>
   private async Task<Result> RunPreviousBrandAgentCommand(
+    string? previousPublisher,
     string previousBrandName,
     string? previousInstanceId,
     string command,
     TimeSpan timeout)
   {
-    var installDirectory = FilesystemPathProvider.GetAgentInstallDirectoryFor(previousBrandName, previousInstanceId);
+    var installDirectory = FilesystemPathProvider.GetAgentInstallDirectoryFor(
+      previousPublisher,
+      previousBrandName,
+      previousInstanceId);
+
     var agentPath = GetAgentPath(installDirectory, _systemEnvironment.Platform, previousBrandName);
 
     if (!FileSystem.FileExists(agentPath))
@@ -399,6 +410,34 @@ internal abstract class AgentInstallerBase(
       {
         Logger.LogWarning(ex, "Failed to delete staged agent copy {StagedPath}.", stagedPath);
       }
+    }
+  }
+
+  private bool SharesThisInstallIdentity(string previousBrandName, string? previousInstanceId)
+  {
+    var effectivePreviousInstanceId = string.IsNullOrWhiteSpace(previousInstanceId)
+      ? AppConstants.DefaultInstanceId
+      : previousInstanceId;
+
+    return BrandNames.AreSameInstall(previousBrandName, BrandingConstants.BrandName) &&
+           string.Equals(
+             effectivePreviousInstanceId,
+             FilesystemPathProvider.GetEffectiveInstanceId(),
+             StringComparison.Ordinal);
+  }
+
+  private void TryDeleteDirectory(string directoryPath)
+  {
+    try
+    {
+      if (FileSystem.DirectoryExists(directoryPath))
+      {
+        FileSystem.DeleteDirectory(directoryPath, true);
+      }
+    }
+    catch (Exception ex)
+    {
+      Logger.LogWarning(ex, "Failed to delete {DirectoryPath}. It can be removed by hand.", directoryPath);
     }
   }
 

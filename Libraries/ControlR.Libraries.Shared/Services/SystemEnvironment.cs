@@ -21,6 +21,8 @@ public interface ISystemEnvironment
 
   string GetProfileDirectory();
 
+  string GetProgramFilesDirectory();
+
   [SupportedOSPlatformGuard("linux")]
   bool IsLinux();
 
@@ -124,6 +126,13 @@ public class SystemEnvironment : ISystemEnvironment
   public string GetProfileDirectory()
   {
     return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+  }
+
+  // The folder's display name is not "Program Files" on a localized Windows, so the literal cannot be
+  // used here even though it appears in every screenshot of a developer machine.
+  public string GetProgramFilesDirectory()
+  {
+    return Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
   }
 
   [SupportedOSPlatformGuard("linux")]

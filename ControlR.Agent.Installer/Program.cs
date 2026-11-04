@@ -57,6 +57,8 @@ const string PreviousBrandNameDescription = "Brand name of the agent install bei
 const string PreviousBrandNameLongAlias = "--previous-brand-name";
 const string PreviousInstanceIdDescription = "Instance ID of the agent install being replaced, set only during a migration. Omit when that install used the default instance ID. That install is removed once this brand is installed and running.";
 const string PreviousInstanceIdLongAlias = "--previous-instance-id";
+const string PreviousPublisherDescription = "Publisher of the agent install being replaced, which is the vendor directory its paths sit under. Omit when that install predates the vendor directory. Set only during a migration.";
+const string PreviousPublisherLongAlias = "--previous-publisher";
 const string TempDirectoryPrefix = "controlr-install-";
 const string TempBundleFileName = "ControlR.Agent.bundle.zip";
 
@@ -149,6 +151,12 @@ static Command GetInstallCommand()
     Description = PreviousInstanceIdDescription,
   };
 
+  var previousPublisherOption = new Option<string?>(PreviousPublisherLongAlias)
+  {
+    Required = false,
+    Description = PreviousPublisherDescription,
+  };
+
   var installCommand = new Command(InstallCommandName, InstallCommandDescription)
   {
     serverUriOption,
@@ -161,6 +169,7 @@ static Command GetInstallCommand()
     customerIdOption,
     previousBrandNameOption,
     previousInstanceIdOption,
+    previousPublisherOption,
   };
 
   installCommand.SetAction(async parseResult =>
@@ -181,7 +190,8 @@ static Command GetInstallCommand()
       installRequest,
       parseResult.GetValue(instanceIdOption),
       parseResult.GetValue(previousBrandNameOption),
-      parseResult.GetValue(previousInstanceIdOption));
+      parseResult.GetValue(previousInstanceIdOption),
+      parseResult.GetValue(previousPublisherOption));
   });
 
   return installCommand;
@@ -230,11 +240,25 @@ static async Task<int> RunInstall(
   AgentInstallRequest request,
   string? instanceId,
   string? previousBrandArg,
-  string? previousInstanceIdArg)
+  string? previousInstanceIdArg,
+  string? previousPublisherArg)
 {
+  // TODO: Temporary migration code for v0.31.x
+  // This has to run before the host is built, because building the host is what opens the settings file.
+  var stagedSettings = CarryStagedSettingsForward(instanceId, previousPublisherArg, previousBrandArg, previousInstanceIdArg);
+
   using var host = CreateInstallerHost(instanceId, request.ServerUri);
   var logger = host.Services.GetRequiredService<ILoggerFactory>().CreateLogger("ControlR.Agent.Installer");
   using var logScope = logger.BeginScope("RunInstall. InstanceId: {InstanceId}", instanceId);
+
+  if (stagedSettings is not null)
+  {
+    logger.LogWarning(
+      "Moved the settings file staged for this install from {Source} to {Destination}.",
+      stagedSettings.Value.Source,
+      stagedSettings.Value.Destination);
+  }
+
   var fileSystem = host.Services.GetRequiredService<IFileSystem>();
   var tempDir = Path.Combine(Path.GetTempPath(), $"{TempDirectoryPrefix}{Guid.NewGuid():N}");
   var tempBundlePath = Path.Combine(tempDir, TempBundleFileName);
@@ -242,6 +266,7 @@ static async Task<int> RunInstall(
   // Declared out here so the catch can roll the replaced install back too.
   string? previousBrand = null;
   string? previousInstanceId = null;
+  string? previousPublisher = null;
 
   try
   {
@@ -270,26 +295,34 @@ static async Task<int> RunInstall(
     // this installer is not the right binary to be running here. Brands are compared by the key that
     // names every directory, service, and registry key, so two names that reduce to the same key are
     // the same install and this installer is still the right binary.
-    if (!BrandNames.AreSameInstall(metadata.BrandName, BrandingConstants.BrandName))
+    if (!BrandNames.AreSameInstall(metadata.BrandName, BrandingConstants.BrandName)
+        || !InstallPathNames.AreSameVendor(metadata.Publisher, BrandingConstants.Publisher))
     {
       logger.LogCritical(
-        "Refusing to install: server bundle is for brand {ServerBrandName}, but this installer is brand {InstallerBrandName}. " +
+        "Refusing to install: server bundle is brand {ServerBrandName} from publisher {ServerPublisher}, but this installer " +
+        "is brand {InstallerBrandName} from publisher {InstallerPublisher}. " +
         "Nothing on this machine was changed.",
         metadata.BrandName,
-        BrandingConstants.BrandName);
+        metadata.Publisher,
+        BrandingConstants.BrandName,
+        BrandingConstants.Publisher);
       return 1;
     }
 
     // A migration is indicated by the install being replaced, which the resident install passes in.
     var previousInstall = PreviousInstall.Resolve(
+      previousPublisherArg,
       previousBrandArg,
       previousInstanceIdArg,
+      BrandingConstants.Publisher,
       BrandingConstants.BrandName,
       instanceId);
 
     if (previousInstall is null)
     {
-      if (!string.IsNullOrWhiteSpace(previousBrandArg) || !string.IsNullOrWhiteSpace(previousInstanceIdArg))
+      if (!string.IsNullOrWhiteSpace(previousBrandArg) ||
+          !string.IsNullOrWhiteSpace(previousInstanceIdArg) ||
+          !string.IsNullOrWhiteSpace(previousPublisherArg))
       {
         logger.LogWarning("Ignoring the previous-install arguments because they describe this same install.");
       }
@@ -298,6 +331,7 @@ static async Task<int> RunInstall(
     {
       previousBrand = previousInstall.BrandName;
       previousInstanceId = previousInstall.InstanceId;
+      previousPublisher = previousInstall.Publisher;
     }
 
     if (previousBrand is not null)
@@ -339,13 +373,14 @@ static async Task<int> RunInstall(
       CustomerId = request.CustomerId,
       PreviousBrandName = previousBrand,
       PreviousInstanceId = previousInstanceId,
+      PreviousPublisher = previousPublisher,
     };
 
     var installResult = await installer.Install(installRequest);
     if (!installResult.IsSuccess)
     {
       logger.LogError("Installation failed. Reason: {Reason}", installResult.Reason);
-      await RecoverFromFailedInstall(host, installer, logger, previousBrand, previousInstanceId);
+      await RecoverFromFailedInstall(host, installer, logger, previousPublisher, previousBrand, previousInstanceId);
       return 1;
     }
 
@@ -364,7 +399,7 @@ static async Task<int> RunInstall(
     {
       // Best effort. This install is already working, so a failure here must not report a failed
       // install. A leftover old-brand service is recoverable; reporting success as failure is not.
-      await installer.RetirePreviousBrand(previousBrand, previousInstanceId);
+      await installer.RetirePreviousBrand(previousPublisher, previousBrand, previousInstanceId);
     }
 
     return 0;
@@ -374,7 +409,7 @@ static async Task<int> RunInstall(
     logger.LogError(ex, "Installation failed.");
 
     var installer = host.Services.GetRequiredService<IAgentInstaller>();
-    await RecoverFromFailedInstall(host, installer, logger, previousBrand, previousInstanceId);
+    await RecoverFromFailedInstall(host, installer, logger, previousPublisher, previousBrand, previousInstanceId);
     return 1;
   }
   finally
@@ -400,6 +435,7 @@ static async Task RecoverFromFailedInstall(
   IHost host,
   IAgentInstaller installer,
   ILogger logger,
+  string? previousPublisher,
   string? previousBrand,
   string? previousInstanceId)
 {
@@ -407,7 +443,7 @@ static async Task RecoverFromFailedInstall(
   {
     if (previousBrand is not null)
     {
-      await installer.RestorePreviousBrand(previousBrand, previousInstanceId);
+      await installer.RestorePreviousBrand(previousPublisher, previousBrand, previousInstanceId);
       return;
     }
 
@@ -472,15 +508,20 @@ static async Task<int> RunRepairDesktop(string? instanceId)
     logger.LogInformation("Bundle version: {Version}", metadata.Version);
 
     // Repair writes the desktop client payload into an existing install, so it only ever applies to
-    // that install's own brand. A cross-brand bundle is served by the install command, which moves
-    // the whole install rather than dropping a foreign payload into the wrong directory.
-    if (!string.Equals(metadata.BrandName, BrandingConstants.BrandName, StringComparison.Ordinal))
+    // that install's own brand and vendor. A bundle from elsewhere is served by the install command,
+    // which moves the whole install rather than dropping a foreign payload into the wrong directory.
+    // The client carries its own branding constants, so a foreign vendor's client would write its logs
+    // and settings under a directory this install's log paths do not name.
+    if (!BrandNames.AreSameInstall(metadata.BrandName, BrandingConstants.BrandName)
+        || !InstallPathNames.AreSameVendor(metadata.Publisher, BrandingConstants.Publisher))
     {
       logger.LogCritical(
-        "Refusing to repair desktop client: server bundle is for brand {ServerBrandName}, but this installer is brand {InstallerBrandName}. " +
+        "Refusing to repair desktop client: server bundle is for brand {ServerBrandName} from publisher {ServerPublisher}, but this installer is brand {InstallerBrandName} from publisher {InstallerPublisher}. " +
         "If this server is correct, run the matching installer instead.",
         metadata.BrandName,
-        BrandingConstants.BrandName);
+        metadata.Publisher,
+        BrandingConstants.BrandName,
+        BrandingConstants.Publisher);
       return 1;
     }
 
@@ -530,6 +571,51 @@ static IHost CreateInstallerHost(string? instanceId, Uri? serverUri)
   builder.BootstrapSerilog(pathProvider.GetInstallerLogFilePath(), TimeSpan.FromDays(7));
   builder.Services.AddSingleton<IBundleDownloader, BundleDownloader>();
   return builder.Build();
+}
+
+// TODO: Temporary migration code for v0.31.x
+// An agent built before the publisher became a directory stages the replacing install's settings at the
+// path its own compiled formula names, which has no publisher in it. Those settings carry the device ID
+// and the signing key, and this build reads them from under the publisher directory, so the staged file has
+// to be moved there first. Returns the two paths only when a migration was indicated, this build's own
+// settings do not exist yet, and a staged file was found one directory up.
+static (string Source, string Destination)? CarryStagedSettingsForward(
+  string? instanceId,
+  string? previousPublisherArg,
+  string? previousBrandArg,
+  string? previousInstanceIdArg)
+{
+  if (string.IsNullOrWhiteSpace(previousPublisherArg) &&
+      string.IsNullOrWhiteSpace(previousBrandArg) &&
+      string.IsNullOrWhiteSpace(previousInstanceIdArg))
+  {
+    return null;
+  }
+
+  var fileSystem = new FileSystem(new SerilogLogger<FileSystem>());
+  var pathProvider = CreateStandalonePathProvider(instanceId);
+  var destinationPath = pathProvider.GetAgentAppSettingsPath();
+  if (fileSystem.FileExists(destinationPath))
+  {
+    return null;
+  }
+
+  // The staged copy is named for the identity being written, so its brand and instance match this
+  // installer's and only the publisher directory is missing.
+  var sourcePath = Path.Combine(
+    pathProvider.GetSettingsDirectoryFor(publisherName: null, BrandingConstants.BrandName, instanceId),
+    "appsettings.json");
+
+  if (!fileSystem.FileExists(sourcePath))
+  {
+    return null;
+  }
+
+  fileSystem.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
+
+  // The staged file already carries the restrictions the staging agent put on it, and a move keeps them.
+  fileSystem.MoveFile(sourcePath, destinationPath, overwrite: false);
+  return (sourcePath, destinationPath);
 }
 
 static FileSystemPathProvider GetTempPathProvider(HostApplicationBuilder builder)

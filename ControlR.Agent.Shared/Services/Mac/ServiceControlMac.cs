@@ -16,6 +16,13 @@ internal class ServiceControlMac(
   private readonly ILogger<ServiceControlMac> _logger = logger;
   private readonly IProcessManager _processManager = processManager;
 
+  public Task ReloadUserDaemons(bool throwOnFailure)
+  {
+    // The Mac install boots the desktop job out and bootstraps it again, and a bootstrap reads the
+    // plist from disk. Nothing on Mac holds a stale copy of a job definition across an install.
+    throw new NotSupportedException("Reloading a user service daemon is not used on Mac.");
+  }
+
   public async Task StartAgentService(bool throwOnFailure)
   {
     try

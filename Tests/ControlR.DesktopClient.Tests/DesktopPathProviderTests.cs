@@ -1,5 +1,6 @@
 using ControlR.DesktopClient.Common.Options;
 using ControlR.DesktopClient.Services;
+using ControlR.Libraries.Branding;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -14,6 +15,19 @@ public class DesktopPathProviderTests
 
     Assert.Contains("inst-1", provider.GetRequiredService<IDesktopPathProvider>().GetSettingsPath());
     Assert.NotNull(provider.GetService<IDesktopSettingsStore>());
+  }
+
+  [Fact]
+  public void GetLegacySettingsDirectory_NamesTheVendorlessDirectoryForTheConfiguredInstance()
+  {
+    var provider = new DesktopPathProvider(
+      Options.Create(new DesktopClientOptions { InstanceId = "inst-1" }));
+
+    var legacyDirectory = provider.GetLegacySettingsDirectory();
+
+    // TODO: Temporary migration code for v0.31.x
+    Assert.Contains("inst-1", legacyDirectory, StringComparison.Ordinal);
+    Assert.DoesNotContain(BrandingConstants.Publisher, legacyDirectory, StringComparison.OrdinalIgnoreCase);
   }
 
   [Fact]

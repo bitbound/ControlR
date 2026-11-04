@@ -6,9 +6,7 @@ using ControlR.Libraries.Shared.Services.Processes;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using System.Diagnostics;
-using System.Security;
 using System.Security.Cryptography;
-using System.Text.RegularExpressions;
 
 namespace ControlR.Agent.Common.Services;
 
@@ -95,6 +93,12 @@ internal class AgentMaintenanceService(
 
       var isSameBrand = BrandNames.AreSameInstall(metadata.BrandName, BrandingConstants.BrandName);
 
+      // The publisher names the directory the install lives in, so a bundle from a different vendor is a
+      // different install even when the brand is the same. Comparing brand alone would land the new
+      // bundle in the old vendor directory and leave the paths the new build computes with nothing in
+      // them.
+      var isSameVendor = InstallPathNames.AreSameVendor(metadata.Publisher, BrandingConstants.Publisher);
+
       // The server is authoritative, so an install has to follow it onto the brand and the instance id
       // it names. The brand arrives with the bundle, but the instance id is a tenant setting that the
       // anonymous bundle endpoint cannot answer, so it comes from the endpoint this device signs for.
@@ -107,7 +111,7 @@ internal class AgentMaintenanceService(
         GetEffectiveInstanceId(currentInstanceId),
         StringComparison.Ordinal);
 
-      var isMigration = !isSameBrand || isInstanceMigration;
+      var isMigration = !isSameBrand || !isSameVendor || isInstanceMigration;
 
       if (isMigration)
       {
@@ -123,7 +127,7 @@ internal class AgentMaintenanceService(
         // Without it that install registers a fresh device and signs with a key the server has never
         // been told about, and the existing device record can never authenticate again, so refuse
         // rather than try.
-        if (!WriteSettingsFileForBrand(metadata.BrandName, targetInstanceId))
+        if (!WriteSettingsFileForBrand(metadata.Publisher, metadata.BrandName, targetInstanceId))
         {
           _logger.LogCritical(
             "Refusing to migrate. The settings file for brand {ServerBrandName} and instance id {TargetInstanceId} " +
@@ -200,12 +204,13 @@ internal class AgentMaintenanceService(
       var metadata = metadataResult.Value;
 
       // Repair rewrites the desktop client payload inside an existing install, so it only makes
-      // sense for the install's own brand. A cross-brand bundle is handled by the update path,
-      // which moves the whole install rather than patching one payload into the wrong brand.
-      if (!BrandNames.AreSameInstall(metadata.BrandName, BrandingConstants.BrandName))
+      // sense for the install's own brand and vendor. A bundle from elsewhere is handled by the update
+      // path, which moves the whole install rather than patching one payload into the wrong place.
+      if (!BrandNames.AreSameInstall(metadata.BrandName, BrandingConstants.BrandName)
+          || !InstallPathNames.AreSameVendor(metadata.Publisher, BrandingConstants.Publisher))
       {
         _logger.LogCritical(
-          "Aborting desktop client repair. Server bundle is not this agent's brand. " +
+          "Aborting desktop client repair. Server bundle is not this agent's brand or vendor. " +
           "Agent brand: {AgentBrandName}/{AgentPublisher}, Server brand: {ServerBrandName}/{ServerPublisher}. " +
           "Refusing to write a foreign brand's payload into this install.",
           BrandingConstants.BrandName,
@@ -278,39 +283,6 @@ internal class AgentMaintenanceService(
     throw new InvalidOperationException($"Installer download path '{downloadPath}' does not contain a file name.");
   }
 
-  private static string GetMacInstallerDaemonJobLabel(string? instanceId)
-  {
-    if (string.IsNullOrWhiteSpace(instanceId))
-    {
-      return $"{BrandingConstants.MacServicePrefix}.agent.installer";
-    }
-
-    return $"{BrandingConstants.MacServicePrefix}.agent.installer.{instanceId}";
-  }
-
-  private static string GetMacInstallerDaemonPlistPath(string? instanceId)
-  {
-    return string.IsNullOrWhiteSpace(instanceId)
-      ? $"/Library/LaunchDaemons/{BrandingConstants.MacServicePrefix}.agent.installer.plist"
-      : $"/Library/LaunchDaemons/{BrandingConstants.MacServicePrefix}.agent.installer.{instanceId}.plist";
-  }
-
-  private static ProcessStartInfo GetMacLaunchctlStartInfo(params string[] arguments)
-  {
-    var psi = new ProcessStartInfo
-    {
-      FileName = "sudo",
-      UseShellExecute = false,
-    };
-
-    foreach (var argument in arguments)
-    {
-      psi.ArgumentList.Add(argument);
-    }
-
-    return psi;
-  }
-
   private static string QuoteArgument(string value)
   {
     var escapedValue = value.Replace("\"", "\\\"");
@@ -337,11 +309,15 @@ internal class AgentMaintenanceService(
     if (isMigration)
     {
       // The replacing install picks its identity up from the settings file this agent already staged
-      // for it, so what has to travel is which install to stop and remove. Both values are sent,
-      // because either the brand or the instance id may be the only one that changed, and the
-      // installer has to be told a migration is happening in both cases.
+      // for it, so what has to travel is which install to stop and remove. All three values are sent,
+      // because any one of them may be the only one that changed, and the installer has to be told a
+      // migration is happening in every case. The publisher is what the installer needs to find this
+      // install's directory once the publisher is a directory in that path.
       arguments.Add("--previous-brand-name");
       arguments.Add(BrandingConstants.BrandName);
+
+      arguments.Add("--previous-publisher");
+      arguments.Add(BrandingConstants.Publisher);
 
       if (!string.IsNullOrWhiteSpace(currentInstanceId))
       {
@@ -501,35 +477,36 @@ internal class AgentMaintenanceService(
           .Start("sudo", $"chmod +x {installerPath}")
           .WaitForExitAsync(cancellationToken);
 
-        var launchdJobLabel = GetMacInstallerDaemonJobLabel(_instanceOptions.Value.InstanceId);
-        var plistPath = GetMacInstallerDaemonPlistPath(_instanceOptions.Value.InstanceId);
-
-        // The plist was rendered by the install already on disk, so its arguments are frozen and this
-        // launch would otherwise carry none of the decisions made above. A migration depends on that,
-        // since the brand being replaced is how the installer knows to retire this install. Launching
-        // from an unmodified plist would install the new brand beside this one with both signing as
-        // the same device, so decline instead.
-        if (installArguments.Contains("--previous-brand-name", StringComparer.Ordinal)
-          && !WriteMacInstallerDaemonArguments(plistPath, [installerPath, .. installArguments]))
+        // The installer detaches its own process group and boots this service out partway through, so
+        // nothing here may wait for it. Its output stays unredirected on purpose. A pipe that nobody
+        // drains fills once this process is gone, and the installer would block on its next write.
+        // The working directory is set because this install's own directory is what the installer
+        // deletes and recreates, and a replaced working directory breaks every relative path after it.
+        var installerStartInfo = new ProcessStartInfo
         {
+          FileName = installerPath,
+          WorkingDirectory = Path.GetTempPath(),
+          UseShellExecute = false
+        };
+
+        foreach (var argument in installArguments)
+        {
+          installerStartInfo.ArgumentList.Add(argument);
+        }
+
+        var installerProcess = _processManager.Start(installerStartInfo);
+        if (installerProcess is null)
+        {
+          _logger.LogCritical(
+            "Failed to start the installer at {InstallerPath}. Nothing on this machine was changed.",
+            installerPath);
           return;
         }
 
-        try
-        {
-          var bootoutStartInfo = GetMacLaunchctlStartInfo("launchctl", "bootout", $"system/{launchdJobLabel}");
-          await _processManager.StartAndWaitForExit(bootoutStartInfo, TimeSpan.FromSeconds(15));
-        }
-        catch
-        {
-          // The updater job may not already be loaded.
-        }
-
-        var bootstrapStartInfo = GetMacLaunchctlStartInfo("launchctl", "bootstrap", "system", plistPath);
-        await _processManager.StartAndWaitForExit(bootstrapStartInfo, TimeSpan.FromSeconds(15));
-
-        var kickstartStartInfo = GetMacLaunchctlStartInfo("launchctl", "kickstart", "-k", $"system/{launchdJobLabel}");
-        await _processManager.StartAndWaitForExit(kickstartStartInfo, TimeSpan.FromSeconds(15));
+        _logger.LogInformation(
+          "Started installer {InstallerPath} with process id {ProcessId}.",
+          installerPath,
+          installerProcess.Id);
         break;
 
       default:
@@ -538,58 +515,12 @@ internal class AgentMaintenanceService(
   }
 
   /// <summary>
-  /// Rewrites the installer LaunchDaemon's <c>ProgramArguments</c> so the installer launches with the
-  /// arguments this check decided on. The plist on disk was rendered by the install that is already in
-  /// place, so without this, anything decided now cannot reach the installer on macOS. The whole array
-  /// is replaced rather than appended to, which also refreshes server URI and tenant values that were
-  /// frozen at install time.
-  /// </summary>
-  private bool WriteMacInstallerDaemonArguments(string plistPath, IReadOnlyList<string> programArguments)
-  {
-    if (!_fileSystem.FileExists(plistPath))
-    {
-      _logger.LogCritical(
-        "Cannot migrate: the installer LaunchDaemon was not found at {PlistPath}, so the installer cannot be " +
-        "told which brand it replaces. Nothing on this machine was changed.",
-        plistPath);
-      return false;
-    }
-
-    var plistContent = _fileSystem.ReadAllText(plistPath);
-    var argumentsXml = string.Concat(programArguments.Select(
-      argument => $"\n        <string>{SecurityElement.Escape(argument)}</string>"));
-
-    // "$" in a replacement string is a group reference, so an argument containing one would corrupt the
-    // rewrite. Doubling it escapes it, while the "$1" and "$2" group references below stay intact.
-    var escapedArgumentsXml = argumentsXml.Replace("$", "$$");
-
-    var updatedContent = Regex.Replace(
-      plistContent,
-      @"(<key>ProgramArguments</key>\s*<array>).*?(</array>)",
-      $"$1{escapedArgumentsXml}\n    $2",
-      RegexOptions.Singleline);
-
-    if (string.Equals(updatedContent, plistContent, StringComparison.Ordinal))
-    {
-      _logger.LogCritical(
-        "Cannot migrate: could not locate ProgramArguments in the installer LaunchDaemon at {PlistPath}, so the " +
-        "installer cannot be told which brand it replaces. Nothing on this machine was changed.",
-        plistPath);
-      return false;
-    }
-
-    _fileSystem.WriteAllText(plistPath, updatedContent);
-    _logger.LogInformation("Rewrote installer LaunchDaemon arguments at {PlistPath}.", plistPath);
-    return true;
-  }
-
-  /// <summary>
   /// Copies this install's settings file into the settings directory the replacing install will read,
   /// so it binds the existing device ID, tenant, and signing key instead of minting a new identity.
   /// The server only trusts the public key it already stored for a known device, so losing the key
   /// would leave the endpoint unable to authenticate again.
   /// </summary>
-  private bool WriteSettingsFileForBrand(string newBrandName, string? newInstanceId)
+  private bool WriteSettingsFileForBrand(string newPublisherName, string newBrandName, string? newInstanceId)
   {
     try
     {
@@ -607,7 +538,11 @@ internal class AgentMaintenanceService(
         return false;
       }
 
-      var destinationDirectory = _fileSystemPathProvider.GetSettingsDirectoryFor(newBrandName, newInstanceId);
+      var destinationDirectory = _fileSystemPathProvider.GetSettingsDirectoryFor(
+        newPublisherName,
+        newBrandName,
+        newInstanceId);
+
       var destinationPath = Path.Combine(destinationDirectory, "appsettings.json");
 
       _fileSystem.CreateDirectory(destinationDirectory);

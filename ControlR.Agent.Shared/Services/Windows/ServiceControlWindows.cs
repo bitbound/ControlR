@@ -16,6 +16,13 @@ internal class ServiceControlWindows(
   private readonly IOptions<InstanceOptions> _instanceOptions = instanceOptions;
   private readonly ILogger<ServiceControlWindows> _logger = logger;
 
+  public Task ReloadUserDaemons(bool throwOnFailure)
+  {
+    // The service control reads the registration from the registry when it starts a service, so there is
+    // no cached definition to refresh.
+    throw new NotSupportedException("Reloading a user service daemon is not used on Windows.");
+  }
+
   public async Task StartAgentService(bool throwOnFailure)
   {
     try

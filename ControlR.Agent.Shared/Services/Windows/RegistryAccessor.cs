@@ -22,6 +22,15 @@ public interface IRegistryAccessor
   Result<int> GetRdpPort();
 
   /// <summary>
+  /// Gets the executable path a Windows service is registered to run, from its <c>ImagePath</c> value.
+  /// This is the only machine state that records where a service's files actually are, which is what a
+  /// caller needs when the path formula changed after the service was created.
+  /// </summary>
+  /// <param name="serviceName">The name of the Windows service.</param>
+  /// <returns>The registered path, or null when the service or its value is absent.</returns>
+  string? GetServiceImagePath(string serviceName);
+
+  /// <summary>
   /// Sets the <c>PromptOnSecureDesktop</c> policy value.
   /// </summary>
   /// <param name="enabled"><c>true</c> to enable prompting on the secure desktop; <c>false</c> to disable it.</param>
@@ -82,6 +91,27 @@ internal class RegistryAccessor(
     {
       logger.LogError(ex, "Error while getting RDP port from registry.");
       return Result.Fail<int>("Failed to determine RDP port.");
+    }
+  }
+
+  [SupportedOSPlatform("windows")]
+  public string? GetServiceImagePath(string serviceName)
+  {
+    try
+    {
+      using var serviceKey =
+        Registry.LocalMachine.OpenSubKey($@"SYSTEM\CurrentControlSet\Services\{serviceName}", false);
+
+      // ImagePath is REG_EXPAND_SZ, so a value written by another installer can still carry the
+      // environment markers rather than the resolved path.
+      return serviceKey?.GetValue("ImagePath") is string imagePath && !string.IsNullOrWhiteSpace(imagePath)
+        ? Environment.ExpandEnvironmentVariables(imagePath)
+        : null;
+    }
+    catch (Exception ex)
+    {
+      logger.LogError(ex, "Error while getting the ImagePath of service {ServiceName}.", serviceName);
+      return null;
     }
   }
 

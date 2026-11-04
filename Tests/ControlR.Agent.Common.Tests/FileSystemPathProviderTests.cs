@@ -17,15 +17,15 @@ public class FileSystemPathProviderTests
   private Mock<ISystemEnvironment> _systemEnvironment = null!;
 
   [Theory]
-  [InlineData(SystemPlatform.Windows, null, false, false, @"C:\ProgramData\ControlR\default\appsettings.json")]
-  [InlineData(SystemPlatform.Windows, "localhost", false, false, @"C:\ProgramData\ControlR\localhost\appsettings.json")]
-  [InlineData(SystemPlatform.Windows, "controlr.test.com", false, true, @"C:\ProgramData\ControlR\Debug\controlr.test.com\appsettings.json")]
-  [InlineData(SystemPlatform.Linux, null, false, false, "/home/testuser/.controlr/default/appsettings.json")]
-  [InlineData(SystemPlatform.Linux, "localhost", false, false, "/home/testuser/.controlr/localhost/appsettings.json")]
-  [InlineData(SystemPlatform.Linux, "controlr.test.com", true, false, "/etc/controlr/controlr.test.com/appsettings.json")]
-  [InlineData(SystemPlatform.MacOs, null, false, false, "/Users/testuser/.controlr/default/appsettings.json")]
-  [InlineData(SystemPlatform.MacOs, "localhost", false, false, "/Users/testuser/.controlr/localhost/appsettings.json")]
-  [InlineData(SystemPlatform.MacOs, "controlr.test.com", true, false, "/etc/controlr/controlr.test.com/appsettings.json")]
+  [InlineData(SystemPlatform.Windows, null, false, false, @"C:\ProgramData\Bitbound\ControlR\default\appsettings.json")]
+  [InlineData(SystemPlatform.Windows, "localhost", false, false, @"C:\ProgramData\Bitbound\ControlR\localhost\appsettings.json")]
+  [InlineData(SystemPlatform.Windows, "controlr.test.com", false, true, @"C:\ProgramData\Bitbound\ControlR\Debug\controlr.test.com\appsettings.json")]
+  [InlineData(SystemPlatform.Linux, null, false, false, "/home/testuser/.bitbound/controlr/default/appsettings.json")]
+  [InlineData(SystemPlatform.Linux, "localhost", false, false, "/home/testuser/.bitbound/controlr/localhost/appsettings.json")]
+  [InlineData(SystemPlatform.Linux, "controlr.test.com", true, false, "/etc/bitbound/controlr/controlr.test.com/appsettings.json")]
+  [InlineData(SystemPlatform.MacOs, null, false, false, "/Users/testuser/.bitbound/controlr/default/appsettings.json")]
+  [InlineData(SystemPlatform.MacOs, "localhost", false, false, "/Users/testuser/.bitbound/controlr/localhost/appsettings.json")]
+  [InlineData(SystemPlatform.MacOs, "controlr.test.com", true, false, "/etc/bitbound/controlr/controlr.test.com/appsettings.json")]
   public void GetAgentAppSettingsPath_ReturnsCorrectPath(
     SystemPlatform platform,
     string? instanceId,
@@ -41,12 +41,41 @@ public class FileSystemPathProviderTests
   }
 
   [Theory]
-  [InlineData(SystemPlatform.Windows, null, false, false, @"C:\ProgramData\ControlR\default\Logs\ControlR.Agent\LogFile.log")]
-  [InlineData(SystemPlatform.Windows, "localhost", false, false, @"C:\ProgramData\ControlR\localhost\Logs\ControlR.Agent\LogFile.log")]
-  [InlineData(SystemPlatform.Linux, null, false, false, "/home/testuser/.controlr/default/logs/ControlR.Agent/LogFile.log")]
-  [InlineData(SystemPlatform.Linux, "controlr.test.com", true, false, "/var/log/controlr/controlr.test.com/ControlR.Agent/LogFile.log")]
-  [InlineData(SystemPlatform.MacOs, "localhost", false, false, "/Users/testuser/.controlr/localhost/logs/ControlR.Agent/LogFile.log")]
-  [InlineData(SystemPlatform.MacOs, "controlr.test.com", true, false, "/private/var/log/controlr/controlr.test.com/ControlR.Agent/LogFile.log")]
+  [InlineData(SystemPlatform.Windows, null, @"C:\Program Files\Bitbound\ControlR\default")]
+  [InlineData(SystemPlatform.Windows, "localhost", @"C:\Program Files\Bitbound\ControlR\localhost")]
+  [InlineData(SystemPlatform.Linux, "localhost", "/usr/local/bin/Bitbound/ControlR/localhost")]
+  [InlineData(SystemPlatform.MacOs, "localhost", "/Library/Application Support/Bitbound/ControlR/localhost")]
+  public void GetAgentInstallDirectory_PutsTheBrandUnderThePublisher(
+    SystemPlatform platform,
+    string? instanceId,
+    string expectedPath)
+  {
+    Setup(platform, instanceId);
+
+    var result = _pathProvider.GetAgentInstallDirectory();
+
+    Assert.Equal(expectedPath, result);
+  }
+
+  [Fact]
+  public void GetAgentInstallDirectory_WhenDebug_KeepsTheInstallSegment()
+  {
+    Setup(SystemPlatform.Windows, "localhost", isDebug: true);
+
+    var result = _pathProvider.GetAgentInstallDirectory();
+
+    // Debug builds install under an Install segment rather than directly under the brand. A formula that
+    // leaves it out names a directory nothing was ever written to.
+    Assert.EndsWith(@"Bitbound\ControlR\Install\localhost", result);
+  }
+
+  [Theory]
+  [InlineData(SystemPlatform.Windows, null, false, false, @"C:\ProgramData\Bitbound\ControlR\default\Logs\ControlR.Agent\LogFile.log")]
+  [InlineData(SystemPlatform.Windows, "localhost", false, false, @"C:\ProgramData\Bitbound\ControlR\localhost\Logs\ControlR.Agent\LogFile.log")]
+  [InlineData(SystemPlatform.Linux, null, false, false, "/home/testuser/.bitbound/controlr/default/logs/ControlR.Agent/LogFile.log")]
+  [InlineData(SystemPlatform.Linux, "controlr.test.com", true, false, "/var/log/bitbound/controlr/controlr.test.com/ControlR.Agent/LogFile.log")]
+  [InlineData(SystemPlatform.MacOs, "localhost", false, false, "/Users/testuser/.bitbound/controlr/localhost/logs/ControlR.Agent/LogFile.log")]
+  [InlineData(SystemPlatform.MacOs, "controlr.test.com", true, false, "/private/var/log/bitbound/controlr/controlr.test.com/ControlR.Agent/LogFile.log")]
   public void GetAgentLogFilePath_AppendsLogFileName(
     SystemPlatform platform,
     string? instanceId,
@@ -62,12 +91,12 @@ public class FileSystemPathProviderTests
   }
 
   [Theory]
-  [InlineData(SystemPlatform.Windows, null, false, false, @"C:\ProgramData\ControlR\default\Logs\ControlR.Agent")]
-  [InlineData(SystemPlatform.Windows, "localhost", false, true, @"C:\ProgramData\ControlR\Debug\localhost\Logs\ControlR.Agent")]
-  [InlineData(SystemPlatform.Linux, null, false, false, "/home/testuser/.controlr/default/logs/ControlR.Agent")]
-  [InlineData(SystemPlatform.Linux, "controlr.test.com", true, false, "/var/log/controlr/controlr.test.com/ControlR.Agent")]
-  [InlineData(SystemPlatform.MacOs, "localhost", false, false, "/Users/testuser/.controlr/localhost/logs/ControlR.Agent")]
-  [InlineData(SystemPlatform.MacOs, "controlr.test.com", true, false, "/private/var/log/controlr/controlr.test.com/ControlR.Agent")]
+  [InlineData(SystemPlatform.Windows, null, false, false, @"C:\ProgramData\Bitbound\ControlR\default\Logs\ControlR.Agent")]
+  [InlineData(SystemPlatform.Windows, "localhost", false, true, @"C:\ProgramData\Bitbound\ControlR\Debug\localhost\Logs\ControlR.Agent")]
+  [InlineData(SystemPlatform.Linux, null, false, false, "/home/testuser/.bitbound/controlr/default/logs/ControlR.Agent")]
+  [InlineData(SystemPlatform.Linux, "controlr.test.com", true, false, "/var/log/bitbound/controlr/controlr.test.com/ControlR.Agent")]
+  [InlineData(SystemPlatform.MacOs, "localhost", false, false, "/Users/testuser/.bitbound/controlr/localhost/logs/ControlR.Agent")]
+  [InlineData(SystemPlatform.MacOs, "controlr.test.com", true, false, "/private/var/log/bitbound/controlr/controlr.test.com/ControlR.Agent")]
   public void GetAgentLogsDirectoryPath_ReturnsCorrectStructure(
     SystemPlatform platform,
     string? instanceId,
@@ -83,15 +112,15 @@ public class FileSystemPathProviderTests
   }
 
   [Theory]
-  [InlineData(SystemPlatform.Windows, null, false, false, @"C:\ProgramData\ControlR\default\.controlr-bundle.sha256")]
-  [InlineData(SystemPlatform.Windows, "localhost", false, false, @"C:\ProgramData\ControlR\localhost\.controlr-bundle.sha256")]
-  [InlineData(SystemPlatform.Windows, "controlr.test.com", false, true, @"C:\ProgramData\ControlR\Debug\controlr.test.com\.controlr-bundle.sha256")]
-  [InlineData(SystemPlatform.Linux, null, false, false, "/home/testuser/.controlr/default/.controlr-bundle.sha256")]
-  [InlineData(SystemPlatform.Linux, "localhost", false, false, "/home/testuser/.controlr/localhost/.controlr-bundle.sha256")]
-  [InlineData(SystemPlatform.Linux, "controlr.test.com", true, false, "/etc/controlr/controlr.test.com/.controlr-bundle.sha256")]
-  [InlineData(SystemPlatform.MacOs, null, false, false, "/Users/testuser/.controlr/default/.controlr-bundle.sha256")]
-  [InlineData(SystemPlatform.MacOs, "localhost", false, false, "/Users/testuser/.controlr/localhost/.controlr-bundle.sha256")]
-  [InlineData(SystemPlatform.MacOs, "controlr.test.com", true, false, "/etc/controlr/controlr.test.com/.controlr-bundle.sha256")]
+  [InlineData(SystemPlatform.Windows, null, false, false, @"C:\ProgramData\Bitbound\ControlR\default\.controlr-bundle.sha256")]
+  [InlineData(SystemPlatform.Windows, "localhost", false, false, @"C:\ProgramData\Bitbound\ControlR\localhost\.controlr-bundle.sha256")]
+  [InlineData(SystemPlatform.Windows, "controlr.test.com", false, true, @"C:\ProgramData\Bitbound\ControlR\Debug\controlr.test.com\.controlr-bundle.sha256")]
+  [InlineData(SystemPlatform.Linux, null, false, false, "/home/testuser/.bitbound/controlr/default/.controlr-bundle.sha256")]
+  [InlineData(SystemPlatform.Linux, "localhost", false, false, "/home/testuser/.bitbound/controlr/localhost/.controlr-bundle.sha256")]
+  [InlineData(SystemPlatform.Linux, "controlr.test.com", true, false, "/etc/bitbound/controlr/controlr.test.com/.controlr-bundle.sha256")]
+  [InlineData(SystemPlatform.MacOs, null, false, false, "/Users/testuser/.bitbound/controlr/default/.controlr-bundle.sha256")]
+  [InlineData(SystemPlatform.MacOs, "localhost", false, false, "/Users/testuser/.bitbound/controlr/localhost/.controlr-bundle.sha256")]
+  [InlineData(SystemPlatform.MacOs, "controlr.test.com", true, false, "/etc/bitbound/controlr/controlr.test.com/.controlr-bundle.sha256")]
   public void GetBundleHashFilePath_ReturnsSettingsDirectoryPath(
     SystemPlatform platform,
     string? instanceId,
@@ -131,12 +160,12 @@ public class FileSystemPathProviderTests
   }
 
   [Theory]
-  [InlineData(SystemPlatform.Windows, null, false, false, @"C:\ProgramData\ControlR\default\Logs\ControlR.Agent.Installer\LogFile.log")]
-  [InlineData(SystemPlatform.Windows, "localhost", false, false, @"C:\ProgramData\ControlR\localhost\Logs\ControlR.Agent.Installer\LogFile.log")]
-  [InlineData(SystemPlatform.Linux, null, false, false, "/home/testuser/.controlr/default/logs/ControlR.Agent.Installer/LogFile.log")]
-  [InlineData(SystemPlatform.Linux, "controlr.test.com", true, false, "/var/log/controlr/controlr.test.com/ControlR.Agent.Installer/LogFile.log")]
-  [InlineData(SystemPlatform.MacOs, "localhost", false, false, "/Users/testuser/.controlr/localhost/logs/ControlR.Agent.Installer/LogFile.log")]
-  [InlineData(SystemPlatform.MacOs, "controlr.test.com", true, false, "/private/var/log/controlr/controlr.test.com/ControlR.Agent.Installer/LogFile.log")]
+  [InlineData(SystemPlatform.Windows, null, false, false, @"C:\ProgramData\Bitbound\ControlR\default\Logs\ControlR.Agent.Installer\LogFile.log")]
+  [InlineData(SystemPlatform.Windows, "localhost", false, false, @"C:\ProgramData\Bitbound\ControlR\localhost\Logs\ControlR.Agent.Installer\LogFile.log")]
+  [InlineData(SystemPlatform.Linux, null, false, false, "/home/testuser/.bitbound/controlr/default/logs/ControlR.Agent.Installer/LogFile.log")]
+  [InlineData(SystemPlatform.Linux, "controlr.test.com", true, false, "/var/log/bitbound/controlr/controlr.test.com/ControlR.Agent.Installer/LogFile.log")]
+  [InlineData(SystemPlatform.MacOs, "localhost", false, false, "/Users/testuser/.bitbound/controlr/localhost/logs/ControlR.Agent.Installer/LogFile.log")]
+  [InlineData(SystemPlatform.MacOs, "controlr.test.com", true, false, "/private/var/log/bitbound/controlr/controlr.test.com/ControlR.Agent.Installer/LogFile.log")]
   public void GetInstallerLogFilePath_AppendsLogFileName(
     SystemPlatform platform,
     string? instanceId,
@@ -152,17 +181,18 @@ public class FileSystemPathProviderTests
   }
 
   [Theory]
-  [InlineData(SystemPlatform.Windows, "Acme ", null, false, false, @"C:\ProgramData\Acme_\default")]
-  [InlineData(SystemPlatform.Windows, "Acme Remote", null, false, false, @"C:\ProgramData\Acme_Remote\default")]
-  [InlineData(SystemPlatform.Windows, "Acme Remote", "inst-1", false, false, @"C:\ProgramData\Acme_Remote\inst-1")]
-  [InlineData(SystemPlatform.Windows, "Acme Remote", "inst-1", false, true, @"C:\ProgramData\Acme_Remote\Debug\inst-1")]
-  [InlineData(SystemPlatform.Linux, "Acme Remote", "inst-1", true, false, "/etc/acme_remote/inst-1")]
-  [InlineData(SystemPlatform.Linux, "Acme Remote", "inst-1", false, false, "/home/testuser/.acme_remote/inst-1")]
-  [InlineData(SystemPlatform.MacOs, "Acme Remote", "inst-1", true, false, "/etc/acme_remote/inst-1")]
-  [InlineData(SystemPlatform.MacOs, "Acme Remote", "inst-1", false, false, "/Users/testuser/.acme_remote/inst-1")]
-  [InlineData(SystemPlatform.Linux, "Acme_Remote", "inst-1", true, false, "/etc/acme_remote/inst-1")]
+  [InlineData(SystemPlatform.Windows, "Acme Corp", "Acme ", null, false, false, @"C:\ProgramData\Acme_Corp\Acme_\default")]
+  [InlineData(SystemPlatform.Windows, "Acme Corp", "Acme Remote", null, false, false, @"C:\ProgramData\Acme_Corp\Acme_Remote\default")]
+  [InlineData(SystemPlatform.Windows, "Acme Corp", "Acme Remote", "inst-1", false, false, @"C:\ProgramData\Acme_Corp\Acme_Remote\inst-1")]
+  [InlineData(SystemPlatform.Windows, "Acme Corp", "Acme Remote", "inst-1", false, true, @"C:\ProgramData\Acme_Corp\Acme_Remote\Debug\inst-1")]
+  [InlineData(SystemPlatform.Linux, "Acme Corp", "Acme Remote", "inst-1", true, false, "/etc/acme_corp/acme_remote/inst-1")]
+  [InlineData(SystemPlatform.Linux, "Acme Corp", "Acme Remote", "inst-1", false, false, "/home/testuser/.acme_corp/acme_remote/inst-1")]
+  [InlineData(SystemPlatform.MacOs, "Acme Corp", "Acme Remote", "inst-1", true, false, "/etc/acme_corp/acme_remote/inst-1")]
+  [InlineData(SystemPlatform.MacOs, "Acme Corp", "Acme Remote", "inst-1", false, false, "/Users/testuser/.acme_corp/acme_remote/inst-1")]
+  [InlineData(SystemPlatform.Linux, "Acme_Corp", "Acme_Remote", "inst-1", true, false, "/etc/acme_corp/acme_remote/inst-1")]
   public void GetSettingsDirectoryFor_ForeignBrand_ReturnsThatBrandsInstallDirectory(
     SystemPlatform platform,
+    string publisherName,
     string brandName,
     string? instanceId,
     bool isElevated,
@@ -171,7 +201,7 @@ public class FileSystemPathProviderTests
   {
     Setup(platform, instanceId, isElevated, isDebug);
 
-    var result = _pathProvider.GetSettingsDirectoryFor(brandName, instanceId);
+    var result = _pathProvider.GetSettingsDirectoryFor(publisherName, brandName, instanceId);
 
     Assert.Equal(expectedPath, result);
   }
@@ -185,13 +215,30 @@ public class FileSystemPathProviderTests
     Setup(SystemPlatform.Windows, null);
 
     Assert.Throws<ArgumentException>(() =>
-      _pathProvider.GetSettingsDirectoryFor(brandName!, "inst-1"));
+      _pathProvider.GetSettingsDirectoryFor("Bitbound", brandName!, "inst-1"));
   }
 
   [Theory]
-  [InlineData(SystemPlatform.Linux, null, "/var/log/controlr/default/ControlR.DesktopClient")]
-  [InlineData(SystemPlatform.Linux, "localhost", "/var/log/controlr/localhost/ControlR.DesktopClient")]
-  [InlineData(SystemPlatform.MacOs, "controlr.test.com", "/private/var/log/controlr/controlr.test.com/ControlR.DesktopClient")]
+  [InlineData(SystemPlatform.Windows, @"C:\ProgramData\Acme_Remote\inst-1")]
+  [InlineData(SystemPlatform.Linux, "/etc/acme_remote/inst-1")]
+  [InlineData(SystemPlatform.MacOs, "/etc/acme_remote/inst-1")]
+  public void GetSettingsDirectoryFor_WithoutAPublisher_ReturnsTheVendorlessPath(
+    SystemPlatform platform,
+    string expectedPath)
+  {
+    Setup(platform, "inst-1", isElevated: true);
+
+    // An install from before the publisher became a directory has no vendor level to name, and that is
+    // the shape the relocation has to address it by.
+    var result = _pathProvider.GetSettingsDirectoryFor(null, "Acme Remote", "inst-1");
+
+    Assert.Equal(expectedPath, result);
+  }
+
+  [Theory]
+  [InlineData(SystemPlatform.Linux, null, "/var/log/bitbound/controlr/default/ControlR.DesktopClient")]
+  [InlineData(SystemPlatform.Linux, "localhost", "/var/log/bitbound/controlr/localhost/ControlR.DesktopClient")]
+  [InlineData(SystemPlatform.MacOs, "controlr.test.com", "/private/var/log/bitbound/controlr/controlr.test.com/ControlR.DesktopClient")]
   public void GetUnixDesktopClientLogsDirectoryForRoot_ReturnsCorrectStructure(
     SystemPlatform platform,
     string? instanceId,
@@ -205,9 +252,9 @@ public class FileSystemPathProviderTests
   }
 
   [Theory]
-  [InlineData(SystemPlatform.Linux, "testuser", null, "/home/testuser/.controlr/default/logs/ControlR.DesktopClient")]
-  [InlineData(SystemPlatform.Linux, "alice", "localhost", "/home/alice/.controlr/localhost/logs/ControlR.DesktopClient")]
-  [InlineData(SystemPlatform.MacOs, "bob", "controlr.test.com", "/Users/bob/.controlr/controlr.test.com/logs/ControlR.DesktopClient")]
+  [InlineData(SystemPlatform.Linux, "testuser", null, "/home/testuser/.bitbound/controlr/default/logs/ControlR.DesktopClient")]
+  [InlineData(SystemPlatform.Linux, "alice", "localhost", "/home/alice/.bitbound/controlr/localhost/logs/ControlR.DesktopClient")]
+  [InlineData(SystemPlatform.MacOs, "bob", "controlr.test.com", "/Users/bob/.bitbound/controlr/controlr.test.com/logs/ControlR.DesktopClient")]
   public void GetUnixDesktopClientLogsDirectory_ReturnsCorrectStructure(
     SystemPlatform platform,
     string username,
@@ -242,9 +289,9 @@ public class FileSystemPathProviderTests
   }
 
   [Theory]
-  [InlineData(false, null, @"C:\ProgramData\ControlR\default\testuser\DesktopClient\Logs")]
-  [InlineData(false, "localhost", @"C:\ProgramData\ControlR\localhost\testuser\DesktopClient\Logs")]
-  [InlineData(true, "controlr.test.com", @"C:\ProgramData\ControlR\Debug\controlr.test.com\testuser\DesktopClient\Logs")]
+  [InlineData(false, null, @"C:\ProgramData\Bitbound\ControlR\default\testuser\DesktopClient\Logs")]
+  [InlineData(false, "localhost", @"C:\ProgramData\Bitbound\ControlR\localhost\testuser\DesktopClient\Logs")]
+  [InlineData(true, "controlr.test.com", @"C:\ProgramData\Bitbound\ControlR\Debug\controlr.test.com\testuser\DesktopClient\Logs")]
   public void GetWindowsDesktopClientLogsDirectory_ReturnsCorrectStructure(
     bool isDebug,
     string? instanceId,
@@ -279,9 +326,9 @@ public class FileSystemPathProviderTests
   }
 
   [Theory]
-  [InlineData(false, null, @"C:\ProgramData\ControlR\default")]
-  [InlineData(false, "localhost", @"C:\ProgramData\ControlR\localhost")]
-  [InlineData(true, "controlr.test.com", @"C:\ProgramData\ControlR\Debug\controlr.test.com")]
+  [InlineData(false, null, @"C:\ProgramData\Bitbound\ControlR\default")]
+  [InlineData(false, "localhost", @"C:\ProgramData\Bitbound\ControlR\localhost")]
+  [InlineData(true, "controlr.test.com", @"C:\ProgramData\Bitbound\ControlR\Debug\controlr.test.com")]
   public void GetWindowsDesktopClientUsersDirectory_ReturnsCorrectStructure(
     bool isDebug,
     string? instanceId,
@@ -321,6 +368,8 @@ public class FileSystemPathProviderTests
 
         _systemEnvironment.Setup(x => x.GetCommonApplicationDataDirectory())
           .Returns(@"C:\ProgramData");
+        _systemEnvironment.Setup(x => x.GetProgramFilesDirectory())
+          .Returns(@"C:\Program Files");
         break;
       case SystemPlatform.Linux:
         if (isElevated)
@@ -357,10 +406,10 @@ public class FileSystemPathProviderTests
 
     _elevationChecker = new Mock<IElevationChecker>();
     _elevationChecker.Setup(x => x.IsElevated()).Returns(isElevated);
-    
+
     var directorySeparator = platform == SystemPlatform.Windows ? '\\' : '/';
     _fileSystem = new FakeFileSystem(directorySeparator);
-    
+
     _pathProvider = new FileSystemPathProvider(
       _systemEnvironment.Object,
       _elevationChecker.Object,

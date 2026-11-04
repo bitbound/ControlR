@@ -6,7 +6,6 @@ using ControlR.Libraries.Shared.Services.FileSystem;
 using ControlR.Libraries.Shared.Services.Processes;
 using ControlR.Libraries.Branding;
 using Microsoft.Extensions.Options;
-using System.Diagnostics;
 using System.Runtime.Versioning;
 using ControlR.Libraries.Shared.Services.Encryption;
 
@@ -27,6 +26,7 @@ internal class AgentInstallerMac(
   IOptionsMonitor<AgentAppOptions> appOptions,
   IOptions<InstanceOptions> instanceOptions,
   IEd25519KeyProvider keyProvider,
+  ILegacyPathMigrationUnix legacyPathMigration,
   ILogger<AgentInstallerMac> logger)
   : AgentInstallerBase(fileSystem, fileSystemPathProvider, controlrApi, deviceDataGenerator, optionsAccessor, processManager, systemEnvironment, appOptions, logger, keyProvider), IAgentInstaller
 {
@@ -36,6 +36,7 @@ internal class AgentInstallerMac(
   private readonly IEmbeddedResourceAccessor _embeddedResourceAccessor = embeddedResourceAccessor;
   private readonly IFileSystem _fileSystem = fileSystem;
   private readonly IOptions<InstanceOptions> _instanceOptions = instanceOptions;
+  private readonly ILegacyPathMigrationUnix _legacyPathMigration = legacyPathMigration;
   private readonly ILogger<AgentInstallerMac> _logger = logger;
   private readonly IServiceControl _serviceControl = serviceControl;
 
@@ -57,12 +58,25 @@ internal class AgentInstallerMac(
         return Result.Fail<AgentInstallOutcome>("Install command must be run with sudo.");
       }
 
+      // This install boots out the agent that spawned it, and launchd tears down the whole process
+      // group of a dying job. Leaving that group before any of that starts is what lets this process
+      // survive. The result is unread because EPERM is expected and correct when this process is
+      // already a session leader, which is the case for a manual run from a terminal.
+      _ = Libc.Setsid();
+
       var appBundleInstallPath = GetInstalledAppBundlePath();
       var tempExtractDirectory = GetTempExtractDirectory();
       var installedAgentPath = GetInstalledAgentPath();
       var installedAgentDirectory = Path.GetDirectoryName(installedAgentPath)
         ?? throw new DirectoryNotFoundException("Unable to determine the agent install directory.");
       var bundleStateDirectory = GetBundleStateDirectory();
+
+      // TODO: Temporary migration code for v0.31.x
+      var relocation = _legacyPathMigration.Plan();
+      if (relocation is not null && !_legacyPathMigration.TryStageSettings(relocation).IsSuccess)
+      {
+        return Result.Fail<AgentInstallOutcome>("Could not carry this install's settings to the new path.");
+      }
 
       await _serviceControl.StopDesktopClientService(throwOnFailure: false);
       await _serviceControl.StopAgentService(throwOnFailure: false);
@@ -113,13 +127,18 @@ internal class AgentInstallerMac(
       var agentPlistFile = (await GetLaunchDaemonFile()).Trim();
       var desktopPlistPath = GetLaunchAgentFilePath();
       var desktopPlistFile = (await GetLaunchAgentFile()).Trim();
-      var installerPlistPath = GetInstallerDaemonFilePath();
-      var installerPlistFile = (await GetInstallerDaemonFile(request)).Trim();
+
+      // TODO: Temporary migration code for v0.31.x
+      // The plists name the install directory, so rewriting them is what moves the job. Their previous
+      // contents are what puts the old install back in play, and they are gone once written over.
+      IReadOnlyDictionary<string, string>? previousPlists = relocation is null
+        ? null
+        : _legacyPathMigration.ReadServiceDefinitionFiles(agentPlistPath, desktopPlistPath);
 
       _logger.LogInformation("Writing plist files.");
       await WriteFileIfChanged(agentPlistPath, agentPlistFile);
       await WriteFileIfChanged(desktopPlistPath, desktopPlistFile);
-      await WriteFileIfChanged(installerPlistPath, installerPlistFile);
+      RemoveInstallerDaemonFile();
       await UpdateAppSettings(request.ServerUri, request.TenantId, request.DeviceId);
 
       var createResult = await CreateDeviceOnServer(request.InstallerKeyId, request.InstallerKeySecret, request.TagIds, request.CustomerId);
@@ -133,7 +152,10 @@ internal class AgentInstallerMac(
       // Only one agent may hold the device's connection on the server, so the replaced install stops
       // before this one starts. Starting beside an install that could not be stopped would leave both
       // signing as the same device, so fail and let the caller put the replaced install back.
-      var stopPreviousBrandResult = await StopPreviousBrandService(request.PreviousBrandName, request.PreviousInstanceId);
+      var stopPreviousBrandResult = await StopPreviousBrandService(
+        request.PreviousPublisher,
+        request.PreviousBrandName,
+        request.PreviousInstanceId);
       if (!stopPreviousBrandResult.IsSuccess)
       {
         return Result.Fail<AgentInstallOutcome>($"Failed to stop the {request.PreviousBrandName} install being replaced.");
@@ -146,10 +168,29 @@ internal class AgentInstallerMac(
       catch (Exception ex)
       {
         _logger.LogError(ex, "The {BrandName} service did not start.", BrandingConstants.BrandName);
+
+        if (previousPlists is not null)
+        {
+          // TODO: Temporary migration code for v0.31.x
+          // This build is on disk and its job is defined, and it will not come up. The install being
+          // replaced is still complete, so the plists go back to it and the caller's recovery starts a
+          // build that was already running. The job is booted out before these files get replaced, so the
+          // file is what the next bootstrap reads and no reload is needed here.
+          await _legacyPathMigration.RestoreServiceDefinitionFiles(previousPlists);
+        }
+
         return Result.Fail<AgentInstallOutcome>("Failed to start the agent service after installation.");
       }
 
       await _serviceControl.StartDesktopClientService(throwOnFailure: false);
+
+      if (relocation is not null)
+      {
+        // TODO: Temporary migration code for v0.31.x
+        // Only now, with the relocated service confirmed started. Until this point the old install is
+        // complete on disk, which is what lets a failure at any earlier step be recovered by starting it.
+        _legacyPathMigration.RemoveRelocatedInstall(relocation);
+      }
 
       _logger.LogInformation("Installer finished.");
       return Result.Ok(AgentInstallOutcome.Installed);
@@ -265,12 +306,10 @@ internal class AgentInstallerMac(
 
       var serviceFilePath = GetLaunchDaemonFilePath();
       var desktopFilePath = GetLaunchAgentFilePath();
-      var installerFilePath = GetInstallerDaemonFilePath();
 
       _logger.LogInformation("Booting out services.");
       await _serviceControl.StopDesktopClientService(throwOnFailure: false);
       await _serviceControl.StopAgentService(throwOnFailure: false);
-      await StopInstallerDaemonService();
 
       if (_fileSystem.FileExists(serviceFilePath))
       {
@@ -282,10 +321,7 @@ internal class AgentInstallerMac(
         _fileSystem.DeleteFile(desktopFilePath);
       }
 
-      if (_fileSystem.FileExists(installerFilePath))
-      {
-        _fileSystem.DeleteFile(installerFilePath);
-      }
+      RemoveInstallerDaemonFile();
 
       var appBundleInstallPath = GetInstalledAppBundlePath();
       if (_fileSystem.DirectoryExists(appBundleInstallPath))
@@ -378,35 +414,6 @@ internal class AgentInstallerMac(
     return FilesystemPathProvider.GetMacAppBundlePath();
   }
 
-  private async Task<string> GetInstallerDaemonFile(AgentInstallRequest request)
-  {
-    var template = await _embeddedResourceAccessor.GetResourceAsString(
-      typeof(AgentInstallerMac).Assembly,
-      "InstallerDaemon.plist");
-
-    template = template
-      .Replace("{{SERVICE_NAME}}", GetInstallerDaemonServiceName())
-      .Replace("{{INSTALLER_PATH}}", GetUpdaterInstallerPath())
-      .Replace("{{SERVER_URI}}", request.ServerUri.ToString())
-      .Replace("{{TENANT_ID}}", request.TenantId.ToString());
-
-    if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
-    {
-      var lines = template.Split('\n');
-      lines = [.. lines.Where(line =>
-        !line.Contains("{{INSTANCE_ID}}") &&
-        !line.Contains("<string>--instance-id</string>"))];
-
-      template = string.Join("\n", lines);
-    }
-    else
-    {
-      template = template.Replace("{{INSTANCE_ID}}", _instanceOptions.Value.InstanceId);
-    }
-
-    return template;
-  }
-
   private string GetInstallerDaemonFilePath()
   {
     if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
@@ -415,16 +422,6 @@ internal class AgentInstallerMac(
     }
 
     return $"/Library/LaunchDaemons/{BrandingConstants.MacServicePrefix}.agent.installer.{_instanceOptions.Value.InstanceId}.plist";
-  }
-
-  private string GetInstallerDaemonServiceName()
-  {
-    if (string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId))
-    {
-      return $"{BrandingConstants.MacServicePrefix}.agent.installer";
-    }
-
-    return $"{BrandingConstants.MacServicePrefix}.agent.installer.{_instanceOptions.Value.InstanceId}";
   }
 
   private string GetLaunchAgentFilePath()
@@ -496,17 +493,22 @@ internal class AgentInstallerMac(
     return Path.Combine(_macInstallerTempDirectory, instanceSegment, "bundle");
   }
 
-  private string GetUpdaterInstallerPath()
+  /// <summary>
+  /// Deletes the installer LaunchDaemon that an earlier build installed. That daemon existed only to run
+  /// the installer outside the agent's own job, and the installer now does that by leaving the process
+  /// group it was spawned in. The file goes without a bootout, because an install that this very job
+  /// launched would be killed by one. A definition with no RunAtLoad and no activation trigger is inert
+  /// once its file is gone.
+  /// TODO: Temporary migration code for v0.31.x
+  /// </summary>
+  private void RemoveInstallerDaemonFile()
   {
-    var instanceSegment = string.IsNullOrWhiteSpace(_instanceOptions.Value.InstanceId)
-      ? AppConstants.DefaultInstanceId
-      : _instanceOptions.Value.InstanceId;
-
-    return _fileSystem.JoinPaths(
-      '/',
-      _macInstallerTempDirectory,
-      instanceSegment,
-      AppConstants.GetInstallerFileName(SystemPlatform.MacOs));
+    var installerDaemonFilePath = GetInstallerDaemonFilePath();
+    if (_fileSystem.FileExists(installerDaemonFilePath))
+    {
+      _logger.LogInformation("Deleting obsolete installer LaunchDaemon at {FilePath}.", installerDaemonFilePath);
+      _fileSystem.DeleteFile(installerDaemonFilePath);
+    }
   }
 
   private void SetAgentPermissions(string installedAgentPath)
@@ -551,26 +553,6 @@ internal class AgentInstallerMac(
 
       _fileSystem.SetUnixFileMode(executablePath, executableFileMode);
       _logger.LogDebug("Set executable permissions on {FilePath}", executablePath);
-    }
-  }
-
-  private async Task StopInstallerDaemonService()
-  {
-    try
-    {
-      var psi = new ProcessStartInfo
-      {
-        FileName = "sudo",
-        UseShellExecute = true,
-        WorkingDirectory = "/tmp",
-        Arguments = $"launchctl bootout system/{GetInstallerDaemonServiceName()}"
-      };
-
-      await ProcessManager.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
-    }
-    catch
-    {
-      // The installer daemon may not already be loaded.
     }
   }
 

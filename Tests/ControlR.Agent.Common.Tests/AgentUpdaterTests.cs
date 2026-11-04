@@ -27,180 +27,85 @@ public class AgentMaintenanceServiceTests
   private static readonly Guid _tenantId = Guid.Parse("11111111-1111-1111-1111-111111111111");
 
   [Fact]
-  public async Task CheckForUpdate_OnMac_BootstrapsOneShotLaunchDaemon()
+  public async Task CheckForUpdate_OnMac_SpawnsTheInstallerItDownloaded()
   {
     var fixture = new AgentMaintenanceServiceFixture();
     fixture.FileSystem.AddFile(fixture.BundleHashPath, "OLD_HASH");
-    fixture.SystemEnvironment
-      .SetupGet(x => x.Platform)
-      .Returns(SystemPlatform.MacOs);
-    fixture.SystemEnvironment
-      .SetupGet(x => x.Runtime)
-      .Returns(RuntimeId.MacOsArm64);
-
-    var installerBytes = new byte[] { 1, 2, 3, 4, 5 };
-    var installerSha256 = Convert.ToHexString(SHA256.HashData(installerBytes));
-    var downloadedInstallerPath = string.Empty;
-    var process = new Mock<IProcess>();
-    process
-      .Setup(x => x.WaitForExitAsync(It.IsAny<CancellationToken>()))
-      .Returns(Task.CompletedTask);
-
-    fixture.AgentUpdateApi
-      .Setup(x => x.GetBundleMetadata(RuntimeId.MacOsArm64, It.IsAny<CancellationToken>()))
-      .ReturnsAsync(ApiResult.Ok(new BundleMetadataDto
-      {
-        BundleDownloadUrl = "/downloads/osx-arm64/ControlR.Agent.bundle.zip",
-        BundleSha256 = "NEW_HASH",
-        InstallerDownloadUrl = "/downloads/osx-arm64/ControlR.Agent.Installer",
-        InstallerSha256 = installerSha256,
-        Runtime = RuntimeId.MacOsArm64,
-        Version = Version.Parse("1.2.3"),
-        BrandName = "ControlR",
-        Publisher = "Bitbound"
-      }));
-
-    fixture.DownloadsApi
-      .Setup(x => x.DownloadFile("/downloads/osx-arm64/ControlR.Agent.Installer", It.IsAny<string>(), It.IsAny<CancellationToken>()))
-      .Returns<string, string, CancellationToken>((_, destinationPath, _) =>
-      {
-        downloadedInstallerPath = destinationPath;
-        fixture.FileSystem.AddFile(destinationPath, installerBytes);
-        return Task.FromResult(Result.Ok());
-      });
-
-    fixture.ProcessManager
-      .Setup(x => x.Start("sudo", It.IsAny<string>()))
-      .Returns(process.Object);
-
-    var launchctlStartInfos = new List<ProcessStartInfo>();
-    fixture.ProcessManager
-      .Setup(x => x.StartAndWaitForExit(It.IsAny<ProcessStartInfo>(), It.IsAny<TimeSpan>()))
-      .Returns<ProcessStartInfo, TimeSpan>((startInfo, _) =>
-      {
-        launchctlStartInfos.Add(startInfo);
-        return Task.FromResult(0);
-      });
+    fixture.ServeMacBundle("NEW_HASH");
 
     var updater = fixture.CreateMaintenanceService();
-
-    // CheckForUpdate builds the download path from Path.GetTempPath() at its start. Read the expected
-    // value at the same point so a re-read after the run cannot disagree with it.
-    var expectedInstallerPath = Path.Combine(Path.GetTempPath(), "ControlR_Update", "instance-1", "ControlR.Agent.Installer");
 
     await updater.CheckForUpdate(force: true, cancellationToken: TestContext.Current.CancellationToken);
 
     fixture.ProcessManager.Verify(
       x => x.Start("sudo", It.Is<string>(args => args.Contains("chmod +x", StringComparison.Ordinal))),
       Times.Once);
-    Assert.Equal(3, launchctlStartInfos.Count);
-    Assert.Equal("sudo", launchctlStartInfos[0].FileName);
-    Assert.Equal("launchctl bootout system/app.controlr.agent.installer.instance-1", string.Join(" ", launchctlStartInfos[0].ArgumentList));
-    Assert.Equal("sudo", launchctlStartInfos[1].FileName);
-    Assert.Equal(expectedInstallerPath, downloadedInstallerPath);
-    var expectedPlistPath = "/Library/LaunchDaemons/app.controlr.agent.installer.instance-1.plist";
+
+    var startInfo = fixture.MacInstallerStartInfo;
+    Assert.NotNull(startInfo);
+
+    // The installer leaves the agent's process group on its own, so the agent launches the file it
+    // downloaded. Nothing reads a job definition written by the install already on disk, which is what
+    // let the old launchd path exec a path the download never wrote to.
+    Assert.Equal(fixture.MacInstallerDownloadPath, startInfo.FileName);
     Assert.Equal(
-      $"launchctl bootstrap system {expectedPlistPath}",
-      string.Join(" ", launchctlStartInfos[1].ArgumentList));
-    Assert.Equal("sudo", launchctlStartInfos[2].FileName);
-    Assert.Equal(
-      "launchctl kickstart -k system/app.controlr.agent.installer.instance-1",
-      string.Join(" ", launchctlStartInfos[2].ArgumentList));
+      new[]
+      {
+        "install",
+        "--server-uri",
+        _serverUri.ToString(),
+        "--tenant-id",
+        _tenantId.ToString(),
+        "--instance-id",
+        "instance-1"
+      },
+      startInfo.ArgumentList);
+
+    // Redirection would leave the installer blocked on its next write once the agent is gone and no one
+    // is draining the pipe any more.
+    Assert.False(startInfo.UseShellExecute);
+    Assert.False(startInfo.RedirectStandardOutput);
+    Assert.False(startInfo.RedirectStandardError);
+
+    // This installer boots the agent out, so waiting on it is waiting on this process's own death. No
+    // launchctl call remains now that no job is involved.
+    fixture.ProcessManager.Verify(
+      x => x.StartAndWaitForExit(It.IsAny<ProcessStartInfo>(), It.IsAny<TimeSpan>()),
+      Times.Never);
   }
 
   [Fact]
-  public async Task CheckForUpdate_OnMac_MigratingRewritesInstallerDaemonArguments()
+  public async Task CheckForUpdate_OnMac_TransfersTheReplacedInstallToTheInstaller()
   {
     var fixture = new AgentMaintenanceServiceFixture();
-    var plistPath = "/Library/LaunchDaemons/app.controlr.agent.installer.instance-1.plist";
     var installedSettingsPath = "/etc/controlr/instance-1/appsettings.json";
 
     fixture.FileSystem.AddFile(fixture.BundleHashPath, "OLD_HASH");
-    fixture.SystemEnvironment
-      .SetupGet(x => x.Platform)
-      .Returns(SystemPlatform.MacOs);
-    fixture.SystemEnvironment
-      .SetupGet(x => x.Runtime)
-      .Returns(RuntimeId.MacOsArm64);
-
-    // The plist an installed agent leaves behind, with arguments frozen at install time.
-    fixture.FileSystem.AddFile(plistPath, """
-      <plist version="1.0">
-      <dict>
-          <key>Label</key>
-          <string>app.controlr.agent.installer.instance-1</string>
-          <key>ProgramArguments</key>
-          <array>
-              <string>/tmp/ControlR_Update/instance-1/ControlR.Agent.Installer</string>
-              <string>install</string>
-              <string>--server-uri</string>
-              <string>https://old.example/</string>
-              <string>--tenant-id</string>
-              <string>11111111-1111-1111-1111-111111111111</string>
-              <string>--instance-id</string>
-              <string>instance-1</string>
-          </array>
-      </dict>
-      </plist>
-      """);
-
     fixture.FileSystem.AddFile(installedSettingsPath, "{\"PrivateKey\":\"key\"}");
+
     fixture.PathProvider
       .Setup(x => x.GetAgentAppSettingsPath())
       .Returns(installedSettingsPath);
     fixture.PathProvider
-      .Setup(x => x.GetSettingsDirectoryFor("Acme Remote", "instance-1"))
+      .Setup(x => x.GetSettingsDirectoryFor("AcmeCorp", "Acme Remote", "instance-1"))
       .Returns("/etc/acme_remote/instance-1");
 
-    var installerBytes = new byte[] { 1, 2, 3, 4, 5 };
-    var installerSha256 = Convert.ToHexString(SHA256.HashData(installerBytes));
-
-    fixture.AgentUpdateApi
-      .Setup(x => x.GetBundleMetadata(RuntimeId.MacOsArm64, It.IsAny<CancellationToken>()))
-      .ReturnsAsync(ApiResult.Ok(new BundleMetadataDto
-      {
-        BundleDownloadUrl = "/downloads/osx-arm64/Acme.Agent.bundle.zip",
-        BundleSha256 = "NEW_HASH",
-        InstallerDownloadUrl = "/downloads/osx-arm64/Acme.Agent.Installer",
-        InstallerSha256 = installerSha256,
-        Runtime = RuntimeId.MacOsArm64,
-        Version = Version.Parse("1.2.3"),
-        BrandName = "Acme Remote",
-        Publisher = "AcmeCorp"
-      }));
-
-    fixture.DownloadsApi
-      .Setup(x => x.DownloadFile(
-        "/downloads/osx-arm64/Acme.Agent.Installer",
-        It.IsAny<string>(),
-        It.IsAny<CancellationToken>()))
-      .Returns<string, string, CancellationToken>((_, destinationPath, _) =>
-      {
-        fixture.FileSystem.AddFile(destinationPath, installerBytes);
-        return Task.FromResult(Result.Ok());
-      });
-
-    var process = new Mock<IProcess>();
-    process
-      .Setup(x => x.WaitForExitAsync(It.IsAny<CancellationToken>()))
-      .Returns(Task.CompletedTask);
-    fixture.ProcessManager
-      .Setup(x => x.Start(It.IsAny<string>(), It.IsAny<string>()))
-      .Returns(process.Object);
-    fixture.ProcessManager
-      .Setup(x => x.StartAndWaitForExit(It.IsAny<ProcessStartInfo>(), It.IsAny<TimeSpan>()))
-      .Returns(Task.FromResult(0));
+    fixture.ServeMacBundle("NEW_HASH", brandName: "Acme Remote", publisher: "AcmeCorp");
 
     var updater = fixture.CreateMaintenanceService();
 
     await updater.CheckForUpdate(force: true, cancellationToken: TestContext.Current.CancellationToken);
 
-    // The launchd job can only run the arguments already written into the plist, so a migration has to
-    // rewrite them in place or the installer never learns which brand it is replacing.
-    var plist = fixture.FileSystem.ReadAllText(plistPath);
-    Assert.Contains("--previous-brand-name", plist, StringComparison.Ordinal);
-    Assert.Contains("<string>ControlR</string>", plist, StringComparison.Ordinal);
-    Assert.DoesNotContain("https://old.example/", plist, StringComparison.Ordinal);
+    var startInfo = fixture.MacInstallerStartInfo;
+    Assert.NotNull(startInfo);
+
+    // The installer retires the install it is replacing, and only this run knows which install that was.
+    // Carrying it in the spawn arguments is what keeps two installs from signing as one device.
+    Assert.Contains("--previous-brand-name", startInfo.ArgumentList);
+    Assert.Contains("ControlR", startInfo.ArgumentList);
+    Assert.Contains("--previous-publisher", startInfo.ArgumentList);
+    Assert.Contains("Bitbound", startInfo.ArgumentList);
+    Assert.Equal(fixture.MacInstallerDownloadPath, startInfo.FileName);
   }
 
   [Fact]
@@ -353,7 +258,7 @@ public class AgentMaintenanceServiceTests
       .Setup(x => x.GetAgentAppSettingsPath())
       .Returns(@"C:\ProgramData\ControlR\instance-1\appsettings.json");
     fixture.PathProvider
-      .Setup(x => x.GetSettingsDirectoryFor("OtherBrand", "instance-1"))
+      .Setup(x => x.GetSettingsDirectoryFor("OtherPublisher", "OtherBrand", "instance-1"))
       .Returns(@"C:\ProgramData\OtherBrand\instance-1");
 
     // An install with no signing key could never authenticate as this device under a new brand, and the
@@ -402,7 +307,7 @@ public class AgentMaintenanceServiceTests
       .Setup(x => x.GetAgentAppSettingsPath())
       .Returns(installedSettingsPath);
     fixture.PathProvider
-      .Setup(x => x.GetSettingsDirectoryFor("OtherBrand", "instance-1"))
+      .Setup(x => x.GetSettingsDirectoryFor("OtherPublisher", "OtherBrand", "instance-1"))
       .Returns(@"C:\ProgramData\OtherBrand\instance-1");
 
     var installerBytes = new byte[] { 1, 2, 3, 4, 5 };
@@ -496,7 +401,7 @@ public class AgentMaintenanceServiceTests
       .Setup(x => x.GetAgentAppSettingsPath())
       .Returns(installedSettingsPath);
     fixture.PathProvider
-      .Setup(x => x.GetSettingsDirectoryFor("ControlR", "other"))
+      .Setup(x => x.GetSettingsDirectoryFor("Bitbound", "ControlR", "other"))
       .Returns(@"C:\ProgramData\ControlR\other");
 
     // The tenant moved this deployment to a different instance id. The brand did not change, so only
@@ -542,25 +447,70 @@ public class AgentMaintenanceServiceTests
   }
 
   [Fact]
-  public async Task CheckForUpdate_WhenServerPublisherDiffers_StillDownloadsInstaller()
+  public async Task CheckForUpdate_WhenServerPublisherDiffers_MigratesAndNamesTheInstallBeingReplaced()
   {
     var fixture = new AgentMaintenanceServiceFixture();
-    fixture.FileSystem.AddFile(fixture.BundleHashPath, "OLD_HASH");
+    var installedSettingsPath = @"C:\ProgramData\Bitbound\ControlR\instance-1\appsettings.json";
+    var handedOffSettingsPath = @"C:\ProgramData\OtherPublisher\ControlR\instance-1\appsettings.json";
 
-    // The publisher is not a gate. The brand and the instance id decide whether this is a migration,
-    // and a same-brand bundle from a different publisher is still this install's brand.
-    fixture.ServeWindowsBundle("NEW_HASH", publisher: "WrongPublisher");
+    fixture.FileSystem.AddFile(fixture.BundleHashPath, "OLD_HASH");
+    fixture.FileSystem.AddFile(installedSettingsPath, "{\"PrivateKey\":\"key\"}");
+
+    fixture.PathProvider
+      .Setup(x => x.GetAgentAppSettingsPath())
+      .Returns(installedSettingsPath);
+    fixture.PathProvider
+      .Setup(x => x.GetSettingsDirectoryFor("OtherPublisher", "ControlR", "instance-1"))
+      .Returns(@"C:\ProgramData\OtherPublisher\ControlR\instance-1");
+
+    // The publisher names the directory the install lives in, so a same-brand bundle from a different
+    // vendor is a different install. Comparing brand alone would extract the new bundle into this
+    // vendor's directory while the new build looked for itself in the other one.
+    fixture.ServeWindowsBundle("NEW_HASH", publisher: "OtherPublisher");
 
     var updater = fixture.CreateMaintenanceService();
 
     await updater.CheckForUpdate(force: true, cancellationToken: TestContext.Current.CancellationToken);
 
-    fixture.DownloadsApi.Verify(
-      x => x.DownloadFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
-      Times.Once);
-    fixture.ProcessManager.Verify(
-      x => x.Start(It.IsAny<string>(), It.IsAny<string>()),
-      Times.Once);
+    Assert.True(fixture.FileSystem.FileExists(handedOffSettingsPath));
+    Assert.Contains("\"--previous-brand-name\" \"ControlR\"", fixture.LaunchedInstallerArguments, StringComparison.Ordinal);
+    Assert.Contains("\"--previous-publisher\" \"Bitbound\"", fixture.LaunchedInstallerArguments, StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public async Task RepairDesktopClient_OnMac_SpawnsInstallerWithRepairArguments()
+  {
+    var fixture = new AgentMaintenanceServiceFixture();
+    fixture.ServeMacBundle("ANY_HASH");
+
+    var updater = fixture.CreateMaintenanceService();
+
+    await updater.RepairDesktopClient("test request", TestContext.Current.CancellationToken);
+
+    var startInfo = fixture.MacInstallerStartInfo;
+    Assert.NotNull(startInfo);
+
+    // The repair command has to reach the installer as its own command. An argument list frozen by the
+    // install would have run a full install with install-time values instead of repairing.
+    Assert.Equal(
+      new[] { "repair-desktop", "--instance-id", "instance-1" },
+      startInfo.ArgumentList);
+    Assert.Equal(fixture.MacInstallerDownloadPath, startInfo.FileName);
+  }
+
+  [Fact]
+  public async Task RepairDesktopClient_WhenTheServerPublisherDiffers_DoesNotRepair()
+  {
+    var fixture = new AgentMaintenanceServiceFixture();
+    fixture.ServeWindowsBundle("NEW_HASH", publisher: "OtherPublisher");
+
+    var updater = fixture.CreateMaintenanceService();
+
+    await updater.RepairDesktopClient("test request", TestContext.Current.CancellationToken);
+
+    // Repair writes into this install's directory, and the desktop client carries its own branding
+    // constants, so a foreign vendor's client would log and keep settings where this install never looks.
+    Assert.Equal(string.Empty, fixture.LaunchedInstallerArguments);
   }
 
   private sealed class AgentMaintenanceServiceFixture
@@ -622,6 +572,8 @@ public class AgentMaintenanceServiceTests
     public FakeFileSystem FileSystem { get; } = new('\\');
     public Mock<IHostApplicationLifetime> HostApplicationLifetime { get; } = new();
     public string LaunchedInstallerArguments { get; private set; } = string.Empty;
+    public string MacInstallerDownloadPath { get; private set; } = string.Empty;
+    public ProcessStartInfo? MacInstallerStartInfo { get; private set; }
     public Mock<IFileSystemPathProvider> PathProvider { get; } = new();
     public Mock<IProcessManager> ProcessManager { get; } = new();
     public Mock<IOptionsAccessor> SettingsProvider { get; } = new();
@@ -641,6 +593,62 @@ public class AgentMaintenanceServiceTests
         HostApplicationLifetime.Object,
         Options.Create(new InstanceOptions { InstanceId = "instance-1" }),
         NullLogger<AgentMaintenanceService>.Instance);
+    }
+
+    /// <summary>
+    /// Serves a macOS bundle whose hash differs from the installed one, so an update runs, and records
+    /// the spawn the installer was started with. macOS detaches the installer by process group rather
+    /// than through a launchd job, so the ProcessStartInfo is the whole observable result.
+    /// </summary>
+    public void ServeMacBundle(string bundleSha256, string brandName = "ControlR", string publisher = "Bitbound")
+    {
+      var installerBytes = new byte[] { 1, 2, 3, 4, 5 };
+      var installerSha256 = Convert.ToHexString(SHA256.HashData(installerBytes));
+      var launchedProcess = new Mock<IProcess>();
+      launchedProcess
+        .SetupGet(x => x.Id)
+        .Returns(4242);
+
+      SystemEnvironment
+        .SetupGet(x => x.Platform)
+        .Returns(SystemPlatform.MacOs);
+      SystemEnvironment
+        .SetupGet(x => x.Runtime)
+        .Returns(RuntimeId.MacOsArm64);
+
+      AgentUpdateApi
+        .Setup(x => x.GetBundleMetadata(RuntimeId.MacOsArm64, It.IsAny<CancellationToken>()))
+        .ReturnsAsync(ApiResult.Ok(new BundleMetadataDto
+        {
+          BundleDownloadUrl = "/downloads/osx-arm64/ControlR.Agent.bundle.zip",
+          BundleSha256 = bundleSha256,
+          InstallerDownloadUrl = "/downloads/osx-arm64/ControlR.Agent.Installer",
+          InstallerSha256 = installerSha256,
+          Runtime = RuntimeId.MacOsArm64,
+          Version = Version.Parse("1.2.3"),
+          BrandName = brandName,
+          Publisher = publisher
+        }));
+
+      DownloadsApi
+        .Setup(x => x.DownloadFile(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        .Returns<string, string, CancellationToken>((_, destinationPath, _) =>
+        {
+          MacInstallerDownloadPath = destinationPath;
+          FileSystem.AddFile(destinationPath, installerBytes);
+          return Task.FromResult(Result.Ok());
+        });
+
+      ProcessManager
+        .Setup(x => x.Start(It.IsAny<string>(), It.IsAny<string>()))
+        .Returns(launchedProcess.Object);
+      ProcessManager
+        .Setup(x => x.Start(It.IsAny<ProcessStartInfo>()))
+        .Returns<ProcessStartInfo>((startInfo) =>
+        {
+          MacInstallerStartInfo = startInfo;
+          return launchedProcess.Object;
+        });
     }
 
     /// <summary>

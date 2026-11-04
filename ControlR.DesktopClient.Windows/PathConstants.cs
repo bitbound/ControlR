@@ -20,15 +20,24 @@ public static class PathConstants
 {
   private const string SystemUsername = "System";
 
+  /// <summary>
+  /// TODO: Temporary migration code for v0.31.x
+  /// The settings directory this client used before the publisher became a directory in it.
+  /// </summary>
+  public static string GetLegacySettingsDirectory(string? instanceId)
+  {
+    return GetDesktopClientDirectory(publisher: null, instanceId);
+  }
+
   public static string GetLogsPath(string? instanceId)
   {
-    var logsDir = Path.Combine(GetDesktopClientDirectory(instanceId), "Logs");
+    var logsDir = Path.Combine(GetDesktopClientDirectory(BrandingConstants.Publisher, instanceId), "Logs");
     return Path.Combine(logsDir, "LogFile.log");
   }
 
   public static string GetSettingsPath(string? instanceId)
   {
-    return Path.Combine(GetDesktopClientDirectory(instanceId), "settings.json");
+    return Path.Combine(GetDesktopClientDirectory(BrandingConstants.Publisher, instanceId), "settings.json");
   }
 
   private static string AppendSubDirectories(string rootDir, string? instanceId)
@@ -41,11 +50,11 @@ public static class PathConstants
     return Path.Combine(rootDir, GetEffectiveInstanceId(instanceId));
   }
 
-  private static string GetDesktopClientDirectory(string? instanceId)
+  private static string GetDesktopClientDirectory(string? publisher, string? instanceId)
   {
     var rootDir = Path.Combine(
       Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-      BrandingConstants.WindowsInstallDirectoryName);
+      InstallPathNames.WindowsDirectoryTail(publisher, BrandingConstants.BrandName));
 
     var sessionDir = AppendSubDirectories(rootDir, instanceId);
 

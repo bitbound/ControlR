@@ -6,6 +6,16 @@ namespace ControlR.Agent.Shared.Interfaces;
 public interface IServiceControl
 {
     /// <summary>
+    /// Makes each logged-in user's own service manager re-read its unit files, because the desktop client
+    /// unit is loaded by that user's manager rather than the system one.
+    /// On Mac: Throws NotSupportedException. The install boots the job out and bootstraps it again from
+    /// the plist, which reads the file fresh.
+    /// On Windows: Throws NotSupportedException. The service registration is read at start.
+    /// </summary>
+    /// <exception cref="NotSupportedException">Thrown on Mac and Windows platforms.</exception>
+    Task ReloadUserDaemons(bool throwOnFailure);
+
+    /// <summary>
     /// Starts the main ControlR agent service.
     /// </summary>
     /// <returns>A task representing the asynchronous operation.</returns>

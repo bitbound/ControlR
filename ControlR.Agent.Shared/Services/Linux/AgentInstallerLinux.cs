@@ -29,6 +29,7 @@ internal class AgentInstallerLinux(
   IOptions<InstanceOptions> instanceOptions,
   IEd25519KeyProvider keyProvider,
   ILinuxDesktopClientProcessLocator processLocator,
+  ILegacyPathMigrationUnix legacyPathMigration,
   ILogger<AgentInstallerLinux> logger)
   : AgentInstallerBase(fileSystem, fileSystemPathProvider, controlrApi, deviceDataGenerator, optionsAcccessor, processManager, systemEnvironment, appOptions, logger, keyProvider), IAgentInstaller
 {
@@ -39,6 +40,7 @@ internal class AgentInstallerLinux(
   private readonly IElevationChecker _elevationChecker = elevationChecker;
   private readonly IEmbeddedResourceAccessor _embeddedResourceAccessor = embeddedResourceAccessor;
   private readonly IFileSystem _fileSystem = fileSystem;
+  private readonly ILegacyPathMigrationUnix _legacyPathMigration = legacyPathMigration;
   private readonly IHostApplicationLifetime _lifetime = lifetime;
   private readonly ILogger<AgentInstallerLinux> _logger = logger;
   private readonly ILinuxDesktopClientProcessLocator _processLocator = processLocator;
@@ -73,9 +75,23 @@ internal class AgentInstallerLinux(
       var serviceName = GetServiceName();
       var desktopServiceName = GetDesktopServiceName();
 
+      // TODO: Temporary migration code for v0.31.x
+      // Staged before anything is stopped. A move that cannot carry the settings forward changes nothing
+      // on this machine, so the running agent and a logged-in user's desktop client both stay up.
+      var relocation = _legacyPathMigration.Plan();
+      if (relocation is not null && !_legacyPathMigration.TryStageSettings(relocation).IsSuccess)
+      {
+        return Result.Fail<AgentInstallOutcome>("Could not carry this install's settings to the new path.");
+      }
+
+      var legacyInstallDirectory = relocation?.InstallDirectory;
+
       await _serviceControl.StopDesktopClientService(throwOnFailure: false);
 
-      if (_fileSystem.DirectoryExists(installDir))
+      // The unit name is brand-derived, so the same unit that is about to be rewritten is what is running
+      // the old install. It has to be stopped whether or not this build's own directory exists yet, or the
+      // relocated agent starts beside the one it is replacing and both sign as the same device.
+      if (_fileSystem.DirectoryExists(installDir) || legacyInstallDirectory is not null)
       {
         await ProcessManager
           .Start("sudo", $"systemctl stop {serviceName}")
@@ -86,7 +102,15 @@ internal class AgentInstallerLinux(
         // is replaced. Kill by path so the new install does not start beside a stale client.
         StopDesktopClientProcesses(GetDesktopClientPath(installDir));
 
-        _fileSystem.DeleteDirectory(installDir, true);
+        if (legacyInstallDirectory is not null)
+        {
+          StopDesktopClientProcesses(GetDesktopClientPath(legacyInstallDirectory));
+        }
+
+        if (_fileSystem.DirectoryExists(installDir))
+        {
+          _fileSystem.DeleteDirectory(installDir, true);
+        }
       }
 
       _fileSystem.CreateDirectory(installDir);
@@ -102,12 +126,22 @@ internal class AgentInstallerLinux(
       var serviceFile = (await GetAgentServiceFile()).Trim();
       var desktopServiceFile = (await GetDesktopServiceFile()).Trim();
 
-      // Ensure service directories exist
-      _fileSystem.CreateDirectory(Path.GetDirectoryName(GetServiceFilePath())!);
-      _fileSystem.CreateDirectory(Path.GetDirectoryName(GetDesktopServiceFilePath())!);
+      var serviceFilePath = GetServiceFilePath();
+      var desktopServiceFilePath = GetDesktopServiceFilePath();
 
-      await WriteFileIfChanged(GetServiceFilePath(), serviceFile);
-      await WriteFileIfChanged(GetDesktopServiceFilePath(), desktopServiceFile);
+      // Ensure service directories exist
+      _fileSystem.CreateDirectory(Path.GetDirectoryName(serviceFilePath)!);
+      _fileSystem.CreateDirectory(Path.GetDirectoryName(desktopServiceFilePath)!);
+
+      // TODO: Temporary migration code for v0.31.x
+      // The unit files name the install directory, so replacing them is what moves the unit. Their previous
+      // contents are what puts the old install back in play, and they are gone once written over.
+      IReadOnlyDictionary<string, string>? previousServiceFiles = relocation is null
+        ? null
+        : _legacyPathMigration.ReadServiceDefinitionFiles(serviceFilePath, desktopServiceFilePath);
+
+      await WriteFileIfChanged(serviceFilePath, serviceFile);
+      await WriteFileIfChanged(desktopServiceFilePath, desktopServiceFile);
       await UpdateAppSettings(request.ServerUri, request.TenantId, request.DeviceId);
 
       var createResult = await CreateDeviceOnServer(request.InstallerKeyId, request.InstallerKeySecret, request.TagIds, request.CustomerId);
@@ -136,10 +170,19 @@ internal class AgentInstallerLinux(
       psi.Arguments = $"systemctl --global enable {desktopServiceName}";
       await ProcessManager.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
 
+      // The desktop unit is loaded by each logged-in user's own manager, and the reload above only
+      // reaches the system manager. Without a reload in the user's manager, a start uses the
+      // definition it read before this install rewrote the file, and that definition names the
+      // directory this install is about to remove on a relocation.
+      await _serviceControl.ReloadUserDaemons(throwOnFailure: false);
+
       // Only one agent may hold the device's connection on the server, so the replaced install stops
       // before this one starts. Starting beside an install that could not be stopped would leave both
       // signing as the same device, so fail and let the caller put the replaced install back.
-      var stopPreviousBrandResult = await StopPreviousBrandService(request.PreviousBrandName, request.PreviousInstanceId);
+      var stopPreviousBrandResult = await StopPreviousBrandService(
+        request.PreviousPublisher,
+        request.PreviousBrandName,
+        request.PreviousInstanceId);
       if (!stopPreviousBrandResult.IsSuccess)
       {
         return Result.Fail<AgentInstallOutcome>($"Failed to stop the {request.PreviousBrandName} install being replaced.");
@@ -147,12 +190,13 @@ internal class AgentInstallerLinux(
 
       // The replaced install's agent cannot be trusted to kill its own login screen client. Older
       // builds never did, and a crashed agent could not. Kill the replaced install's clients
-      // directly. They are found by the path that install used, which is keyed on its own brand and
-      // instance id, so a migration that changes either one still finds them and never touches
-      // another install's.
+      // directly. They are found by the path that install used, which is keyed on its own publisher,
+      // brand, and instance id, so a migration that changes any one of them still finds them and never
+      // touches another install's.
       if (!string.IsNullOrWhiteSpace(request.PreviousBrandName))
       {
         var stopPreviousDesktopResult = await StopPreviousBrandDesktopClients(
+          request.PreviousPublisher,
           request.PreviousBrandName,
           request.PreviousInstanceId);
 
@@ -174,11 +218,20 @@ internal class AgentInstallerLinux(
       catch (Exception ex)
       {
         _logger.LogError(ex, "The {BrandName} service did not start.", BrandingConstants.BrandName);
+        await RestoreRelocatedUnit(previousServiceFiles);
         return Result.Fail<AgentInstallOutcome>("Failed to start the agent service after installation.");
       }
 
       _logger.LogInformation("Starting desktop user services for logged-in users.");
       await _serviceControl.StartDesktopClientService(throwOnFailure: false);
+
+      if (relocation is not null)
+      {
+        // TODO: Temporary migration code for v0.31.x
+        // Only now, with the relocated unit confirmed active. Until this point the old install is
+        // complete on disk, which is what lets a failure at any earlier step be recovered by starting it.
+        _legacyPathMigration.RemoveRelocatedInstall(relocation);
+      }
 
       _logger.LogInformation("Install completed.");
       return Result.Ok(AgentInstallOutcome.Installed);
@@ -345,9 +398,9 @@ internal class AgentInstallerLinux(
     return template;
   }
 
-  internal string GetPreviousBrandDesktopClientPath(string previousBrandName, string? previousInstanceId)
+  internal string GetPreviousBrandDesktopClientPath(string? previousPublisher, string previousBrandName, string? previousInstanceId)
   {
-    var installDirectory = FilesystemPathProvider.GetAgentInstallDirectoryFor(previousBrandName, previousInstanceId);
+    var installDirectory = FilesystemPathProvider.GetAgentInstallDirectoryFor(previousPublisher, previousBrandName, previousInstanceId);
 
     // The replaced install names its own client for its own brand, which is not this build's name
     // when the migration changed the brand.
@@ -362,7 +415,7 @@ internal class AgentInstallerLinux(
   /// a unit left active relaunches exactly what the kill just took down. A failed unit stop therefore
   /// aborts before any kill, and the caller treats it like the replaced agent failing to stop.
   /// </summary>
-  internal async Task<Result> StopPreviousBrandDesktopClients(string previousBrandName, string? previousInstanceId)
+  internal async Task<Result> StopPreviousBrandDesktopClients(string? previousPublisher, string previousBrandName, string? previousInstanceId)
   {
     try
     {
@@ -377,7 +430,7 @@ internal class AgentInstallerLinux(
       return Result.Fail($"Failed to stop the {previousBrandName} desktop client service being replaced.");
     }
 
-    StopDesktopClientProcesses(GetPreviousBrandDesktopClientPath(previousBrandName, previousInstanceId));
+    StopDesktopClientProcesses(GetPreviousBrandDesktopClientPath(previousPublisher, previousBrandName, previousInstanceId));
 
     return Result.Ok();
   }
@@ -514,6 +567,34 @@ internal class AgentInstallerLinux(
     {
       TryDeleteDirectory(stageDirectory);
     }
+  }
+
+  /// <summary>
+  /// TODO: Temporary migration code for v0.31.x
+  /// </summary>
+  /// <remarks>
+  /// Puts the unit files back on the install they were taken off, so the recovery the caller runs after a
+  /// failed install starts a build that was already running rather than this one, which just failed to.
+  /// Nothing happens for an install that stayed where it was, since its unit files were never moved.
+  /// </remarks>
+  private async Task RestoreRelocatedUnit(IReadOnlyDictionary<string, string>? previousServiceFiles)
+  {
+    if (previousServiceFiles is null)
+    {
+      return;
+    }
+
+    await _legacyPathMigration.RestoreServiceDefinitionFiles(previousServiceFiles);
+
+    var psi = new ProcessStartInfo
+    {
+      FileName = "sudo",
+      UseShellExecute = true,
+      Arguments = "systemctl daemon-reload"
+    };
+
+    _logger.LogInformation("Reloading systemd daemon after restoring the unit files.");
+    await ProcessManager.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
   }
 
   private void SetExecutablePermissions(string installDirectory)

@@ -9,6 +9,7 @@ namespace ControlR.DesktopClient.Tests;
 
 public class DesktopSettingsStoreTests
 {
+  private const string LegacySettingsDirectoryPath = "/app/config-legacy";
   private const string SettingsPath = "/app/config/settings.json";
 
   [Fact]
@@ -32,6 +33,50 @@ public class DesktopSettingsStoreTests
 
     Assert.Equal(AvaloniaThemeMode.Dark, store.Current.Theme);
     Assert.Null(store.Current.Language);
+  }
+
+  [Fact]
+  public void Current_WhenOnlyTheLegacySettingsDirectoryExists_MovesItsFilesIntoPlace()
+  {
+    var fileSystem = new FakeFileSystem();
+    fileSystem.AddDirectory(LegacySettingsDirectoryPath);
+    fileSystem.WriteAllText(Path.Combine(LegacySettingsDirectoryPath, "settings.json"), """
+      { "Language": "cs-CZ" }
+      """);
+    fileSystem.WriteAllText(Path.Combine(LegacySettingsDirectoryPath, "wayland-remotedesktop-restore-token"), "token");
+
+    // A client running as root shares this directory with the agent, which keeps its signing key there and
+    // relocates it itself.
+    fileSystem.WriteAllText(Path.Combine(LegacySettingsDirectoryPath, "appsettings.json"), "{}");
+
+    var store = CreateStore(fileSystem);
+
+    // The whole directory moved into a publisher path along with the install, and this client is the only
+    // process that can put its own files at the new path with the owners they already had.
+    Assert.Equal("cs-CZ", store.Current.Language);
+    Assert.True(fileSystem.FileExists(SettingsPath));
+    Assert.True(fileSystem.FileExists(
+      Path.Combine(Path.GetDirectoryName(SettingsPath)!, "wayland-remotedesktop-restore-token")));
+    Assert.True(fileSystem.FileExists(Path.Combine(LegacySettingsDirectoryPath, "appsettings.json")));
+    Assert.False(fileSystem.FileExists(Path.Combine(Path.GetDirectoryName(SettingsPath)!, "appsettings.json")));
+  }
+
+  [Fact]
+  public void Current_WhenTheSettingsFileAlreadyExists_LeavesTheLegacyFileAlone()
+  {
+    var fileSystem = new FakeFileSystem();
+    fileSystem.WriteAllText(SettingsPath, """
+      { "Language": "cs-CZ" }
+      """);
+    fileSystem.AddDirectory(LegacySettingsDirectoryPath);
+    fileSystem.WriteAllText(Path.Combine(LegacySettingsDirectoryPath, "settings.json"), """
+      { "Language": "de-DE" }
+      """);
+
+    var store = CreateStore(fileSystem);
+
+    Assert.Equal("cs-CZ", store.Current.Language);
+    Assert.True(fileSystem.FileExists(Path.Combine(LegacySettingsDirectoryPath, "settings.json")));
   }
 
   [Fact]
@@ -83,6 +128,7 @@ public class DesktopSettingsStoreTests
   {
     var paths = new Mock<IDesktopPathProvider>();
     paths.Setup(x => x.GetSettingsPath()).Returns(SettingsPath);
+    paths.Setup(x => x.GetLegacySettingsDirectory()).Returns(LegacySettingsDirectoryPath);
 
     return new DesktopSettingsStore(
       paths.Object,

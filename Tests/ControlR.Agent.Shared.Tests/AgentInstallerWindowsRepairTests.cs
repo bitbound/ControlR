@@ -44,7 +44,7 @@ public class AgentInstallerWindowsRepairTests
 
     systemEnvironment.SetupGet(x => x.Platform).Returns(SystemPlatform.Windows);
     pathProvider
-      .Setup(x => x.GetAgentInstallDirectoryFor(previousBrand, It.IsAny<string?>()))
+      .Setup(x => x.GetAgentInstallDirectoryFor(null, previousBrand, It.IsAny<string?>()))
       .Returns(previousInstallDirectory);
 
     processManager
@@ -58,7 +58,9 @@ public class AgentInstallerWindowsRepairTests
 
     var sut = CreateSut(fileSystem, processManager, new Mock<IRetryer>(), pathProvider, systemEnvironment);
 
-    var result = await sut.RestorePreviousBrand(previousBrand, previousInstanceId);
+    // A null publisher names a replaced install that predates the vendor directory, which is the shape
+    // an install from before the publisher change has.
+    var result = await sut.RestorePreviousBrand(null, previousBrand, previousInstanceId);
 
     Assert.True(result.IsSuccess);
     // The replaced install's service and paths are keyed on the instance id it was created with, so
@@ -88,10 +90,10 @@ public class AgentInstallerWindowsRepairTests
 
     systemEnvironment.SetupGet(x => x.Platform).Returns(SystemPlatform.Windows);
     pathProvider
-      .Setup(x => x.GetAgentInstallDirectoryFor(previousBrand, It.IsAny<string?>()))
+      .Setup(x => x.GetAgentInstallDirectoryFor(null, previousBrand, It.IsAny<string?>()))
       .Returns(previousInstallDirectory);
     pathProvider
-      .Setup(x => x.GetSettingsDirectoryFor(previousBrand, It.IsAny<string?>()))
+      .Setup(x => x.GetSettingsDirectoryFor(null, previousBrand, It.IsAny<string?>()))
       .Returns(previousSettingsDirectory);
 
     processManager
@@ -106,7 +108,7 @@ public class AgentInstallerWindowsRepairTests
 
     var sut = CreateSut(fileSystem, processManager, new Mock<IRetryer>(), pathProvider, systemEnvironment);
 
-    var result = await sut.RetirePreviousBrand(previousBrand, previousInstanceId);
+    var result = await sut.RetirePreviousBrand(null, previousBrand, previousInstanceId);
 
     Assert.True(result.IsSuccess);
     Assert.Equal($"uninstall \"--instance-id\" \"{previousInstanceId}\"", stagedCommand);
@@ -219,7 +221,7 @@ public class AgentInstallerWindowsRepairTests
 
     systemEnvironment.SetupGet(x => x.Platform).Returns(SystemPlatform.Windows);
     pathProvider
-      .Setup(x => x.GetAgentInstallDirectoryFor(previousBrand, It.IsAny<string?>()))
+      .Setup(x => x.GetAgentInstallDirectoryFor(null, previousBrand, It.IsAny<string?>()))
       .Returns(previousInstallDirectory);
 
     processManager
@@ -253,6 +255,8 @@ public class AgentInstallerWindowsRepairTests
       Mock.Of<IDeviceInfoProvider>(),
       pathProvider.Object,
       registryAccessor?.Object ?? Mock.Of<IRegistryAccessor>(),
+      Mock.Of<IAgentServiceRegistration>(),
+      Mock.Of<ILegacyPathMigrationWindows>(),
       Microsoft.Extensions.Options.Options.Create(new InstanceOptions()),
       fileSystem,
       Mock.Of<IOptionsAccessor>(),
@@ -271,6 +275,8 @@ public class AgentInstallerWindowsRepairTests
     IDeviceInfoProvider deviceDataGenerator,
     IFileSystemPathProvider fileSystemPathProvider,
     IRegistryAccessor registryAccessor,
+    IAgentServiceRegistration agentServiceRegistration,
+    ILegacyPathMigrationWindows legacyPathMigration,
     IOptions<InstanceOptions> instanceOptions,
     IFileSystem fileSystem,
     IOptionsAccessor optionsAccessor,
@@ -287,6 +293,8 @@ public class AgentInstallerWindowsRepairTests
       deviceDataGenerator,
       fileSystemPathProvider,
       registryAccessor,
+      agentServiceRegistration,
+      legacyPathMigration,
       instanceOptions,
       fileSystem,
       optionsAccessor,
@@ -296,7 +304,7 @@ public class AgentInstallerWindowsRepairTests
   {
     public Task<Result> StopPreviousBrand(string? previousBrandName, string? previousInstanceId)
     {
-      return StopPreviousBrandService(previousBrandName, previousInstanceId);
+      return StopPreviousBrandService(null, previousBrandName, previousInstanceId);
     }
   }
 }

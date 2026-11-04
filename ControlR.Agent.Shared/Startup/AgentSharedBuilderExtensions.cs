@@ -32,6 +32,9 @@ public static class AgentSharedBuilderExtensions
       services.AddSingleton<IServiceControl, ServiceControlWindows>();
       services.AddSingleton<IElevationChecker, ElevationCheckerWin>();
       services.AddSingleton<IRegistryAccessor, RegistryAccessor>();
+      services.AddSingleton<IAgentServiceRegistration, AgentServiceRegistration>();
+      // TODO: Temporary migration code for v0.31.x
+      services.AddSingleton<ILegacyPathMigrationWindows, LegacyPathMigrationWindows>();
     }
     else if (OperatingSystem.IsLinux())
     {
@@ -41,12 +44,16 @@ public static class AgentSharedBuilderExtensions
       services.AddSingleton<IHeadlessServerDetector, HeadlessServerDetector>();
       services.AddSingleton<IServiceControl, ServiceControlLinux>();
       services.AddSingleton<ILinuxDesktopClientProcessLocator, LinuxDesktopClientProcessLocator>();
+      // TODO: Temporary migration code for v0.31.x
+      services.AddSingleton<ILegacyPathMigrationUnix, LegacyPathMigrationUnix>();
     }
     else if (OperatingSystem.IsMacOS())
     {
       services.AddSingleton<IAgentInstaller, AgentInstallerMac>();
       services.AddSingleton<IServiceControl, ServiceControlMac>();
       services.AddSingleton<IElevationChecker, ElevationCheckerMac>();
+      // TODO: Temporary migration code for v0.31.x
+      services.AddSingleton<ILegacyPathMigrationUnix, LegacyPathMigrationUnix>();
     }
 
     return services;

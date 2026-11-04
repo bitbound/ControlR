@@ -9,6 +9,44 @@ namespace ControlR.Agent.Shared.Tests;
 public class ServiceControlLinuxTests
 {
   [Fact]
+  public async Task ReloadUserDaemons_ReloadsTheManagerOfEveryLoggedInUser()
+  {
+    var processManager = new Mock<IProcessManager>();
+    processManager
+      .Setup(x => x.StartAndWaitForExit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<TimeSpan>()))
+      .ReturnsAsync(0);
+
+    var loggedInUsers = new Mock<ILoggedInUserProvider>();
+    loggedInUsers
+      .Setup(x => x.GetLoggedInUsers())
+      .ReturnsAsync([
+        new LoggedInUserSession("1000", "x11", IsActive: false),
+        new LoggedInUserSession("1001", "x11", IsActive: true)
+      ]);
+
+    var sut = CreateSut(processManager, loggedInUsers.Object);
+
+    await sut.ReloadUserDaemons(throwOnFailure: true);
+
+    // A session that is not in the foreground still holds its unit's stale definition and is what starts
+    // it when the user comes back, so it is reloaded too.
+    processManager.Verify(
+      x => x.StartAndWaitForExit(
+        "sudo",
+        "-u #1000 XDG_RUNTIME_DIR=/run/user/1000 systemctl --user daemon-reload",
+        false,
+        It.IsAny<TimeSpan>()),
+      Times.Once);
+    processManager.Verify(
+      x => x.StartAndWaitForExit(
+        "sudo",
+        "-u #1001 XDG_RUNTIME_DIR=/run/user/1001 systemctl --user daemon-reload",
+        false,
+        It.IsAny<TimeSpan>()),
+      Times.Once);
+  }
+
+  [Fact]
   public async Task StartAgentService_WhenTheUnitNeverReportsActive_StaysQuietWhenTheCallerDidNotAskToBeTold()
   {
     var sut = CreateSut(startExitCode: 0, isActiveExitCode: 1);
@@ -128,12 +166,14 @@ public class ServiceControlLinuxTests
     return CreateSut(processManager);
   }
 
-  private static ServiceControlLinux CreateSut(Mock<IProcessManager> processManager)
+  private static ServiceControlLinux CreateSut(
+    Mock<IProcessManager> processManager,
+    ILoggedInUserProvider? loggedInUsers = null)
   {
     return new ServiceControlLinux(
       processManager.Object,
       Mock.Of<IHeadlessServerDetector>(),
-      Mock.Of<ILoggedInUserProvider>(),
+      loggedInUsers ?? Mock.Of<ILoggedInUserProvider>(),
       Microsoft.Extensions.Options.Options.Create(new InstanceOptions { InstanceId = "exp" }),
       NullLogger<ServiceControlLinux>.Instance);
   }

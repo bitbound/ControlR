@@ -15,6 +15,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
+using ControlR.Agent.Shared.Services.Base;
 
 namespace ControlR.Agent.Shared.Tests;
 
@@ -81,6 +82,7 @@ public class DesktopClientLaunchArgumentTests
       Microsoft.Extensions.Options.Options.Create(new InstanceOptions { InstanceId = instanceId }),
       Mock.Of<IEd25519KeyProvider>(),
       Mock.Of<ILinuxDesktopClientProcessLocator>(),
+      Mock.Of<ILegacyPathMigrationUnix>(),
       NullLogger<AgentInstallerLinux>.Instance);
   }
 
@@ -106,6 +108,7 @@ public class DesktopClientLaunchArgumentTests
       Mock.Of<IOptionsMonitor<AgentAppOptions>>(),
         Microsoft.Extensions.Options.Options.Create(new InstanceOptions { InstanceId = instanceId }),
       Mock.Of<IEd25519KeyProvider>(),
+      Mock.Of<ILegacyPathMigrationUnix>(),
       NullLogger<AgentInstallerMac>.Instance);
   }
 

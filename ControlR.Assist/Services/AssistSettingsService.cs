@@ -33,7 +33,7 @@ public sealed class AssistSettingsService(ILogger<AssistSettingsService> logger)
 
   private static readonly string _settingsDirectory = Path.Combine(
     Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-    BrandingConstants.BrandKey,
+    InstallPathNames.UnixDirectoryTail(BrandingConstants.Publisher, BrandingConstants.BrandName),
     "Assist");
   private static readonly string _settingsPath = Path.Combine(_settingsDirectory, "settings.json");
 
