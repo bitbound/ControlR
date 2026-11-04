@@ -57,6 +57,18 @@ public class FileSystemPathProviderTests
     Assert.Equal(expectedPath, result);
   }
 
+  [Fact]
+  public void GetAgentInstallDirectory_WhenDebug_KeepsTheInstallSegment()
+  {
+    Setup(SystemPlatform.Windows, "localhost", isDebug: true);
+
+    var result = _pathProvider.GetAgentInstallDirectory();
+
+    // Debug builds install under an Install segment rather than directly under the brand. A formula that
+    // leaves it out names a directory nothing was ever written to.
+    Assert.EndsWith(@"Bitbound\ControlR\Install\localhost", result);
+  }
+
   [Theory]
   [InlineData(SystemPlatform.Windows, null, false, false, @"C:\ProgramData\Bitbound\ControlR\default\Logs\ControlR.Agent\LogFile.log")]
   [InlineData(SystemPlatform.Windows, "localhost", false, false, @"C:\ProgramData\Bitbound\ControlR\localhost\Logs\ControlR.Agent\LogFile.log")]

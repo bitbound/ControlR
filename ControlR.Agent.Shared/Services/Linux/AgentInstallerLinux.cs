@@ -75,9 +75,9 @@ internal class AgentInstallerLinux(
       var serviceName = GetServiceName();
       var desktopServiceName = GetDesktopServiceName();
 
-      await _serviceControl.StopDesktopClientService(throwOnFailure: false);
-
       // TODO: Temporary migration code for v0.31.x
+      // Staged before anything is stopped. A move that cannot carry the settings forward changes nothing
+      // on this machine, so the running agent and a logged-in user's desktop client both stay up.
       var relocation = _legacyPathMigration.Plan();
       if (relocation is not null && !_legacyPathMigration.TryStageSettings(relocation).IsSuccess)
       {
@@ -85,6 +85,8 @@ internal class AgentInstallerLinux(
       }
 
       var legacyInstallDirectory = relocation?.InstallDirectory;
+
+      await _serviceControl.StopDesktopClientService(throwOnFailure: false);
 
       // The unit name is brand-derived, so the same unit that is about to be rewritten is what is running
       // the old install. It has to be stopped whether or not this build's own directory exists yet, or the

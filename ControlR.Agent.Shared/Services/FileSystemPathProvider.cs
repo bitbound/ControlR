@@ -147,7 +147,7 @@ public class FileSystemPathProvider(
     var brandDirectories = InstallPathNames.Directories(publisherName, brandName);
 
     var baseDir = _systemEnvironment.IsDebug
-      ? _fileSystem.JoinPaths(GetPathSeparator(), [Path.GetTempPath().TrimEnd(GetPathSeparator()), .. brandDirectories])
+      ? _fileSystem.JoinPaths(GetPathSeparator(), [Path.GetTempPath().TrimEnd(GetPathSeparator()), .. brandDirectories, "Install"])
       : _systemEnvironment.Platform switch
       {
         SystemPlatform.Windows => _fileSystem.JoinPaths(GetPathSeparator(), [_systemEnvironment.GetProgramFilesDirectory(), .. brandDirectories]),
