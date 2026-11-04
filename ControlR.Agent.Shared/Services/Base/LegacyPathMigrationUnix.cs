@@ -25,8 +25,9 @@ public sealed record UnixPathRelocation(string InstallDirectory, string Settings
 /// <para>
 /// Unlike Windows, no service registration has to be repointed here. Both installers rewrite their unit
 /// file or plist on every install, and those names are brand-derived rather than publisher-derived, so
-/// installing at the new path moves the service by itself. What is left is the identity handoff and the
-/// old tree.
+/// installing at the new path moves the service by itself. What is left is the identity handoff, the old
+/// tree, and putting those files back when a move fails after they were replaced. Only the previous
+/// contents can do that, and they are gone once written over, so they are read here rather than recomputed.
 /// </para>
 /// </remarks>
 public interface ILegacyPathMigrationUnix
@@ -38,9 +39,24 @@ public interface ILegacyPathMigrationUnix
   UnixPathRelocation? Plan();
 
   /// <summary>
+  /// Reads the service definition files that this install is about to replace, so a move that fails after
+  /// they are written can put the previous ones back. Both installers rewrite their unit file or plist on
+  /// every install, so for a relocated install those files are what names the new path, and a failure
+  /// later in the install would otherwise leave the old binary on disk with nothing able to start it.
+  /// Files that do not exist yet are left out, since putting them back means leaving them absent.
+  /// </summary>
+  IReadOnlyDictionary<string, string> ReadServiceDefinitionFiles(params string[] filePaths);
+
+  /// <summary>
   /// Removes the relocated install's directories, once the relocated service is confirmed running.
   /// </summary>
   void RemoveRelocatedInstall(UnixPathRelocation relocation);
+
+  /// <summary>
+  /// Writes back the service definition files read before this install replaced them. Best effort per
+  /// file; the caller has already failed the install.
+  /// </summary>
+  Task RestoreServiceDefinitionFiles(IReadOnlyDictionary<string, string> previousContents);
 
   /// <summary>
   /// Copies the settings that carry this device's identity into the directory the relocated install reads
@@ -84,6 +100,23 @@ internal sealed class LegacyPathMigrationUnix(
         instanceId: instanceId));
   }
 
+  public IReadOnlyDictionary<string, string> ReadServiceDefinitionFiles(params string[] filePaths)
+  {
+    using var _ = _logger.BeginMemberScope();
+
+    var contents = new Dictionary<string, string>();
+
+    foreach (var filePath in filePaths)
+    {
+      if (_fileSystem.FileExists(filePath))
+      {
+        contents[filePath] = _fileSystem.ReadAllText(filePath);
+      }
+    }
+
+    return contents;
+  }
+
   public void RemoveRelocatedInstall(UnixPathRelocation relocation)
   {
     using var _ = _logger.BeginMemberScope();
@@ -92,6 +125,27 @@ internal sealed class LegacyPathMigrationUnix(
     // that reporting a successful move as a failure is not.
     TryDeleteDirectory(relocation.InstallDirectory);
     TryDeleteDirectory(relocation.SettingsDirectory);
+  }
+
+  public async Task RestoreServiceDefinitionFiles(IReadOnlyDictionary<string, string> previousContents)
+  {
+    using var _ = _logger.BeginMemberScope();
+
+    foreach (var (filePath, content) in previousContents)
+    {
+      try
+      {
+        await _fileSystem.WriteAllTextAsync(filePath, content);
+        _logger.LogInformation("Restored {FilePath} to the service definition this install replaced.", filePath);
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex,
+          "Failed to restore {FilePath}. The install being replaced is still complete on disk, but nothing names " +
+          "the path it runs from, so it cannot be started until the file is put back by hand.",
+          filePath);
+      }
+    }
   }
 
   public Result TryStageSettings(UnixPathRelocation relocation)

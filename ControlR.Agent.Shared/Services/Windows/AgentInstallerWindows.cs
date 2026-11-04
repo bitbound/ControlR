@@ -55,6 +55,10 @@ internal class AgentInstallerWindows(
       return Result.Fail<AgentInstallOutcome>("The installer is already running.");
     }
 
+    // Set once this install has taken over the registration of an install at another path, which is the
+    // only state a later failure has to undo. Declared out here so the catch below can see it too.
+    ServiceRegistration? registrationToRestore = null;
+
     try
     {
       Logger.LogInformation("Install started.");
@@ -78,11 +82,13 @@ internal class AgentInstallerWindows(
       var installDir = GetInstallDirectory();
       var targetAgentPath = FilesystemPathProvider.GetAgentExecutablePath();
       var targetDesktopClientPath = Path.Combine(installDir, "DesktopClient", AppConstants.DesktopClientFileName);
+      var serviceName = GetServiceName();
+      var registration = _agentServiceRegistration.TryGetRegistration(serviceName);
 
       // An install that is already on this machine is registered to run from wherever it was put, and
       // that is the only record of where it is. The service is stopped and its files replaced by a move,
       // never by a second registration beside the one already there.
-      var (relocation, registeredElsewhere) = PlanRelocation(installDir);
+      var (relocation, registeredElsewhere) = PlanRelocation(installDir, registration);
       if (relocation is null && registeredElsewhere)
       {
         return Result.Fail<AgentInstallOutcome>(
@@ -147,8 +153,6 @@ internal class AgentInstallerWindows(
         subcommand += $" -i {instanceId}";
       }
 
-      var serviceName = GetServiceName();
-
       // A relocated install keeps its registration, which is what keeps its failure actions, its
       // dependency-free start type, and its place in Services view intact. Create and delete would leave a
       // service that does not exist for as long as a handle to the deleted one is open.
@@ -160,6 +164,8 @@ internal class AgentInstallerWindows(
           Logger.LogError("Failed to point the {ServiceName} service at the relocated install.", serviceName);
           return Result.Fail<AgentInstallOutcome>("Failed to repoint the agent service.");
         }
+
+        registrationToRestore = registration;
       }
       else
       {
@@ -191,6 +197,7 @@ internal class AgentInstallerWindows(
         request.PreviousInstanceId);
       if (!stopPreviousBrandResult.IsSuccess)
       {
+        await RestoreOriginalRegistration(serviceName, registrationToRestore);
         return Result.Fail<AgentInstallOutcome>($"Failed to stop the {request.PreviousBrandName} install being replaced.");
       }
 
@@ -198,6 +205,7 @@ internal class AgentInstallerWindows(
       if (!startResult.IsSuccess)
       {
         Logger.LogError("The {BrandName} service did not start.", BrandingConstants.BrandName);
+        await RestoreOriginalRegistration(serviceName, registrationToRestore);
         return startResult.ToResult(AgentInstallOutcome.Installed);
       }
 
@@ -214,6 +222,7 @@ internal class AgentInstallerWindows(
     catch (Exception ex)
     {
       Logger.LogError(ex, $"Error while installing the {BrandingConstants.BrandName} service.");
+      await RestoreOriginalRegistration(GetServiceName(), registrationToRestore);
       return Result.Fail<AgentInstallOutcome>(ex);
     }
     finally
@@ -449,26 +458,30 @@ internal class AgentInstallerWindows(
   /// computes, and whether this build is able to do that.
   /// </summary>
   /// <param name="installDirectory">The directory this build installs into.</param>
+  /// <param name="registration">
+  /// Where the service this install replaces is registered to run from, read before anything was changed.
+  /// </param>
   /// <returns>
   /// The install to move, when the service is registered elsewhere and that place is a layout this build
   /// can name; nothing to move, when no service is registered or the one registered is already here; and
   /// a flag that the service is registered elsewhere without being movable, which the caller has to refuse
   /// rather than register a second service over it.
   /// </returns>
-  private (WindowsPathRelocation? Relocation, bool RegisteredElsewhere) PlanRelocation(string installDirectory)
+  private (WindowsPathRelocation? Relocation, bool RegisteredElsewhere) PlanRelocation(
+    string installDirectory,
+    ServiceRegistration? registration)
   {
     if (_systemEnvironment.IsDebug)
     {
       return (null, false);
     }
 
-    var registeredDirectory = _agentServiceRegistration.TryGetRegisteredDirectory(GetServiceName());
-    if (registeredDirectory is null || IsSameDirectory(registeredDirectory, installDirectory))
+    if (registration is null || IsSameDirectory(registration.Directory, installDirectory))
     {
       return (null, false);
     }
 
-    return (_legacyPathMigration.Plan(registeredDirectory), true);
+    return (_legacyPathMigration.Plan(registration.Directory), true);
   }
 
   private async Task<string> PrepareRepairStage(string bundleZipPath, string installDir)
@@ -540,6 +553,38 @@ internal class AgentInstallerWindows(
     finally
     {
       TryDeleteDirectory(stageDirectory);
+    }
+  }
+
+  /// <summary>
+  /// TODO: Temporary migration code for v0.31.x
+  /// </summary>
+  /// <remarks>
+  /// Puts the registration back on the install it was taken off, so the recovery that the caller runs after
+  /// a failed install starts a build that was already running rather than this one, which just failed to.
+  /// Only a relocated install ever has anything here to undo, so nothing happens when this is passed the
+  /// registration of an install that stayed where it was.
+  /// </remarks>
+  private async Task RestoreOriginalRegistration(string serviceName, ServiceRegistration? registration)
+  {
+    if (registration is null)
+    {
+      return;
+    }
+
+    var result = await _agentServiceRegistration.Repoint(
+      serviceName,
+      registration.ExecutablePath,
+      registration.RunArguments);
+
+    if (!result.IsSuccess)
+    {
+      Logger.LogError(
+        "The install being replaced is still complete on disk, but {ServiceName} is still registered to run " +
+        "from {ExecutablePath}. Reason: {Reason}",
+        serviceName,
+        registration.ExecutablePath,
+        result.Reason);
     }
   }
 

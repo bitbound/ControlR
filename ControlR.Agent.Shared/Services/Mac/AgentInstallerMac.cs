@@ -48,6 +48,10 @@ internal class AgentInstallerMac(
       return Result.Fail<AgentInstallOutcome>("The installer is already running.");
     }
 
+    // Set once this install has taken over the plist files of an install at another path, which is the only
+    // state a later failure has to undo. Declared out here so the catch below can see it too.
+    IReadOnlyDictionary<string, string>? previousPlists = null;
+
     try
     {
       _logger.LogInformation("Install started.");
@@ -128,6 +132,15 @@ internal class AgentInstallerMac(
       var desktopPlistPath = GetLaunchAgentFilePath();
       var desktopPlistFile = (await GetLaunchAgentFile()).Trim();
 
+      // TODO: Temporary migration code for v0.31.x
+      // The plists name the install directory, so rewriting them is what moves the job. Until this install
+      // has confirmed the relocated job is running, the previous contents are what puts the old install
+      // back in play if a later step fails.
+      if (relocation is not null)
+      {
+        previousPlists = _legacyPathMigration.ReadServiceDefinitionFiles(agentPlistPath, desktopPlistPath);
+      }
+
       _logger.LogInformation("Writing plist files.");
       await WriteFileIfChanged(agentPlistPath, agentPlistFile);
       await WriteFileIfChanged(desktopPlistPath, desktopPlistFile);
@@ -137,6 +150,7 @@ internal class AgentInstallerMac(
       var createResult = await CreateDeviceOnServer(request.InstallerKeyId, request.InstallerKeySecret, request.TagIds, request.CustomerId);
       if (!createResult.IsSuccess)
       {
+        await RestoreRelocatedPlists(previousPlists);
         return createResult.ToResult(AgentInstallOutcome.Installed);
       }
 
@@ -151,6 +165,7 @@ internal class AgentInstallerMac(
         request.PreviousInstanceId);
       if (!stopPreviousBrandResult.IsSuccess)
       {
+        await RestoreRelocatedPlists(previousPlists);
         return Result.Fail<AgentInstallOutcome>($"Failed to stop the {request.PreviousBrandName} install being replaced.");
       }
 
@@ -161,6 +176,7 @@ internal class AgentInstallerMac(
       catch (Exception ex)
       {
         _logger.LogError(ex, "The {BrandName} service did not start.", BrandingConstants.BrandName);
+        await RestoreRelocatedPlists(previousPlists);
         return Result.Fail<AgentInstallOutcome>("Failed to start the agent service after installation.");
       }
 
@@ -180,6 +196,7 @@ internal class AgentInstallerMac(
     catch (Exception ex)
     {
       _logger.LogError(ex, $"Error while installing the {BrandingConstants.BrandName} service.");
+      await RestoreRelocatedPlists(previousPlists);
       return Result.Fail<AgentInstallOutcome>(ex);
     }
     finally
@@ -491,6 +508,26 @@ internal class AgentInstallerMac(
       _logger.LogInformation("Deleting obsolete installer LaunchDaemon at {FilePath}.", installerDaemonFilePath);
       _fileSystem.DeleteFile(installerDaemonFilePath);
     }
+  }
+
+  /// <summary>
+  /// TODO: Temporary migration code for v0.31.x
+  /// </summary>
+  /// <remarks>
+  /// Puts the plist files back on the install they were taken off, so the recovery the caller runs after a
+  /// failed install starts a build that was already running rather than this one, which just failed to.
+  /// Nothing happens for an install that stayed where it was, since its plists were never moved. The job is
+  /// booted out before these files get replaced, so the file is what the next bootstrap reads and no
+  /// reload is needed here.
+  /// </remarks>
+  private async Task RestoreRelocatedPlists(IReadOnlyDictionary<string, string>? previousPlists)
+  {
+    if (previousPlists is null)
+    {
+      return;
+    }
+
+    await _legacyPathMigration.RestoreServiceDefinitionFiles(previousPlists);
   }
 
   private void SetAgentPermissions(string installedAgentPath)

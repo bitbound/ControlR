@@ -4,6 +4,14 @@ using ControlR.Libraries.Shared.Services.Processes;
 namespace ControlR.Agent.Shared.Services.Windows;
 
 /// <summary>
+/// Where a service is registered to run from.
+/// </summary>
+/// <param name="ExecutablePath">The executable the registration names.</param>
+/// <param name="RunArguments">Everything the registration passes to that executable.</param>
+/// <param name="Directory">The directory holding <paramref name="ExecutablePath"/>.</param>
+public sealed record ServiceRegistration(string ExecutablePath, string RunArguments, string Directory);
+
+/// <summary>
 /// The Windows service registration itself, read and rewritten without going through the service
 /// control manager's start and stop paths.
 /// </summary>
@@ -19,11 +27,13 @@ public interface IAgentServiceRegistration
   Task<Result> Repoint(string serviceName, string agentExecutablePath, string runArguments);
 
   /// <summary>
-  /// Returns the directory the service is registered to run from, or null when no service of that name
-  /// is registered. This is the only machine state that records where an installed agent's files are, so
-  /// a caller that has to act on an existing install cannot substitute the path formula it computes.
+  /// Returns where the named service is registered to run from, or null when no service of that name is
+  /// registered or its registration cannot be read. This is the only machine state that records where an
+  /// installed agent's files are, so a caller that has to act on an existing install cannot substitute the
+  /// path formula it computes. The whole registration target comes back rather than only its directory, so
+  /// a caller that changes it can also put it back exactly as it found it.
   /// </summary>
-  string? TryGetRegisteredDirectory(string serviceName);
+  ServiceRegistration? TryGetRegistration(string serviceName);
 }
 
 [SupportedOSPlatform("windows")]
@@ -38,7 +48,10 @@ internal sealed class AgentServiceRegistration(
 
     logger.LogInformation("Repointing the {ServiceName} service at {AgentExecutablePath}.", serviceName, agentExecutablePath);
 
-    var configString = $"sc.exe config \"{serviceName}\" binPath= \"\\\"{agentExecutablePath}\\\" {runArguments}\"";
+    var binPath = string.IsNullOrWhiteSpace(runArguments)
+      ? $"\\\"{agentExecutablePath}\\\""
+      : $"\\\"{agentExecutablePath}\\\" {runArguments}";
+    var configString = $"sc.exe config \"{serviceName}\" binPath= \"{binPath}\"";
     var result = await processes.GetProcessOutput("cmd.exe", $"/c {configString}");
     if (!result.IsSuccess)
     {
@@ -49,7 +62,7 @@ internal sealed class AgentServiceRegistration(
     return Result.Ok();
   }
 
-  public string? TryGetRegisteredDirectory(string serviceName)
+  public ServiceRegistration? TryGetRegistration(string serviceName)
   {
     var imagePath = registryAccessor.GetServiceImagePath(serviceName);
     if (string.IsNullOrWhiteSpace(imagePath))
@@ -57,10 +70,27 @@ internal sealed class AgentServiceRegistration(
       return null;
     }
 
-    var executablePath = TryGetExecutablePath(imagePath);
-    return executablePath is null
-      ? null
-      : GetDirectory(executablePath);
+    var trimmed = imagePath.TrimStart();
+
+    if (trimmed.StartsWith('"'))
+    {
+      var closingQuote = trimmed.IndexOf('"', 1);
+      if (closingQuote <= 0)
+      {
+        return null;
+      }
+
+      return new ServiceRegistration(
+        trimmed[1..closingQuote],
+        trimmed[(closingQuote + 1)..].Trim(),
+        GetDirectory(trimmed[1..closingQuote]));
+    }
+
+    var firstSpace = trimmed.IndexOf(' ');
+    var executablePath = firstSpace > 0 ? trimmed[..firstSpace] : trimmed;
+    var runArguments = firstSpace > 0 ? trimmed[(firstSpace + 1)..].Trim() : string.Empty;
+
+    return new ServiceRegistration(executablePath, runArguments, GetDirectory(executablePath));
   }
 
   // Windows separators are searched by hand rather than through Path, because the code that reads a
@@ -71,23 +101,5 @@ internal sealed class AgentServiceRegistration(
     var trimmed = filePath.TrimEnd('\\');
     var lastSeparator = trimmed.LastIndexOf('\\');
     return lastSeparator <= 0 ? trimmed : trimmed[..lastSeparator];
-  }
-
-  /// <summary>
-  /// Reads the executable out of a registered <c>ImagePath</c>, which holds the run arguments after the
-  /// path and quotes the path when it contains spaces.
-  /// </summary>
-  private static string? TryGetExecutablePath(string imagePath)
-  {
-    var trimmed = imagePath.TrimStart();
-
-    if (trimmed.StartsWith('"'))
-    {
-      var closingQuote = trimmed.IndexOf('"', 1);
-      return closingQuote > 0 ? trimmed[1..closingQuote] : null;
-    }
-
-    var firstSpace = trimmed.IndexOf(' ');
-    return firstSpace > 0 ? trimmed[..firstSpace] : trimmed;
   }
 }
