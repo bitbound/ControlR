@@ -22,9 +22,9 @@ public static class PathConstants
 
   /// <summary>
   /// TODO: Temporary migration code for v0.31.x
-  /// The settings path this client used before the publisher became a directory in it.
+  /// The settings directory this client used before the publisher became a directory in it.
   /// </summary>
-  public static string GetLegacySettingsPath(string? instanceId)
+  public static string GetLegacySettingsDirectory(string? instanceId)
   {
     var rootDir = Path.Combine(
       Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
@@ -32,7 +32,7 @@ public static class PathConstants
 
     var sessionDir = AppendSubDirectories(rootDir, instanceId);
 
-    return Path.Combine(sessionDir, GetUsername(), BrandingConstants.DesktopClientDirectoryName, "settings.json");
+    return Path.Combine(sessionDir, GetUsername(), BrandingConstants.DesktopClientDirectoryName);
   }
 
   public static string GetLogsPath(string? instanceId)

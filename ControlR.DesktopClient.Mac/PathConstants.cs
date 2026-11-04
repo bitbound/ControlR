@@ -17,15 +17,15 @@ public static class PathConstants
 {
   /// <summary>
   /// TODO: Temporary migration code for v0.31.x
-  /// The settings path this client used before the publisher became a directory in it.
+  /// The settings directory this client used before the publisher became a directory in it.
   /// </summary>
-  public static string GetLegacySettingsPath(string? instanceId)
+  public static string GetLegacySettingsDirectory(string? instanceId)
   {
     var rootDir = Libc.Geteuid() == 0
       ? $"/etc/{BrandingConstants.UnixConfigDirectoryName}"
       : $"{Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)}/{BrandingConstants.UnixHiddenDirectoryName}";
 
-    return Path.Combine(AppendInstanceId(rootDir, instanceId), "settings.json");
+    return AppendInstanceId(rootDir, instanceId);
   }
 
   public static string GetLogsPath(string? instanceId)

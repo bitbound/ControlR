@@ -30,7 +30,7 @@ public class DesktopSettingsStore : IDesktopSettingsStore
     _settingsFilePath = pathProvider.GetSettingsPath();
     _fileSystem = fileSystem;
     _logger = logger;
-    Current = Read(_settingsFilePath, pathProvider.GetLegacySettingsPath(), fileSystem, logger);
+    Current = Read(_settingsFilePath, pathProvider.GetLegacySettingsDirectory(), fileSystem, logger);
   }
 
   public DesktopSettings Current { get; private set; }
@@ -51,14 +51,14 @@ public class DesktopSettingsStore : IDesktopSettingsStore
   // from starting. Theme and language both have other ways to be chosen, so start with defaults.
   private static DesktopSettings Read(
     string settingsFilePath,
-    string legacySettingsFilePath,
+    string legacySettingsDirectoryPath,
     IFileSystem fileSystem,
     ILogger logger)
   {
     // TODO: Temporary migration code for v0.31.x
     if (!fileSystem.FileExists(settingsFilePath))
     {
-      TryCarryLegacySettings(settingsFilePath, legacySettingsFilePath, fileSystem, logger);
+      TryCarryLegacySettings(settingsFilePath, legacySettingsDirectoryPath, fileSystem, logger);
     }
 
     try
@@ -80,34 +80,49 @@ public class DesktopSettingsStore : IDesktopSettingsStore
 
   /// <summary>
   /// TODO: Temporary migration code for v0.31.x
-  /// Moves the settings file the install left behind when its directory grew a publisher segment. This
-  /// client is the only writer of that file, so it is also the only process that can put the copy at the
-  /// new path with the same owner it had before.
+  /// Moves the files this client wrote before its settings directory grew a publisher segment. This
+  /// client is the only writer of that directory, so it is also the only process that can put those
+  /// files at the new path with the owners they already had.
   /// </summary>
   private static void TryCarryLegacySettings(
     string settingsFilePath,
-    string legacySettingsFilePath,
+    string legacySettingsDirectoryPath,
     IFileSystem fileSystem,
     ILogger logger)
   {
     try
     {
-      if (!fileSystem.FileExists(legacySettingsFilePath))
+      if (!fileSystem.DirectoryExists(legacySettingsDirectoryPath))
       {
         return;
       }
 
-      fileSystem.CreateDirectory(Path.GetDirectoryName(settingsFilePath)!);
-      fileSystem.MoveFile(legacySettingsFilePath, settingsFilePath, overwrite: false);
-      logger.LogInformation(
-        "Moved this client's settings from {LegacySettingsPath} to {SettingsPath}.",
-        legacySettingsFilePath,
-        settingsFilePath);
+      // Everything at the top of that directory belongs to this client, so all of it comes along rather
+      // than one file name at a time. Its subdirectories hold logs, and old logs stay where they are.
+      var settingsDirectoryPath = Path.GetDirectoryName(settingsFilePath)!;
+      fileSystem.CreateDirectory(settingsDirectoryPath);
+
+      foreach (var legacyFilePath in fileSystem.GetFiles(legacySettingsDirectoryPath))
+      {
+        var destinationPath = Path.Combine(settingsDirectoryPath, Path.GetFileName(legacyFilePath));
+
+        // A file already at the new path is the newer copy this client wrote itself.
+        if (fileSystem.FileExists(destinationPath))
+        {
+          continue;
+        }
+
+        fileSystem.MoveFile(legacyFilePath, destinationPath, overwrite: false);
+        logger.LogInformation(
+          "Moved {FileName} from {LegacySettingsDirectory}, the settings directory used before the publisher directory.",
+          Path.GetFileName(legacyFilePath),
+          legacySettingsDirectoryPath);
+      }
     }
     catch (Exception ex)
     {
       // Choosing the language and theme again is a smaller cost than not starting.
-      logger.LogWarning(ex, "Unable to move the settings file from {LegacySettingsPath}.", legacySettingsFilePath);
+      logger.LogWarning(ex, "Unable to carry the settings from {LegacySettingsDirectory}.", legacySettingsDirectoryPath);
     }
   }
 
