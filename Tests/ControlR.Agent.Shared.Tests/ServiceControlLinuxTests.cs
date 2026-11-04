@@ -9,6 +9,40 @@ namespace ControlR.Agent.Shared.Tests;
 public class ServiceControlLinuxTests
 {
   [Fact]
+  public async Task ReloadUserDaemons_ReloadsTheManagerOfEveryLoggedInUser()
+  {
+    var processManager = new Mock<IProcessManager>();
+    processManager
+      .Setup(x => x.StartAndWaitForExit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<TimeSpan>()))
+      .ReturnsAsync(0);
+
+    var loggedInUsers = new Mock<ILoggedInUserProvider>();
+    loggedInUsers
+      .Setup(x => x.GetLoggedInUsers())
+      .ReturnsAsync([new LoggedInUserSession("1000", "x11", IsActive: false)]);
+
+    var sut = new ServiceControlLinux(
+      processManager.Object,
+      Mock.Of<IHeadlessServerDetector>(),
+      loggedInUsers.Object,
+      Microsoft.Extensions.Options.Options.Create(new InstanceOptions { InstanceId = "exp" }),
+      NullLogger<ServiceControlLinux>.Instance);
+
+    await sut.ReloadUserDaemons(throwOnFailure: true);
+
+    // The desktop unit is loaded by the user's own manager, so a reload aimed at the system manager
+    // leaves that unit holding the definition read before an install rewrote the file. Inactive
+    // sessions are included because the stale definition is what starts when they come back.
+    processManager.Verify(
+      x => x.StartAndWaitForExit(
+        "sudo",
+        "-u #1000 XDG_RUNTIME_DIR=/run/user/1000 systemctl --user daemon-reload",
+        false,
+        It.IsAny<TimeSpan>()),
+      Times.Once);
+  }
+
+  [Fact]
   public async Task StartAgentService_WhenTheUnitNeverReportsActive_StaysQuietWhenTheCallerDidNotAskToBeTold()
   {
     var sut = CreateSut(startExitCode: 0, isActiveExitCode: 1);

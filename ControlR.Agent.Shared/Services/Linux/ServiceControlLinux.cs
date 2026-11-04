@@ -20,6 +20,52 @@ internal class ServiceControlLinux(
     private readonly ILogger<ServiceControlLinux> _logger = logger;
     private readonly IProcessManager _processManager = processManager;
 
+    public async Task ReloadUserDaemons(bool throwOnFailure)
+    {
+        // Check if running on headless server
+        var isHeadless = await _headlessServerDetector.IsHeadlessServer();
+        if (isHeadless)
+        {
+            _logger.LogInformation("Running on headless Ubuntu server. Desktop client service is not applicable.");
+            return;
+        }
+
+        try
+        {
+            var uids = (await _loggedInUserProvider.GetLoggedInUsers())
+                .Select(user => user.Uid)
+                .ToList();
+            if (uids.Count == 0)
+            {
+                _logger.LogInformation("No logged-in users found. No user daemon configuration to reload.");
+                return;
+            }
+
+            _logger.LogInformation("Reloading systemd user daemon configuration for {UserCount} logged-in users.", uids.Count);
+
+            var tasks = new List<Task>();
+            foreach (var uid in uids)
+            {
+                tasks.Add(ReloadUserDaemonForUser(uid));
+            }
+
+            await Task.WhenAll(tasks);
+            _logger.LogInformation("Systemd user daemon configuration reloaded for all logged-in users.");
+        }
+        catch (Exception ex)
+        {
+            if (throwOnFailure)
+            {
+                _logger.LogError(ex, "Failed to reload systemd user daemon configuration.");
+                throw;
+            }
+            else
+            {
+                _logger.LogInformation(ex, "Failed to reload systemd user daemon configuration.");
+            }
+        }
+    }
+
     public async Task StartAgentService(bool throwOnFailure)
     {
         try
@@ -218,6 +264,23 @@ internal class ServiceControlLinux(
         }
 
         return $"{BrandingConstants.LinuxDesktopServiceName.Replace(".service", "")}-{_instanceOptions.Value.InstanceId}.service";
+    }
+
+    private async Task ReloadUserDaemonForUser(string uid)
+    {
+        // A unit file this install rewrote in place is not re-read by the manager that already has it
+        // loaded, so a start would use the definition from before the install and run the path the
+        // install just removed. This is the reload that makes the new definition the one that starts.
+        var exitCode = await _processManager.StartAndWaitForExit("sudo",
+            $"-u #{uid} XDG_RUNTIME_DIR=/run/user/{uid} systemctl --user daemon-reload",
+            false, _serviceStatusTimeout);
+
+        if (exitCode != 0)
+        {
+            throw new InvalidOperationException($"systemctl --user daemon-reload for user {uid} exited with code {exitCode}.");
+        }
+
+        _logger.LogInformation("Systemd user daemon configuration reloaded for user {UID}.", uid);
     }
 
     private async Task StartDesktopClientForUser(string uid, string serviceName, bool throwOnFailure)

@@ -16,6 +16,13 @@ internal class ServiceControlWindows(
   private readonly IOptions<InstanceOptions> _instanceOptions = instanceOptions;
   private readonly ILogger<ServiceControlWindows> _logger = logger;
 
+  public Task ReloadUserDaemons(bool throwOnFailure)
+  {
+    // The desktop client is not a service on Windows, and the service control reads the registration
+    // from the registry when it starts a service, so there is no cached definition to refresh.
+    throw new NotSupportedException("Desktop client service control is not supported on Windows. The desktop client is handled differently on this platform.");
+  }
+
   public async Task StartAgentService(bool throwOnFailure)
   {
     try

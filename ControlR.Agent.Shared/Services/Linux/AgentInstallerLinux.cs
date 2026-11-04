@@ -170,6 +170,12 @@ internal class AgentInstallerLinux(
       psi.Arguments = $"systemctl --global enable {desktopServiceName}";
       await ProcessManager.StartAndWaitForExit(psi, TimeSpan.FromSeconds(10));
 
+      // The desktop unit is loaded by each logged-in user's own manager, and the reload above only
+      // reaches the system manager. Without a reload in the user's manager, a start uses the
+      // definition it read before this install rewrote the file, and that definition names the
+      // directory this install is about to remove on a relocation.
+      await _serviceControl.ReloadUserDaemons(throwOnFailure: false);
+
       // Only one agent may hold the device's connection on the server, so the replaced install stops
       // before this one starts. Starting beside an install that could not be stopped would leave both
       // signing as the same device, so fail and let the caller put the replaced install back.
