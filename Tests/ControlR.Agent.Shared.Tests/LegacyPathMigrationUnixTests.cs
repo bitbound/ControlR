@@ -41,8 +41,11 @@ public class LegacyPathMigrationUnixTests
     Assert.True(fileSystem.FileExists("/etc/bitbound/controlr/instance-1/appsettings.json"));
 
     // The copy carries the device signing key in plaintext, and a copy arrives with whatever the host's
-    // umask allows rather than with the restrictions the running install put on the original.
-    optionsAccessor.Verify(x => x.RestrictAccess("/etc/bitbound/controlr/instance-1/appsettings.json"), Times.Once);
+    // umask allows rather than with the restrictions the running install put on the original. The path is
+    // joined the way the code under test joins it, because the separator differs by build host.
+    optionsAccessor.Verify(
+      x => x.RestrictAccess(Path.Join("/etc/bitbound/controlr/instance-1", "appsettings.json")),
+      Times.Once);
   }
 
   [Fact]
