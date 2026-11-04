@@ -68,7 +68,7 @@ internal abstract class AgentInstallerBase(
   }
 
   /// <summary>
-  /// Removes the install being replaced, and the settings directory its uninstall leaves behind.
+  /// Removes the install being replaced, along with the directories its uninstall leaves behind.
   /// </summary>
   public async Task<Result> RetirePreviousBrand(string? previousPublisher, string previousBrandName, string? previousInstanceId)
   {
@@ -79,40 +79,36 @@ internal abstract class AgentInstallerBase(
       previousBrandName,
       previousInstanceId);
 
-    var result = await RunPreviousBrandAgentCommand(
-      previousPublisher,
-      previousBrandName,
-      previousInstanceId,
-      "uninstall",
-      TimeSpan.FromMinutes(10));
-
-    if (!result.IsSuccess)
+    // The publisher is a directory in the replaced install's paths and nothing else, so an install that
+    // keeps this brand and this instance id was registered under the same service, unit, plist, and
+    // uninstall key names as this one. Its own uninstall would remove the identity this install took over,
+    // so that install is retired by deleting its files.
+    if (!SharesThisInstallIdentity(previousBrandName, previousInstanceId))
     {
-      Logger.LogError(
-        "Failed to remove the {PreviousBrandName} install: {Reason}. This install is running; the old service and its files need manual removal.",
-        previousBrandName,
-        result.Reason);
-      return result;
-    }
-
-    // Uninstall deliberately keeps the settings directory, and that file holds the device signing key
-    // in plaintext. Remove it so the retired brand does not keep holding it.
-    try
-    {
-      var settingsDirectory = FilesystemPathProvider.GetSettingsDirectoryFor(
+      var result = await RunPreviousBrandAgentCommand(
         previousPublisher,
         previousBrandName,
-        previousInstanceId);
+        previousInstanceId,
+        "uninstall",
+        TimeSpan.FromMinutes(10));
 
-      if (FileSystem.DirectoryExists(settingsDirectory))
+      if (!result.IsSuccess)
       {
-        FileSystem.DeleteDirectory(settingsDirectory, true);
+        Logger.LogError(
+          "Failed to remove the {PreviousBrandName} install: {Reason}. This install is running; the old service and its files need manual removal.",
+          previousBrandName,
+          result.Reason);
+        return result;
       }
     }
-    catch (Exception ex)
-    {
-      Logger.LogWarning(ex, "Failed to delete the retired install's settings directory.");
-    }
+
+    // Both directories survive the uninstall, which keeps them by design, and the settings one holds the
+    // device signing key in plaintext. Remove them so the retired install does not keep holding them.
+    TryDeleteDirectory(
+      FilesystemPathProvider.GetAgentInstallDirectoryFor(previousPublisher, previousBrandName, previousInstanceId));
+
+    TryDeleteDirectory(
+      FilesystemPathProvider.GetSettingsDirectoryFor(previousPublisher, previousBrandName, previousInstanceId));
 
     Logger.LogInformation("Removed the {PreviousBrandName} install.", previousBrandName);
     return Result.Ok();
@@ -414,6 +410,34 @@ internal abstract class AgentInstallerBase(
       {
         Logger.LogWarning(ex, "Failed to delete staged agent copy {StagedPath}.", stagedPath);
       }
+    }
+  }
+
+  private bool SharesThisInstallIdentity(string previousBrandName, string? previousInstanceId)
+  {
+    var effectivePreviousInstanceId = string.IsNullOrWhiteSpace(previousInstanceId)
+      ? AppConstants.DefaultInstanceId
+      : previousInstanceId;
+
+    return BrandNames.AreSameInstall(previousBrandName, BrandingConstants.BrandName) &&
+           string.Equals(
+             effectivePreviousInstanceId,
+             FilesystemPathProvider.GetEffectiveInstanceId(),
+             StringComparison.Ordinal);
+  }
+
+  private void TryDeleteDirectory(string directoryPath)
+  {
+    try
+    {
+      if (FileSystem.DirectoryExists(directoryPath))
+      {
+        FileSystem.DeleteDirectory(directoryPath, true);
+      }
+    }
+    catch (Exception ex)
+    {
+      Logger.LogWarning(ex, "Failed to delete {DirectoryPath}. It can be removed by hand.", directoryPath);
     }
   }
 

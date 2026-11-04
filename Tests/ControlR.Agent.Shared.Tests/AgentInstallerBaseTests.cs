@@ -3,12 +3,14 @@ using ControlR.Agent.Shared.Options;
 using ControlR.Agent.Shared.Services;
 using ControlR.Agent.Shared.Services.Base;
 using ControlR.ApiClient;
+using ControlR.Libraries.Branding;
 using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Primitives;
 using ControlR.Libraries.Shared.Services;
 using ControlR.Libraries.Shared.Services.Encryption;
 using ControlR.Libraries.Shared.Services.FileSystem;
 using ControlR.Libraries.Shared.Services.Processes;
+using ControlR.Libraries.TestingUtilities.FileSystem;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -23,6 +25,42 @@ public class AgentInstallerBaseTests
     var result = TestAgentInstaller.GetInstallDirectoryForTest(@"C:\Program Files\ControlR", instanceId: null);
 
     Assert.Equal(Path.Combine(@"C:\Program Files\ControlR", AppConstants.DefaultInstanceId), result);
+  }
+
+  [Fact]
+  public async Task RetirePreviousBrand_WhenOnlyThePublisherDiffers_LeavesTheReplacedInstallServiceAlone()
+  {
+    const string previousPublisher = "Acme Corp";
+    var previousInstallDirectory = "/usr/local/bin/acme_corp/controlr/default";
+    var previousSettingsDirectory = "/etc/acme_corp/controlr/default";
+    var fileSystem = new FakeFileSystem('/');
+    var processManager = new Mock<IProcessManager>();
+    var pathProvider = new Mock<IFileSystemPathProvider>();
+
+    fileSystem.AddFile($"{previousInstallDirectory}/ControlR.Agent", []);
+    fileSystem.AddDirectory(previousSettingsDirectory);
+
+    pathProvider.Setup(x => x.GetEffectiveInstanceId()).Returns(AppConstants.DefaultInstanceId);
+    pathProvider
+      .Setup(x => x.GetAgentInstallDirectoryFor(previousPublisher, BrandingConstants.BrandName, null))
+      .Returns(previousInstallDirectory);
+    pathProvider
+      .Setup(x => x.GetSettingsDirectoryFor(previousPublisher, BrandingConstants.BrandName, null))
+      .Returns(previousSettingsDirectory);
+
+    var sut = CreateInstaller(fileSystem, processManager.Object, pathProvider.Object);
+
+    var result = await sut.RetirePreviousBrand(previousPublisher, BrandingConstants.BrandName, previousInstanceId: null);
+
+    // Only the directories carry the publisher, so this install and the one being replaced were
+    // registered under the same service name. Running the replaced binary's uninstall would remove the
+    // service this install just took over, so that install goes by deleting its files.
+    Assert.True(result.IsSuccess);
+    processManager.Verify(
+      x => x.StartAndWaitForExit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<TimeSpan>()),
+      Times.Never);
+    Assert.False(fileSystem.DirectoryExists(previousInstallDirectory));
+    Assert.False(fileSystem.DirectoryExists(previousSettingsDirectory));
   }
 
   [Fact]
@@ -69,10 +107,26 @@ public class AgentInstallerBaseTests
     return process;
   }
 
-  private sealed class TestAgentInstaller(IProcessManager processManager, ISystemEnvironment systemEnvironment)
+  private static TestAgentInstaller CreateInstaller(
+    IFileSystem fileSystem,
+    IProcessManager processManager,
+    IFileSystemPathProvider pathProvider)
+  {
+    return new TestAgentInstaller(
+      processManager,
+      Mock.Of<ISystemEnvironment>(),
+      fileSystem,
+      pathProvider);
+  }
+
+  private sealed class TestAgentInstaller(
+    IProcessManager processManager,
+    ISystemEnvironment systemEnvironment,
+    IFileSystem? fileSystem = null,
+    IFileSystemPathProvider? pathProvider = null)
     : AgentInstallerBase(
-      Mock.Of<IFileSystem>(),
-      Mock.Of<IFileSystemPathProvider>(),
+      fileSystem ?? Mock.Of<IFileSystem>(),
+      pathProvider ?? Mock.Of<IFileSystemPathProvider>(),
       Mock.Of<IControlrApi>(),
       Mock.Of<IDeviceInfoProvider>(),
       Mock.Of<IOptionsAccessor>(),
