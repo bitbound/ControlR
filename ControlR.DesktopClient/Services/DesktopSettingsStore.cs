@@ -30,7 +30,7 @@ public class DesktopSettingsStore : IDesktopSettingsStore
     _settingsFilePath = pathProvider.GetSettingsPath();
     _fileSystem = fileSystem;
     _logger = logger;
-    Current = Read(_settingsFilePath, fileSystem, logger);
+    Current = Read(_settingsFilePath, pathProvider.GetLegacySettingsPath(), fileSystem, logger);
   }
 
   public DesktopSettings Current { get; private set; }
@@ -49,8 +49,18 @@ public class DesktopSettingsStore : IDesktopSettingsStore
 
   // A file left half-written by an interrupted save, or edited by hand, must not keep the client
   // from starting. Theme and language both have other ways to be chosen, so start with defaults.
-  private static DesktopSettings Read(string settingsFilePath, IFileSystem fileSystem, ILogger logger)
+  private static DesktopSettings Read(
+    string settingsFilePath,
+    string legacySettingsFilePath,
+    IFileSystem fileSystem,
+    ILogger logger)
   {
+    // TODO: Temporary migration code for v0.31.x
+    if (!fileSystem.FileExists(settingsFilePath))
+    {
+      TryCarryLegacySettings(settingsFilePath, legacySettingsFilePath, fileSystem, logger);
+    }
+
     try
     {
       if (!fileSystem.FileExists(settingsFilePath))
@@ -65,6 +75,39 @@ public class DesktopSettingsStore : IDesktopSettingsStore
     {
       logger.LogError(ex, "Ignoring unusable settings file {SettingsPath}", settingsFilePath);
       return new DesktopSettings();
+    }
+  }
+
+  /// <summary>
+  /// TODO: Temporary migration code for v0.31.x
+  /// Moves the settings file the install left behind when its directory grew a publisher segment. This
+  /// client is the only writer of that file, so it is also the only process that can put the copy at the
+  /// new path with the same owner it had before.
+  /// </summary>
+  private static void TryCarryLegacySettings(
+    string settingsFilePath,
+    string legacySettingsFilePath,
+    IFileSystem fileSystem,
+    ILogger logger)
+  {
+    try
+    {
+      if (!fileSystem.FileExists(legacySettingsFilePath))
+      {
+        return;
+      }
+
+      fileSystem.CreateDirectory(Path.GetDirectoryName(settingsFilePath)!);
+      fileSystem.MoveFile(legacySettingsFilePath, settingsFilePath, overwrite: false);
+      logger.LogInformation(
+        "Moved this client's settings from {LegacySettingsPath} to {SettingsPath}.",
+        legacySettingsFilePath,
+        settingsFilePath);
+    }
+    catch (Exception ex)
+    {
+      // Choosing the language and theme again is a smaller cost than not starting.
+      logger.LogWarning(ex, "Unable to move the settings file from {LegacySettingsPath}.", legacySettingsFilePath);
     }
   }
 

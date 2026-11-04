@@ -15,6 +15,21 @@ namespace ControlR.DesktopClient.Linux;
 /// </summary>
 public static class PathConstants
 {
+  /// <summary>
+  /// TODO: Temporary migration code for v0.31.x
+  /// The settings path this client used before the publisher became a directory in it.
+  /// </summary>
+  public static string GetLegacySettingsPath(string? instanceId)
+  {
+    var rootDir = Libc.Geteuid() == 0
+      ? $"/etc/{BrandingConstants.UnixConfigDirectoryName}"
+      : Path.Combine(
+          Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+          BrandingConstants.UnixHiddenDirectoryName);
+
+    return Path.Combine(AppendInstanceId(rootDir, instanceId), "settings.json");
+  }
+
   public static string GetLogsPath(string? instanceId)
   {
     var isRoot = Libc.Geteuid() == 0;

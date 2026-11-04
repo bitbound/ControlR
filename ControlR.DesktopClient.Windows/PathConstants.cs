@@ -20,6 +20,21 @@ public static class PathConstants
 {
   private const string SystemUsername = "System";
 
+  /// <summary>
+  /// TODO: Temporary migration code for v0.31.x
+  /// The settings path this client used before the publisher became a directory in it.
+  /// </summary>
+  public static string GetLegacySettingsPath(string? instanceId)
+  {
+    var rootDir = Path.Combine(
+      Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+      BrandingConstants.WindowsInstallDirectoryName);
+
+    var sessionDir = AppendSubDirectories(rootDir, instanceId);
+
+    return Path.Combine(sessionDir, GetUsername(), BrandingConstants.DesktopClientDirectoryName, "settings.json");
+  }
+
   public static string GetLogsPath(string? instanceId)
   {
     var logsDir = Path.Combine(GetDesktopClientDirectory(instanceId), "Logs");

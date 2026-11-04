@@ -9,6 +9,7 @@ namespace ControlR.DesktopClient.Tests;
 
 public class DesktopSettingsStoreTests
 {
+  private const string LegacySettingsPath = "/app/config-legacy/settings.json";
   private const string SettingsPath = "/app/config/settings.json";
 
   [Fact]
@@ -32,6 +33,40 @@ public class DesktopSettingsStoreTests
 
     Assert.Equal(AvaloniaThemeMode.Dark, store.Current.Theme);
     Assert.Null(store.Current.Language);
+  }
+
+  [Fact]
+  public void Current_WhenOnlyTheLegacySettingsFileExists_MovesItIntoPlace()
+  {
+    var fileSystem = new FakeFileSystem();
+    fileSystem.WriteAllText(LegacySettingsPath, """
+      { "Language": "cs-CZ" }
+      """);
+
+    var store = CreateStore(fileSystem);
+
+    // The settings file moved into a publisher directory along with the install, and this client is the
+    // only process that can put the old copy at the new path with the owner it had before.
+    Assert.Equal("cs-CZ", store.Current.Language);
+    Assert.True(fileSystem.FileExists(SettingsPath));
+    Assert.False(fileSystem.FileExists(LegacySettingsPath));
+  }
+
+  [Fact]
+  public void Current_WhenTheSettingsFileAlreadyExists_LeavesTheLegacyFileAlone()
+  {
+    var fileSystem = new FakeFileSystem();
+    fileSystem.WriteAllText(SettingsPath, """
+      { "Language": "cs-CZ" }
+      """);
+    fileSystem.WriteAllText(LegacySettingsPath, """
+      { "Language": "de-DE" }
+      """);
+
+    var store = CreateStore(fileSystem);
+
+    Assert.Equal("cs-CZ", store.Current.Language);
+    Assert.True(fileSystem.FileExists(LegacySettingsPath));
   }
 
   [Fact]
@@ -83,6 +118,7 @@ public class DesktopSettingsStoreTests
   {
     var paths = new Mock<IDesktopPathProvider>();
     paths.Setup(x => x.GetSettingsPath()).Returns(SettingsPath);
+    paths.Setup(x => x.GetLegacySettingsPath()).Returns(LegacySettingsPath);
 
     return new DesktopSettingsStore(
       paths.Object,
