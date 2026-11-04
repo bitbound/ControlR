@@ -91,6 +91,22 @@ public class PreviousInstallTests
   }
 
   [Fact]
+  public void Resolve_WhenThePublisherDiffersOnlyByPunctuation_ReturnsNull()
+  {
+    var previousInstall = PreviousInstall.Resolve(
+      previousPublisher: "Acme_Corp",
+      previousBrandName: "ControlR",
+      previousInstanceId: null,
+      installerPublisher: "Acme Corp",
+      installerBrandName: "ControlR",
+      installerInstanceId: null);
+
+    // The sanitized key is what names the vendor directory, so both spellings address one install. Naming
+    // a migration here would retire the install this installer just wrote.
+    Assert.Null(previousInstall);
+  }
+
+  [Fact]
   public void Resolve_WhenTheReplacedInstallIsUnderTheSamePublisher_NamesThatPublisher()
   {
     var previousInstall = PreviousInstall.Resolve(

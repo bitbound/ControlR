@@ -50,7 +50,7 @@ public sealed record PreviousInstall(string BrandName, string? InstanceId, strin
     var brandName = suppliedBrandName ?? installerBrandName;
 
     if (BrandNames.AreSameInstall(brandName, installerBrandName) &&
-        string.Equals(suppliedPublisher, installerPublisher, StringComparison.Ordinal) &&
+        InstallPathNames.AreSameVendor(suppliedPublisher, installerPublisher) &&
         string.Equals(
           GetEffectiveInstanceId(suppliedInstanceId),
           GetEffectiveInstanceId(installerInstanceId),
