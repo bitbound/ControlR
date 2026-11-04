@@ -206,22 +206,6 @@ internal sealed class LegacyPathMigrationWindows(
     return _fileSystem.JoinPaths('\\', directoryPath, fileName);
   }
 
-  private void TryDeleteFile(string filePath)
-  {
-    try
-    {
-      if (_fileSystem.FileExists(filePath))
-      {
-        _fileSystem.DeleteFile(filePath);
-        _logger.LogInformation("Removed {FilePath}, which the relocated install now has its own copy of.", filePath);
-      }
-    }
-    catch (Exception ex)
-    {
-      _logger.LogWarning(ex, "Failed to remove {FilePath}. It can be deleted by hand.", filePath);
-    }
-  }
-
   private void TryDeleteDirectory(string directoryPath)
   {
     try
@@ -235,6 +219,22 @@ internal sealed class LegacyPathMigrationWindows(
     catch (Exception ex)
     {
       _logger.LogWarning(ex, "Failed to remove {DirectoryPath}. It can be deleted by hand.", directoryPath);
+    }
+  }
+
+  private void TryDeleteFile(string filePath)
+  {
+    try
+    {
+      if (_fileSystem.FileExists(filePath))
+      {
+        _fileSystem.DeleteFile(filePath);
+        _logger.LogInformation("Removed {FilePath}, which the relocated install now has its own copy of.", filePath);
+      }
+    }
+    catch (Exception ex)
+    {
+      _logger.LogWarning(ex, "Failed to remove {FilePath}. It can be deleted by hand.", filePath);
     }
   }
 }

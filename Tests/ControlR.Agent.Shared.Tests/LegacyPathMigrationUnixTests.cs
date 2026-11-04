@@ -9,6 +9,25 @@ namespace ControlR.Agent.Shared.Tests;
 public class LegacyPathMigrationUnixTests
 {
   [Fact]
+  public void RemoveRelocatedInstall_LeavesWhatThisMoveDidNotCarry()
+  {
+    var fileSystem = new FakeFileSystem('/');
+    fileSystem.AddFile("/etc/controlr/instance-1/appsettings.json", "{}");
+    fileSystem.AddFile("/etc/controlr/instance-1/settings.json", "{}");
+    fileSystem.AddDirectory("/usr/local/bin/ControlR/instance-1");
+    var sut = CreateSut(fileSystem, CreatePathProvider(), new Mock<IOptionsAccessor>());
+
+    sut.RemoveRelocatedInstall(CreateRelocation());
+
+    Assert.False(fileSystem.DirectoryExists("/usr/local/bin/ControlR/instance-1"));
+    Assert.False(fileSystem.FileExists("/etc/controlr/instance-1/appsettings.json"));
+
+    // The desktop client keeps its own settings in the agent's settings directory. That file belongs to the
+    // install that moved rather than to this move, so it stays.
+    Assert.True(fileSystem.FileExists("/etc/controlr/instance-1/settings.json"));
+  }
+
+  [Fact]
   public void TryStageSettings_WhenTheLegacySettingsFileExists_CopiesItWithTheRunningInstallRestrictions()
   {
     var fileSystem = new FakeFileSystem('/');

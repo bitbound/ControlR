@@ -48,7 +48,8 @@ public interface ILegacyPathMigrationUnix
   IReadOnlyDictionary<string, string> ReadServiceDefinitionFiles(params string[] filePaths);
 
   /// <summary>
-  /// Removes the relocated install's directories, once the relocated service is confirmed running.
+  /// Removes the relocated install's directory and the two settings files this move carried over, once the
+  /// relocated service is confirmed running. The rest of the old settings directory stays.
   /// </summary>
   void RemoveRelocatedInstall(UnixPathRelocation relocation);
 
@@ -126,7 +127,11 @@ internal sealed class LegacyPathMigrationUnix(
     // Best effort. The relocated install is running, and a directory left behind is recoverable in a way
     // that reporting a successful move as a failure is not.
     TryDeleteDirectory(relocation.InstallDirectory);
-    TryDeleteDirectory(relocation.SettingsDirectory);
+
+    // Only the files this move carried over go. The desktop client keeps its own settings file and its
+    // screen-sharing restore token in this same directory, so the tree is not this move's to discard.
+    TryDeleteFile(GetFile(relocation.SettingsDirectory, AppSettingsFileName));
+    TryDeleteFile(GetFile(relocation.SettingsDirectory, BrandingConstants.BundleHashFileName));
   }
 
   public async Task RestoreServiceDefinitionFiles(IReadOnlyDictionary<string, string> previousContents)
@@ -224,6 +229,22 @@ internal sealed class LegacyPathMigrationUnix(
     catch (Exception ex)
     {
       _logger.LogWarning(ex, "Failed to remove {DirectoryPath}. It can be deleted by hand.", directoryPath);
+    }
+  }
+
+  private void TryDeleteFile(string filePath)
+  {
+    try
+    {
+      if (_fileSystem.FileExists(filePath))
+      {
+        _fileSystem.DeleteFile(filePath);
+        _logger.LogInformation("Removed {FilePath}, which the relocated install now has its own copy of.", filePath);
+      }
+    }
+    catch (Exception ex)
+    {
+      _logger.LogWarning(ex, "Failed to remove {FilePath}. It can be deleted by hand.", filePath);
     }
   }
 }
