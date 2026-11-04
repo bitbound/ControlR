@@ -19,7 +19,7 @@ Detailed conventions (C# standards, API surface and DTOs, permissions, hub contr
   - Whole test project: `dotnet run --project {project_path}`
   - Specific class/method: `dotnet run --project {project_path} -- -filter /{assembly-name}/{namespace}/{class}/{method}`
   - **IMPORTANT**: xUnit v3 filter paths use assembly name, then C# namespace, then class name, then method name.
-    - The namespace may look lke a repeat of the assembly name, but it's distinct and required.
+    - The namespace may look like a repeat of the assembly name, but it's distinct and required.
     - Example: for class `IdentityApiRegisterFilterTests` in namespace `ControlR.Web.Server.Tests`, project `ControlR.Web.Server.Tests`:
       `-filter /ControlR.Web.Server.Tests/ControlR.Web.Server.Tests/IdentityApiRegisterFilterTests`
     - For a specific method, append `/{method}`.

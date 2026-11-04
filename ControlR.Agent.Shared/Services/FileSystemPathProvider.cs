@@ -32,7 +32,9 @@ public interface IFileSystemPathProvider
   /// </summary>
   string GetAgentLogFilePath();
   /// <summary>
-  /// Returns the directory where agent logs are stored. On Windows this is under CommonApplicationData; on Linux/macOS it is under /var/log for elevated processes or ~/.controlr/logs for user processes.
+  /// Returns the directory where agent logs are stored. Every root here sits under a publisher directory:
+  /// on Windows it is under CommonApplicationData, on Linux/macOS under /var/log for elevated processes or
+  /// the user's hidden home directory for user processes.
   /// </summary>
   string GetAgentLogsDirectoryPath();
   /// <summary>
