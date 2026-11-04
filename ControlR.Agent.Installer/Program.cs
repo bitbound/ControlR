@@ -243,9 +243,22 @@ static async Task<int> RunInstall(
   string? previousInstanceIdArg,
   string? previousPublisherArg)
 {
+  // TODO: Temporary migration code for v0.31.x
+  // This has to run before the host is built, because building the host is what opens the settings file.
+  var stagedSettings = CarryStagedSettingsForward(instanceId, previousPublisherArg, previousBrandArg, previousInstanceIdArg);
+
   using var host = CreateInstallerHost(instanceId, request.ServerUri);
   var logger = host.Services.GetRequiredService<ILoggerFactory>().CreateLogger("ControlR.Agent.Installer");
   using var logScope = logger.BeginScope("RunInstall. InstanceId: {InstanceId}", instanceId);
+
+  if (stagedSettings is not null)
+  {
+    logger.LogWarning(
+      "Moved the settings file staged for this install from {Source} to {Destination}.",
+      stagedSettings.Value.Source,
+      stagedSettings.Value.Destination);
+  }
+
   var fileSystem = host.Services.GetRequiredService<IFileSystem>();
   var tempDir = Path.Combine(Path.GetTempPath(), $"{TempDirectoryPrefix}{Guid.NewGuid():N}");
   var tempBundlePath = Path.Combine(tempDir, TempBundleFileName);
@@ -558,6 +571,51 @@ static IHost CreateInstallerHost(string? instanceId, Uri? serverUri)
   builder.BootstrapSerilog(pathProvider.GetInstallerLogFilePath(), TimeSpan.FromDays(7));
   builder.Services.AddSingleton<IBundleDownloader, BundleDownloader>();
   return builder.Build();
+}
+
+// TODO: Temporary migration code for v0.31.x
+// An agent built before the publisher became a directory stages the replacing install's settings at the
+// path its own compiled formula names, which has no publisher in it. Those settings carry the device ID
+// and the signing key, and this build reads them from under the publisher directory, so the staged file has
+// to be moved there first. Returns the two paths only when a migration was indicated, this build's own
+// settings do not exist yet, and a staged file was found one directory up.
+static (string Source, string Destination)? CarryStagedSettingsForward(
+  string? instanceId,
+  string? previousPublisherArg,
+  string? previousBrandArg,
+  string? previousInstanceIdArg)
+{
+  if (string.IsNullOrWhiteSpace(previousPublisherArg) &&
+      string.IsNullOrWhiteSpace(previousBrandArg) &&
+      string.IsNullOrWhiteSpace(previousInstanceIdArg))
+  {
+    return null;
+  }
+
+  var fileSystem = new FileSystem(new SerilogLogger<FileSystem>());
+  var pathProvider = CreateStandalonePathProvider(instanceId);
+  var destinationPath = pathProvider.GetAgentAppSettingsPath();
+  if (fileSystem.FileExists(destinationPath))
+  {
+    return null;
+  }
+
+  // The staged copy is named for the identity being written, so its brand and instance match this
+  // installer's and only the publisher directory is missing.
+  var sourcePath = Path.Combine(
+    pathProvider.GetSettingsDirectoryFor(publisherName: null, BrandingConstants.BrandName, instanceId),
+    "appsettings.json");
+
+  if (!fileSystem.FileExists(sourcePath))
+  {
+    return null;
+  }
+
+  fileSystem.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
+
+  // The staged file already carries the restrictions the staging agent put on it, and a move keeps them.
+  fileSystem.MoveFile(sourcePath, destinationPath, overwrite: false);
+  return (sourcePath, destinationPath);
 }
 
 static FileSystemPathProvider GetTempPathProvider(HostApplicationBuilder builder)
