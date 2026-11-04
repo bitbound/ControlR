@@ -35,8 +35,12 @@ public class PreviousInstallTests
 
     Assert.NotNull(previousInstall);
     Assert.Equal("ControlR", previousInstall.BrandName);
-    Assert.Equal("Bitbound", previousInstall.Publisher);
     Assert.Equal("exp", previousInstall.InstanceId);
+
+    // An agent that predates the publisher directory sends no publisher at all. Reading that as this
+    // installer's publisher would look for the install being replaced under the vendor directory, where
+    // it was never installed.
+    Assert.Null(previousInstall.Publisher);
   }
 
   [Fact]
@@ -84,6 +88,22 @@ public class PreviousInstallTests
 
     // Both names reduce to the same key, so they name one install, not two.
     Assert.Null(previousInstall);
+  }
+
+  [Fact]
+  public void Resolve_WhenTheReplacedInstallIsUnderTheSamePublisher_NamesThatPublisher()
+  {
+    var previousInstall = PreviousInstall.Resolve(
+      previousPublisher: "Bitbound",
+      previousBrandName: "ControlR",
+      previousInstanceId: "exp",
+      installerPublisher: "Bitbound",
+      installerBrandName: "ControlR",
+      installerInstanceId: "ce");
+
+    Assert.NotNull(previousInstall);
+    Assert.Equal("Bitbound", previousInstall.Publisher);
+    Assert.Equal("exp", previousInstall.InstanceId);
   }
 
   [Fact]
