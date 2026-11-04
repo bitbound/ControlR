@@ -204,12 +204,13 @@ internal class AgentMaintenanceService(
       var metadata = metadataResult.Value;
 
       // Repair rewrites the desktop client payload inside an existing install, so it only makes
-      // sense for the install's own brand. A cross-brand bundle is handled by the update path,
-      // which moves the whole install rather than patching one payload into the wrong brand.
-      if (!BrandNames.AreSameInstall(metadata.BrandName, BrandingConstants.BrandName))
+      // sense for the install's own brand and vendor. A bundle from elsewhere is handled by the update
+      // path, which moves the whole install rather than patching one payload into the wrong place.
+      if (!BrandNames.AreSameInstall(metadata.BrandName, BrandingConstants.BrandName)
+          || !InstallPathNames.AreSameVendor(metadata.Publisher, BrandingConstants.Publisher))
       {
         _logger.LogCritical(
-          "Aborting desktop client repair. Server bundle is not this agent's brand. " +
+          "Aborting desktop client repair. Server bundle is not this agent's brand or vendor. " +
           "Agent brand: {AgentBrandName}/{AgentPublisher}, Server brand: {ServerBrandName}/{ServerPublisher}. " +
           "Refusing to write a foreign brand's payload into this install.",
           BrandingConstants.BrandName,

@@ -495,15 +495,20 @@ static async Task<int> RunRepairDesktop(string? instanceId)
     logger.LogInformation("Bundle version: {Version}", metadata.Version);
 
     // Repair writes the desktop client payload into an existing install, so it only ever applies to
-    // that install's own brand. A cross-brand bundle is served by the install command, which moves
-    // the whole install rather than dropping a foreign payload into the wrong directory.
-    if (!string.Equals(metadata.BrandName, BrandingConstants.BrandName, StringComparison.Ordinal))
+    // that install's own brand and vendor. A bundle from elsewhere is served by the install command,
+    // which moves the whole install rather than dropping a foreign payload into the wrong directory.
+    // The client carries its own branding constants, so a foreign vendor's client would write its logs
+    // and settings under a directory this install's log paths do not name.
+    if (!BrandNames.AreSameInstall(metadata.BrandName, BrandingConstants.BrandName)
+        || !InstallPathNames.AreSameVendor(metadata.Publisher, BrandingConstants.Publisher))
     {
       logger.LogCritical(
-        "Refusing to repair desktop client: server bundle is for brand {ServerBrandName}, but this installer is brand {InstallerBrandName}. " +
+        "Refusing to repair desktop client: server bundle is for brand {ServerBrandName} from publisher {ServerPublisher}, but this installer is brand {InstallerBrandName} from publisher {InstallerPublisher}. " +
         "If this server is correct, run the matching installer instead.",
         metadata.BrandName,
-        BrandingConstants.BrandName);
+        metadata.Publisher,
+        BrandingConstants.BrandName,
+        BrandingConstants.Publisher);
       return 1;
     }
 

@@ -498,6 +498,21 @@ public class AgentMaintenanceServiceTests
     Assert.Equal(fixture.MacInstallerDownloadPath, startInfo.FileName);
   }
 
+  [Fact]
+  public async Task RepairDesktopClient_WhenTheServerPublisherDiffers_DoesNotRepair()
+  {
+    var fixture = new AgentMaintenanceServiceFixture();
+    fixture.ServeWindowsBundle("NEW_HASH", publisher: "OtherPublisher");
+
+    var updater = fixture.CreateMaintenanceService();
+
+    await updater.RepairDesktopClient("test request", TestContext.Current.CancellationToken);
+
+    // Repair writes into this install's directory, and the desktop client carries its own branding
+    // constants, so a foreign vendor's client would log and keep settings where this install never looks.
+    Assert.Equal(string.Empty, fixture.LaunchedInstallerArguments);
+  }
+
   private sealed class AgentMaintenanceServiceFixture
   {
     public AgentMaintenanceServiceFixture()
