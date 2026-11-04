@@ -3,6 +3,7 @@ using ControlR.Agent.Shared.Services;
 using ControlR.Agent.Shared.Services.Windows;
 using ControlR.Libraries.Shared.Constants;
 using ControlR.Libraries.Shared.Services.FileSystem;
+using ControlR.Libraries.TestingUtilities.FileSystem;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 
@@ -11,6 +12,34 @@ namespace ControlR.Agent.Shared.Tests;
 [SupportedOSPlatform("windows8.0")]
 public class LegacyPathMigrationWindowsTests
 {
+  [Fact]
+  public void Plan_WhenTheRegisteredDirectoryMatchesNoIdentity_ReportsNothingToMove()
+  {
+    var pathProvider = CreatePathProvider();
+    var sut = CreateSut(pathProvider);
+
+    var relocation = sut.Plan(
+      "Acme Corp",
+      @"C:\Program Files\Other Vendor\ControlR\instance-1");
+
+    // Moving a directory this build cannot name again would mean removing files it did not write.
+    Assert.Null(relocation);
+  }
+
+  [Fact]
+  public void Plan_WhenTheServiceIsRegisteredAtTheVendorlessPath_NamesThatInstall()
+  {
+    var pathProvider = CreatePathProvider();
+    var sut = CreateSut(pathProvider);
+
+    var relocation = sut.Plan(
+      previousPublisher: null,
+      registeredDirectory: @"C:\Program Files\ControlR\default");
+
+    Assert.NotNull(relocation);
+    Assert.Equal(@"C:\ProgramData\ControlR\default", relocation.SettingsDirectory);
+  }
+
   [Fact]
   public void Plan_WhenTheServiceIsRegisteredUnderThePublisherBeingReplaced_NamesThatInstall()
   {
@@ -29,31 +58,26 @@ public class LegacyPathMigrationWindowsTests
   }
 
   [Fact]
-  public void Plan_WhenTheServiceIsRegisteredAtTheVendorlessPath_NamesThatInstall()
+  public void RemoveRelocatedInstall_LeavesTheLogHistoryOfTheInstallThatMoved()
   {
-    var pathProvider = CreatePathProvider();
-    var sut = CreateSut(pathProvider);
+    var fileSystem = new FakeFileSystem('\\');
+    var oldSettingsDirectory = @"C:\ProgramData\ControlR\default";
+    var oldLogFile = $@"{oldSettingsDirectory}\Logs\ControlR.Agent\LogFile.log";
+    fileSystem.AddFile($@"{oldSettingsDirectory}\appsettings.json", "{}");
+    fileSystem.AddFile(oldLogFile, "history");
+    fileSystem.AddDirectory(@"C:\Program Files\ControlR\default");
 
-    var relocation = sut.Plan(
-      previousPublisher: null,
-      registeredDirectory: @"C:\Program Files\ControlR\default");
+    var sut = CreateSut(CreatePathProvider(), fileSystem);
 
-    Assert.NotNull(relocation);
-    Assert.Equal(@"C:\ProgramData\ControlR\default", relocation.SettingsDirectory);
-  }
+    sut.RemoveRelocatedInstall(
+      new WindowsPathRelocation(@"C:\Program Files\ControlR\default", oldSettingsDirectory));
 
-  [Fact]
-  public void Plan_WhenTheRegisteredDirectoryMatchesNoIdentity_ReportsNothingToMove()
-  {
-    var pathProvider = CreatePathProvider();
-    var sut = CreateSut(pathProvider);
+    Assert.False(fileSystem.DirectoryExists(@"C:\Program Files\ControlR\default"));
+    Assert.False(fileSystem.FileExists($@"{oldSettingsDirectory}\appsettings.json"));
 
-    var relocation = sut.Plan(
-      "Acme Corp",
-      @"C:\Program Files\Other Vendor\ControlR\instance-1");
-
-    // Moving a directory this build cannot name again would mean removing files it did not write.
-    Assert.Null(relocation);
+    // The settings directory is also where this brand's log history lives, and it belongs to the install
+    // that moved rather than to this move.
+    Assert.True(fileSystem.FileExists(oldLogFile));
   }
 
   private static Mock<IFileSystemPathProvider> CreatePathProvider()
@@ -83,17 +107,19 @@ public class LegacyPathMigrationWindowsTests
     return pathProvider;
   }
 
-  private static string Resolve(string? instanceId)
-  {
-    return instanceId ?? AppConstants.DefaultInstanceId;
-  }
-
-  private static LegacyPathMigrationWindows CreateSut(Mock<IFileSystemPathProvider> pathProvider)
+  private static LegacyPathMigrationWindows CreateSut(
+    Mock<IFileSystemPathProvider> pathProvider,
+    IFileSystem? fileSystem = null)
   {
     return new LegacyPathMigrationWindows(
-      Mock.Of<IFileSystem>(),
+      fileSystem ?? Mock.Of<IFileSystem>(),
       pathProvider.Object,
       Mock.Of<IOptionsAccessor>(),
       NullLogger<LegacyPathMigrationWindows>.Instance);
+  }
+
+  private static string Resolve(string? instanceId)
+  {
+    return instanceId ?? AppConstants.DefaultInstanceId;
   }
 }

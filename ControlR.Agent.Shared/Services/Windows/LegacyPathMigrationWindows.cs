@@ -53,7 +53,8 @@ public interface ILegacyPathMigrationWindows
   WindowsPathRelocation? Plan(string? previousPublisher, string registeredDirectory);
 
   /// <summary>
-  /// Removes the relocated install's directories. Call this only once the relocated service is running.
+  /// Removes the relocated install's executable directory and the two settings files this move carried
+  /// over, once the relocated service is running. The rest of the old settings tree stays.
   /// </summary>
   void RemoveRelocatedInstall(WindowsPathRelocation relocation);
 
@@ -122,7 +123,12 @@ internal sealed class LegacyPathMigrationWindows(
     // Best effort. The relocated install is running, and a directory left behind is recoverable in a way
     // that reporting a successful move as a failure is not.
     TryDeleteDirectory(relocation.InstallDirectory);
-    TryDeleteDirectory(relocation.SettingsDirectory);
+
+    // Only the files this move carried over are removed from the settings tree. That tree also holds this
+    // brand's log history and the desktop client's per-user state, which are the replaced install's, not
+    // this move's to discard, and the old desktop client can still be writing to it.
+    TryDeleteFile(GetFile(relocation.SettingsDirectory, AppSettingsFileName));
+    TryDeleteFile(GetFile(relocation.SettingsDirectory, BrandingConstants.BundleHashFileName));
   }
 
   public bool TryStageSettings(WindowsPathRelocation relocation)
@@ -198,6 +204,22 @@ internal sealed class LegacyPathMigrationWindows(
   private string GetFile(string directoryPath, string fileName)
   {
     return _fileSystem.JoinPaths('\\', directoryPath, fileName);
+  }
+
+  private void TryDeleteFile(string filePath)
+  {
+    try
+    {
+      if (_fileSystem.FileExists(filePath))
+      {
+        _fileSystem.DeleteFile(filePath);
+        _logger.LogInformation("Removed {FilePath}, which the relocated install now has its own copy of.", filePath);
+      }
+    }
+    catch (Exception ex)
+    {
+      _logger.LogWarning(ex, "Failed to remove {FilePath}. It can be deleted by hand.", filePath);
+    }
   }
 
   private void TryDeleteDirectory(string directoryPath)
