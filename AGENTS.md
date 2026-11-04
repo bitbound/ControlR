@@ -46,3 +46,18 @@ Services use extension methods, not direct `Program.cs` registrations:
 - **ViewerHub** — web client connections and remote control requests.
 - Hub groups organized by tenant, device tags, and user roles via `HubGroupNames.GetTenantDevicesGroupName()`, `GetTagGroupName()`, etc.
 - **Agent ↔ DesktopClient IPC** via named pipes (`IIpcConnection`). Agent forwards `RemoteControlRequestIpcDto` to the user-session DesktopClient; DesktopClient reports back for relay to server.
+
+## Tenant Isolation (EF Query Filters)
+
+- `AppDb` applies **claims-driven global query filters**: `UseUserClaims(user)` (`Data/Configuration/DbContextOptionsBuilderExtensions.cs`) reads the authenticated principal's tenant/user claims when the context is created. When a tenant claim is present, most tenant-owned entities (`Users`, `Devices`, `UserGroups`, `DeviceGroups`, `Customers`, `Tags`, etc.) are filtered automatically, including via `[FromServices] AppDb` in controllers.
+- **Server principals** (no tenant claim, e.g. server service accounts) get an **unfiltered context by explicit contract**. That is what enables their cross-tenant access.
+- **Exempt by design, NO query filters:** `PermissionAssignment`, `ServiceAccount`, `AuthorizationChangeLog`. Tenant isolation for these is enforced in service code. Never assume a filter exists for them.
+- For security-critical boundaries, don't rely solely on the implicit filters. Explicit `TenantId == tenantId` predicates are encouraged. They survive unfiltered contexts and make the boundary self-documenting.
+
+## General Coding Standards
+
+- Use 2 spaces for indentation.
+
+## Planning
+
+- Planning documents and implementation notes go in `/.plans/` (not committed).
