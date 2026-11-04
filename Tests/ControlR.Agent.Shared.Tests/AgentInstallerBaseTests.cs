@@ -99,14 +99,6 @@ public class AgentInstallerBaseTests
     otherDesktop.Verify(x => x.Kill(), Times.Never);
   }
 
-  private static Mock<IProcess> CreateProcess(int processId, string filePath)
-  {
-    var process = new Mock<IProcess>();
-    process.SetupGet(x => x.Id).Returns(processId);
-    process.SetupGet(x => x.FilePath).Returns(filePath);
-    return process;
-  }
-
   private static TestAgentInstaller CreateInstaller(
     IFileSystem fileSystem,
     IProcessManager processManager,
@@ -117,6 +109,14 @@ public class AgentInstallerBaseTests
       Mock.Of<ISystemEnvironment>(),
       fileSystem,
       pathProvider);
+  }
+
+  private static Mock<IProcess> CreateProcess(int processId, string filePath)
+  {
+    var process = new Mock<IProcess>();
+    process.SetupGet(x => x.Id).Returns(processId);
+    process.SetupGet(x => x.FilePath).Returns(filePath);
+    return process;
   }
 
   private sealed class TestAgentInstaller(

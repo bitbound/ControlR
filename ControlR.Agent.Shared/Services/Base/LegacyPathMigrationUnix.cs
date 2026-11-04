@@ -69,12 +69,14 @@ public interface ILegacyPathMigrationUnix
 internal sealed class LegacyPathMigrationUnix(
   IFileSystem fileSystem,
   IFileSystemPathProvider pathProvider,
+  IOptionsAccessor optionsAccessor,
   ILogger<LegacyPathMigrationUnix> logger) : ILegacyPathMigrationUnix
 {
   private const string AppSettingsFileName = "appsettings.json";
 
   private readonly IFileSystem _fileSystem = fileSystem;
   private readonly ILogger<LegacyPathMigrationUnix> _logger = logger;
+  private readonly IOptionsAccessor _optionsAccessor = optionsAccessor;
   private readonly IFileSystemPathProvider _pathProvider = pathProvider;
 
   public UnixPathRelocation? Plan()
@@ -171,7 +173,12 @@ internal sealed class LegacyPathMigrationUnix(
     try
     {
       _fileSystem.CreateDirectory(destinationDirectory);
-      _fileSystem.CopyFile(sourceSettingsPath, GetFile(destinationDirectory, AppSettingsFileName), overwrite: true);
+      var destinationSettingsPath = GetFile(destinationDirectory, AppSettingsFileName);
+      _fileSystem.CopyFile(sourceSettingsPath, destinationSettingsPath, overwrite: true);
+
+      // The file holds the device signing key in plaintext, so it gets the same restrictions the running
+      // install puts on its own copy rather than whatever the copy inherited from the umask.
+      _optionsAccessor.RestrictAccess(destinationSettingsPath);
 
       var sourceHashPath = GetFile(relocation.SettingsDirectory, BrandingConstants.BundleHashFileName);
       if (_fileSystem.FileExists(sourceHashPath))

@@ -9,23 +9,28 @@ namespace ControlR.Agent.Shared.Tests;
 public class LegacyPathMigrationUnixTests
 {
   [Fact]
-  public void TryStageSettings_WhenTheLegacySettingsFileExists_CopiesItIntoTheNewDirectory()
+  public void TryStageSettings_WhenTheLegacySettingsFileExists_CopiesItWithTheRunningInstallRestrictions()
   {
     var fileSystem = new FakeFileSystem('/');
     fileSystem.AddFile("/etc/controlr/instance-1/appsettings.json", "{}");
-    var sut = CreateSut(fileSystem, CreatePathProvider());
+    var optionsAccessor = new Mock<IOptionsAccessor>();
+    var sut = CreateSut(fileSystem, CreatePathProvider(), optionsAccessor);
 
     var result = sut.TryStageSettings(CreateRelocation());
 
     Assert.True(result.IsSuccess);
     Assert.True(fileSystem.FileExists("/etc/bitbound/controlr/instance-1/appsettings.json"));
+
+    // The copy carries the device signing key in plaintext, and a copy arrives with whatever the host's
+    // umask allows rather than with the restrictions the running install put on the original.
+    optionsAccessor.Verify(x => x.RestrictAccess("/etc/bitbound/controlr/instance-1/appsettings.json"), Times.Once);
   }
 
   [Fact]
   public void TryStageSettings_WhenTheLegacySettingsFileIsAbsent_FailsWithoutWritingAnything()
   {
     var fileSystem = new FakeFileSystem('/');
-    var sut = CreateSut(fileSystem, CreatePathProvider());
+    var sut = CreateSut(fileSystem, CreatePathProvider(), new Mock<IOptionsAccessor>());
 
     var result = sut.TryStageSettings(CreateRelocation());
 
@@ -62,11 +67,13 @@ public class LegacyPathMigrationUnixTests
 
   private static LegacyPathMigrationUnix CreateSut(
     FakeFileSystem fileSystem,
-    Mock<IFileSystemPathProvider> pathProvider)
+    Mock<IFileSystemPathProvider> pathProvider,
+    Mock<IOptionsAccessor> optionsAccessor)
   {
     return new LegacyPathMigrationUnix(
       fileSystem,
       pathProvider.Object,
+      optionsAccessor.Object,
       NullLogger<LegacyPathMigrationUnix>.Instance);
   }
 }
