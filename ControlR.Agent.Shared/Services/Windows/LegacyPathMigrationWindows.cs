@@ -5,8 +5,8 @@ using ControlR.Libraries.Shared.Services.FileSystem;
 namespace ControlR.Agent.Shared.Services.Windows;
 
 /// <summary>
-/// The install that predates the publisher becoming a directory in its paths, and the settings directory
-/// that belongs to it.
+/// The install that lives at the path this brand used before the directory it is being moved out of, and
+/// the settings directory that belongs to it.
 /// </summary>
 /// <param name="InstallDirectory">Where that install's executable is registered to run from.</param>
 /// <param name="SettingsDirectory">Where that install keeps appsettings.json, which holds its signing key.</param>
@@ -17,11 +17,12 @@ public sealed record WindowsPathRelocation(string InstallDirectory, string Setti
 /// </summary>
 /// <remarks>
 /// <para>
-/// One-time migration code. It knows the path shape that agents built before the publisher directory
-/// landed, which is deliberately nowhere else in this codebase, and it is the only thing that lets an
-/// install already on that shape be found and moved. Once no device reports an agent version below the
-/// first release carrying this, delete this file, its registration, and its call sites in
-/// <see cref="AgentInstallerWindows"/>, and the permanent guard there takes over every case.
+/// One-time migration code. It names the directory an existing install was written into so that install can
+/// be found, moved, and then removed, none of which the installer could do by formula alone: the install
+/// already on the machine was written by a build whose compiled branding put it somewhere else. Once no
+/// device reports an agent version below the first release carrying this, delete this file, its
+/// registration, and its call sites in <see cref="AgentInstallerWindows"/>, and the permanent guard there
+/// takes over every case.
 /// </para>
 /// <para>
 /// It runs inside the installer rather than the agent because the agent that is installed is the one
@@ -36,12 +37,20 @@ public interface ILegacyPathMigrationWindows
   /// Resolves the relocation for a service that is registered to run outside the directory this build
   /// computes for itself.
   /// </summary>
+  /// <param name="previousPublisher">
+  /// The vendor the resident install reported when it started this migration, which is the directory its
+  /// paths sit under. Null is the install from before the publisher became a directory at all.
+  /// </param>
+  /// <param name="registeredDirectory">
+  /// The directory the service is registered to run from, which is the only machine state that records
+  /// where the existing install's files are.
+  /// </param>
   /// <returns>
-  /// The install to move, or null when the registered directory is not the vendorless shape this class
-  /// can name. A caller must not move a layout it cannot also find again, and must not remove a directory
-  /// it did not write.
+  /// The install to move, or null when the registered directory is not a layout this class can name. A
+  /// caller must not move a layout it cannot also find again, and must not remove a directory it did not
+  /// write.
   /// </returns>
-  WindowsPathRelocation? Plan(string registeredDirectory);
+  WindowsPathRelocation? Plan(string? previousPublisher, string registeredDirectory);
 
   /// <summary>
   /// Removes the relocated install's directories. Call this only once the relocated service is running.
@@ -70,7 +79,7 @@ internal sealed class LegacyPathMigrationWindows(
   private readonly IOptionsAccessor _optionsAccessor = optionsAccessor;
   private readonly IFileSystemPathProvider _pathProvider = pathProvider;
 
-  public WindowsPathRelocation? Plan(string registeredDirectory)
+  public WindowsPathRelocation? Plan(string? previousPublisher, string registeredDirectory)
   {
     using var _ = _logger.BeginMemberScope();
 
@@ -79,24 +88,29 @@ internal sealed class LegacyPathMigrationWindows(
       ? null
       : instanceSegment;
 
-    var vendorlessDirectory = _pathProvider.GetAgentInstallDirectoryFor(
-      publisherName: null,
+    // The brand and instance come from the registration itself, and the vendor from what the resident
+    // install reported, so this names the directory that install was written into by formula rather than
+    // by guessing at whatever precedes the brand segment. A layout no identity produces is not moved.
+    var previousDirectory = _pathProvider.GetAgentInstallDirectoryFor(
+      publisherName: previousPublisher,
       brandName: BrandingConstants.BrandName,
       instanceId: instanceId);
 
-    if (!SameDirectory(vendorlessDirectory, registeredDirectory))
+    if (!SameDirectory(previousDirectory, registeredDirectory))
     {
       _logger.LogInformation(
-        "The service is registered at {RegisteredDirectory}, which is not the path this brand used before " +
-        "the publisher became a directory, so it is left where it is.",
-        registeredDirectory);
+        "The service is registered at {RegisteredDirectory}, which is not the path brand {BrandName} would " +
+        "have been written at under publisher {PreviousPublisher}, so it is left where it is.",
+        registeredDirectory,
+        BrandingConstants.BrandName,
+        previousPublisher ?? "the absence of one");
       return null;
     }
 
     return new WindowsPathRelocation(
       registeredDirectory,
       _pathProvider.GetSettingsDirectoryFor(
-        publisherName: null,
+        publisherName: previousPublisher,
         brandName: BrandingConstants.BrandName,
         instanceId: instanceId));
   }

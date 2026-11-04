@@ -83,17 +83,17 @@ internal class AgentInstallerWindows(
       // that is the only record of where it is. The service is stopped and its files replaced by a move,
       // never by a second registration beside the one already there.
       var registration = _agentServiceRegistration.TryGetRegistration(GetServiceName());
-      var (relocation, registeredElsewhere) = PlanRelocation(installDir, registration);
+      var (relocation, registeredElsewhere) = PlanRelocation(installDir, registration, request.PreviousPublisher);
+      if (relocation is null && registeredElsewhere)
+      {
+        return Result.Fail<AgentInstallOutcome>(
+          $"The agent service is registered to run from {registration!.Directory}, which is not this install's " +
+          "directory and is not a layout this build can name. Nothing on this machine was changed.");
+      }
 
       // Set once this install has taken over the registration read above, which is the only registration
       // there is to put back.
       ServiceRegistration? relocatedFrom = null;
-      if (relocation is null && registeredElsewhere)
-      {
-        return Result.Fail<AgentInstallOutcome>(
-          "The agent service is registered to run from a directory that is not this install's, and this build " +
-          "cannot name that layout. Nothing on this machine was changed.");
-      }
 
       if (relocation is not null && !_legacyPathMigration.TryStageSettings(relocation))
       {
@@ -465,15 +465,20 @@ internal class AgentInstallerWindows(
   /// <param name="registration">
   /// Where the service this install replaces is registered to run from, read before anything was changed.
   /// </param>
+  /// <param name="previousPublisher">
+  /// The vendor the resident install reported for itself, which is the directory its paths sit under. Null
+  /// is an install from before the publisher became a directory.
+  /// </param>
   /// <returns>
-  /// The install to move, when the service is registered elsewhere and that place is a layout this build
-  /// can name; nothing to move, when no service is registered or the one registered is already here; and
-  /// a flag that the service is registered elsewhere without being movable, which the caller has to refuse
-  /// rather than register a second service over it.
+  /// The install to move, when the service is registered elsewhere and that place is the directory the
+  /// reported identity was written into; nothing to move, when no service is registered or the one
+  /// registered is already here; and a flag that the service is registered elsewhere without being
+  /// movable, which the caller has to refuse rather than register a second service over it.
   /// </returns>
   private (WindowsPathRelocation? Relocation, bool RegisteredElsewhere) PlanRelocation(
     string installDirectory,
-    ServiceRegistration? registration)
+    ServiceRegistration? registration,
+    string? previousPublisher)
   {
     if (_systemEnvironment.IsDebug)
     {
@@ -485,7 +490,7 @@ internal class AgentInstallerWindows(
       return (null, false);
     }
 
-    return (_legacyPathMigration.Plan(registration.Directory), true);
+    return (_legacyPathMigration.Plan(previousPublisher, registration.Directory), true);
   }
 
   private async Task<string> PrepareRepairStage(string bundleZipPath, string installDir)
