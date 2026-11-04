@@ -21,11 +21,7 @@ public static class PathConstants
   /// </summary>
   public static string GetLegacySettingsDirectory(string? instanceId)
   {
-    var rootDir = Libc.Geteuid() == 0
-      ? $"/etc/{BrandingConstants.UnixConfigDirectoryName}"
-      : $"{Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)}/{BrandingConstants.UnixHiddenDirectoryName}";
-
-    return AppendInstanceId(rootDir, instanceId);
+    return GetSettingsDirectory(publisher: null, instanceId);
   }
 
   public static string GetLogsPath(string? instanceId)
@@ -44,11 +40,7 @@ public static class PathConstants
 
   public static string GetSettingsPath(string? instanceId)
   {
-    var rootDir = Libc.Geteuid() == 0
-      ? $"/etc/{InstallPathNames.LowercaseUnixDirectoryTail(BrandingConstants.Publisher, BrandingConstants.BrandName)}"
-      : $"{Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)}/{InstallPathNames.UnixHiddenHomeTail(BrandingConstants.Publisher, BrandingConstants.BrandName)}";
-
-    return Path.Combine(AppendInstanceId(rootDir, instanceId), "settings.json");
+    return Path.Combine(GetSettingsDirectory(BrandingConstants.Publisher, instanceId), "settings.json");
   }
 
   private static string AppendInstanceId(string rootDir, string? instanceId)
@@ -61,6 +53,15 @@ public static class PathConstants
     return string.IsNullOrWhiteSpace(instanceId)
       ? AppConstants.DefaultInstanceId
       : instanceId;
+  }
+
+  private static string GetSettingsDirectory(string? publisher, string? instanceId)
+  {
+    var rootDir = Libc.Geteuid() == 0
+      ? $"/etc/{InstallPathNames.LowercaseUnixDirectoryTail(publisher, BrandingConstants.BrandName)}"
+      : $"{Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)}/{InstallPathNames.UnixHiddenHomeTail(publisher, BrandingConstants.BrandName)}";
+
+    return AppendInstanceId(rootDir, instanceId);
   }
 
 }

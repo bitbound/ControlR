@@ -268,12 +268,7 @@ internal class ServiceControlLinux(
 
     private async Task ReloadUserDaemonForUser(string uid)
     {
-        // A unit file this install rewrote in place is not re-read by the manager that already has it
-        // loaded, so a start would use the definition from before the install and run the path the
-        // install just removed. This is the reload that makes the new definition the one that starts.
-        var exitCode = await _processManager.StartAndWaitForExit("sudo",
-            $"-u #{uid} XDG_RUNTIME_DIR=/run/user/{uid} systemctl --user daemon-reload",
-            false, _serviceStatusTimeout);
+        var exitCode = await RunSystemctlForUserAsync(uid, "daemon-reload");
 
         if (exitCode != 0)
         {
@@ -283,16 +278,24 @@ internal class ServiceControlLinux(
         _logger.LogInformation("Systemd user daemon configuration reloaded for user {UID}.", uid);
     }
 
+    private Task<int> RunSystemctlForUserAsync(string uid, string arguments)
+    {
+        // Run in the user's own manager rather than the system one, which needs both the target uid and
+        // the runtime directory that belongs to it.
+        return _processManager.StartAndWaitForExit(
+            "sudo",
+            $"-u #{uid} XDG_RUNTIME_DIR=/run/user/{uid} systemctl --user {arguments}",
+            false,
+            _serviceStatusTimeout);
+    }
+
     private async Task StartDesktopClientForUser(string uid, string serviceName, bool throwOnFailure)
     {
         try
         {
             _logger.LogInformation("Starting desktop client service for user {UID}: {ServiceName}", uid, serviceName);
 
-            // Use sudo to run as the specific user with proper XDG_RUNTIME_DIR
-            await _processManager.StartAndWaitForExit("sudo",
-                $"-u #{uid} XDG_RUNTIME_DIR=/run/user/{uid} systemctl --user start {serviceName}",
-                false, _serviceStatusTimeout);
+            await RunSystemctlForUserAsync(uid, $"start {serviceName}");
 
             _logger.LogInformation("Desktop client service started for user {UID}.", uid);
         }
@@ -316,10 +319,7 @@ internal class ServiceControlLinux(
         {
             _logger.LogInformation("Stopping desktop client service for user {UID}: {ServiceName}", uid, serviceName);
 
-            // Use sudo to run as the specific user with proper XDG_RUNTIME_DIR
-            var exitCode = await _processManager.StartAndWaitForExit("sudo",
-                $"-u #{uid} XDG_RUNTIME_DIR=/run/user/{uid} systemctl --user stop {serviceName}",
-                false, _serviceStatusTimeout);
+            var exitCode = await RunSystemctlForUserAsync(uid, $"stop {serviceName}");
 
             // The overload returns the exit code rather than throwing on it. Check it, because a
             // caller that goes on to kill the client's processes treats a stopped unit as a

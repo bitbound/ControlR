@@ -26,24 +26,18 @@ public static class PathConstants
   /// </summary>
   public static string GetLegacySettingsDirectory(string? instanceId)
   {
-    var rootDir = Path.Combine(
-      Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-      BrandingConstants.WindowsInstallDirectoryName);
-
-    var sessionDir = AppendSubDirectories(rootDir, instanceId);
-
-    return Path.Combine(sessionDir, GetUsername(), BrandingConstants.DesktopClientDirectoryName);
+    return GetDesktopClientDirectory(publisher: null, instanceId);
   }
 
   public static string GetLogsPath(string? instanceId)
   {
-    var logsDir = Path.Combine(GetDesktopClientDirectory(instanceId), "Logs");
+    var logsDir = Path.Combine(GetDesktopClientDirectory(BrandingConstants.Publisher, instanceId), "Logs");
     return Path.Combine(logsDir, "LogFile.log");
   }
 
   public static string GetSettingsPath(string? instanceId)
   {
-    return Path.Combine(GetDesktopClientDirectory(instanceId), "settings.json");
+    return Path.Combine(GetDesktopClientDirectory(BrandingConstants.Publisher, instanceId), "settings.json");
   }
 
   private static string AppendSubDirectories(string rootDir, string? instanceId)
@@ -56,11 +50,11 @@ public static class PathConstants
     return Path.Combine(rootDir, GetEffectiveInstanceId(instanceId));
   }
 
-  private static string GetDesktopClientDirectory(string? instanceId)
+  private static string GetDesktopClientDirectory(string? publisher, string? instanceId)
   {
     var rootDir = Path.Combine(
       Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-      InstallPathNames.WindowsDirectoryTail(BrandingConstants.Publisher, BrandingConstants.BrandName));
+      InstallPathNames.WindowsDirectoryTail(publisher, BrandingConstants.BrandName));
 
     var sessionDir = AppendSubDirectories(rootDir, instanceId);
 

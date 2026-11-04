@@ -21,13 +21,7 @@ public static class PathConstants
   /// </summary>
   public static string GetLegacySettingsDirectory(string? instanceId)
   {
-    var rootDir = Libc.Geteuid() == 0
-      ? $"/etc/{BrandingConstants.UnixConfigDirectoryName}"
-      : Path.Combine(
-          Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-          BrandingConstants.UnixHiddenDirectoryName);
-
-    return AppendInstanceId(rootDir, instanceId);
+    return GetSettingsDirectory(publisher: null, instanceId);
   }
 
   public static string GetLogsPath(string? instanceId)
@@ -46,12 +40,12 @@ public static class PathConstants
 
   public static string GetSettingsPath(string? instanceId)
   {
-    return Path.Combine(GetSettingsDirectory(instanceId), "settings.json");
+    return Path.Combine(GetSettingsDirectory(BrandingConstants.Publisher, instanceId), "settings.json");
   }
 
   public static string GetWaylandRemoteDesktopRestoreTokenPath(string? instanceId)
   {
-    var dir = GetSettingsDirectory(instanceId);
+    var dir = GetSettingsDirectory(BrandingConstants.Publisher, instanceId);
     return Path.Combine(dir, "wayland-remotedesktop-restore-token");
   }
 
@@ -68,13 +62,13 @@ public static class PathConstants
       : instanceId;
   }
 
-  private static string GetSettingsDirectory(string? instanceId)
+  private static string GetSettingsDirectory(string? publisher, string? instanceId)
   {
     var rootDir = Libc.Geteuid() == 0
-      ? $"/etc/{InstallPathNames.LowercaseUnixDirectoryTail(BrandingConstants.Publisher, BrandingConstants.BrandName)}"
+      ? $"/etc/{InstallPathNames.LowercaseUnixDirectoryTail(publisher, BrandingConstants.BrandName)}"
       : Path.Combine(
           Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-          InstallPathNames.UnixHiddenHomeTail(BrandingConstants.Publisher, BrandingConstants.BrandName));
+          InstallPathNames.UnixHiddenHomeTail(publisher, BrandingConstants.BrandName));
 
     return AppendInstanceId(rootDir, instanceId);
   }

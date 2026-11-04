@@ -45,15 +45,20 @@ public class DesktopSettingsStoreTests
       """);
     fileSystem.WriteAllText(Path.Combine(LegacySettingsDirectoryPath, "wayland-remotedesktop-restore-token"), "token");
 
+    // A client running as root shares this directory with the agent, which keeps its signing key there and
+    // relocates it itself.
+    fileSystem.WriteAllText(Path.Combine(LegacySettingsDirectoryPath, "appsettings.json"), "{}");
+
     var store = CreateStore(fileSystem);
 
     // The whole directory moved into a publisher path along with the install, and this client is the only
-    // process that can put those files at the new path with the owners they already had.
+    // process that can put its own files at the new path with the owners they already had.
     Assert.Equal("cs-CZ", store.Current.Language);
     Assert.True(fileSystem.FileExists(SettingsPath));
     Assert.True(fileSystem.FileExists(
       Path.Combine(Path.GetDirectoryName(SettingsPath)!, "wayland-remotedesktop-restore-token")));
-    Assert.Empty(fileSystem.GetFiles(LegacySettingsDirectoryPath));
+    Assert.True(fileSystem.FileExists(Path.Combine(LegacySettingsDirectoryPath, "appsettings.json")));
+    Assert.False(fileSystem.FileExists(Path.Combine(Path.GetDirectoryName(SettingsPath)!, "appsettings.json")));
   }
 
   [Fact]

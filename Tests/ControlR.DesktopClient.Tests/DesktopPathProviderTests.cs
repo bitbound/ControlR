@@ -1,5 +1,6 @@
 using ControlR.DesktopClient.Common.Options;
 using ControlR.DesktopClient.Services;
+using ControlR.Libraries.Branding;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -24,10 +25,9 @@ public class DesktopPathProviderTests
 
     var legacyDirectory = provider.GetLegacySettingsDirectory();
 
-    // TODO: Temporary migration code for v0.31.x. This is the directory an older client wrote, which is
-    // the one shape with no publisher directory in it.
+    // TODO: Temporary migration code for v0.31.x
     Assert.Contains("inst-1", legacyDirectory, StringComparison.Ordinal);
-    Assert.DoesNotContain("bitbound", legacyDirectory, StringComparison.OrdinalIgnoreCase);
+    Assert.DoesNotContain(BrandingConstants.Publisher, legacyDirectory, StringComparison.OrdinalIgnoreCase);
   }
 
   [Fact]

@@ -7,8 +7,8 @@ public interface IDesktopPathProvider
 {
   /// <summary>
   /// TODO: Temporary migration code for v0.31.x
-  /// Returns the directory this client's settings lived in before the publisher became a directory in
-  /// its path, which is where the files an older client wrote are found after the install moves.
+  /// Returns the directory this client's settings lived in before the publisher became a directory in its
+  /// path.
   /// </summary>
   string GetLegacySettingsDirectory();
 
@@ -25,8 +25,6 @@ public class DesktopPathProvider(IOptions<DesktopClientOptions> options) : IDesk
 {
   public string GetLegacySettingsDirectory()
   {
-    // Delete this member with the settings carry it reads, once no device is still running an agent
-    // built before the publisher directory.
 #if IS_WINDOWS
     return ControlR.DesktopClient.Windows.PathConstants.GetLegacySettingsDirectory(options.Value.InstanceId);
 #elif IS_MACOS
