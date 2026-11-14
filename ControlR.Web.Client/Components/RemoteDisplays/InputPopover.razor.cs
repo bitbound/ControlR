@@ -2,6 +2,26 @@ namespace ControlR.Web.Client.Components.RemoteDisplays;
 
 public partial class InputPopover : DisposableComponent
 {
+  private static readonly KeyShortcut[] _linuxKeyShortcuts =
+  [
+    new("Super", [], KeyStroke.Meta),
+    new("Alt+Tab", [KeyStroke.Alt], KeyStroke.Tab),
+  ];
+
+  private static readonly KeyShortcut[] _macKeyShortcuts =
+  [
+    new("Cmd+Tab", [KeyStroke.Meta], KeyStroke.Tab),
+    new("Cmd+Space", [KeyStroke.Meta], new(" ", "Space")),
+  ];
+
+  private static readonly KeyShortcut[] _windowsKeyShortcuts =
+  [
+    new("Win", [], KeyStroke.Meta),
+    new("Win+R", [KeyStroke.Meta], new("r", "KeyR")),
+    new("Alt+Tab", [KeyStroke.Alt], KeyStroke.Tab),
+    new("Ctrl+Shift+Esc", [KeyStroke.Control, KeyStroke.Shift], new("Escape", "Escape")),
+  ];
+
   private bool _isBlockInputDisabled;
 
   [Inject]
@@ -30,6 +50,15 @@ public partial class InputPopover : DisposableComponent
 
   [Inject]
   public required IHubConnection<IViewerHub> ViewerHub { get; init; }
+
+  private KeyShortcut[] CurrentKeyShortcuts =>
+    DeviceState.TryGetCurrentDevice()?.Platform switch
+    {
+      SystemPlatform.Windows => _windowsKeyShortcuts,
+      SystemPlatform.Linux => _linuxKeyShortcuts,
+      SystemPlatform.MacOs => _macKeyShortcuts,
+      _ => []
+    };
 
   protected override async Task OnAfterRenderAsync(bool firstRender)
   {
@@ -210,6 +239,59 @@ public partial class InputPopover : DisposableComponent
     }
   }
 
+  private async Task HandleSendKeyShortcutClicked(KeyShortcut shortcut)
+  {
+    if (RemoteControlState.IsViewOnlyEnabled)
+    {
+      Snackbar.Add("Input is disabled due to view-only mode", Severity.Warning);
+      return;
+    }
+
+    if (!RemoteControlStream.IsConnected)
+    {
+      Snackbar.Add("No active remote session", Severity.Error);
+      return;
+    }
+
+    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+    var heldModifiers = new List<KeyStroke>();
+
+    try
+    {
+      foreach (var modifier in shortcut.Modifiers)
+      {
+        heldModifiers.Add(modifier);
+        await SendKeyStroke(modifier, true, heldModifiers, cts.Token);
+      }
+
+      await SendKeyStroke(shortcut.Key, true, heldModifiers, cts.Token);
+      await SendKeyStroke(shortcut.Key, false, heldModifiers, cts.Token);
+
+      for (var i = heldModifiers.Count - 1; i >= 0; i--)
+      {
+        var modifier = heldModifiers[i];
+        heldModifiers.RemoveAt(i);
+        await SendKeyStroke(modifier, false, heldModifiers, cts.Token);
+      }
+    }
+    catch (Exception ex)
+    {
+      Logger.LogError(ex, "Error while sending key shortcut {Shortcut}.", shortcut.Label);
+      Snackbar.Add($"An error occurred while sending {shortcut.Label}", Severity.Error);
+
+      // Don't leave a modifier stuck down on the remote device.
+      try
+      {
+        using var resetCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await RemoteControlStream.SendKeyboardStateReset(resetCts.Token);
+      }
+      catch (Exception resetEx)
+      {
+        Logger.LogError(resetEx, "Error while resetting keyboard state after a failed key shortcut.");
+      }
+    }
+  }
+
   private async Task HandleTypeClipboardClicked()
   {
     try
@@ -235,5 +317,38 @@ public partial class InputPopover : DisposableComponent
       Logger.LogError(ex, "Error while sending clipboard.");
       Snackbar.Add("An error occurred while sending clipboard", Severity.Error);
     }
+  }
+
+  private async Task SendKeyStroke(
+    KeyStroke keyStroke,
+    bool isPressed,
+    IReadOnlyCollection<KeyStroke> heldModifiers,
+    CancellationToken cancellationToken)
+  {
+    // Mirror the modifier flags a browser reports: a modifier's own keydown includes it, its keyup doesn't.
+    var modifiers = new KeyEventModifiersDto(
+      heldModifiers.Contains(KeyStroke.Control),
+      heldModifiers.Contains(KeyStroke.Shift),
+      heldModifiers.Contains(KeyStroke.Alt),
+      heldModifiers.Contains(KeyStroke.Meta));
+
+    await RemoteControlStream.SendKeyEvent(
+      keyStroke.Key,
+      keyStroke.Code,
+      isPressed,
+      RemoteControlState.KeyboardInputMode,
+      modifiers,
+      cancellationToken);
+  }
+
+  private sealed record KeyShortcut(string Label, KeyStroke[] Modifiers, KeyStroke Key);
+
+  private sealed record KeyStroke(string Key, string Code)
+  {
+    public static readonly KeyStroke Alt = new("Alt", "AltLeft");
+    public static readonly KeyStroke Control = new("Control", "ControlLeft");
+    public static readonly KeyStroke Meta = new("Meta", "MetaLeft");
+    public static readonly KeyStroke Shift = new("Shift", "ShiftLeft");
+    public static readonly KeyStroke Tab = new("Tab", "Tab");
   }
 }

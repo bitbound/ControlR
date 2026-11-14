@@ -55,6 +55,23 @@
     </MudButton>
   }
 
+  @if (CurrentKeyShortcuts.Length > 0)
+  {
+    <MudText Typo="Typo.caption" Class="mt-2">Send Keys</MudText>
+    <div class="d-flex flex-wrap gap-2">
+      @foreach (var shortcut in CurrentKeyShortcuts)
+      {
+        <MudButton Variant="Variant.Outlined" Size="Size.Small"
+                   OnClick="@(() => HandleSendKeyShortcutClicked(shortcut))">
+          @shortcut.Label
+        </MudButton>
+      }
+    </div>
+    <MudText Typo="Typo.caption" Class="mud-text-secondary">
+      In fullscreen, Chromium-based browsers also forward these keys from your keyboard. Hold Esc to exit fullscreen.
+    </MudText>
+  }
+
   <div class="mt-4">
     <MudText Typo="Typo.caption">Keyboard Input Mode</MudText>
     <MudRadioGroup Value="RemoteControlState.KeyboardInputMode"
