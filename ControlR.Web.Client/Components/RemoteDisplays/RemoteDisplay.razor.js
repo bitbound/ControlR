@@ -43,9 +43,15 @@ class State {
   windowEventHandlers;
   /** @type {MutationObserver|null} */
   mutationObserver;
+  /** @type {WindowEventHandler[]} */
+  documentEventHandlers;
+  /** @type {boolean} */
+  isKeyboardLocked;
 
   constructor() {
     this.windowEventHandlers = [];
+    this.documentEventHandlers = [];
+    this.isKeyboardLocked = false;
     this.touchList = { length: 0 };
     this.previousPinchDistance = -1;
     this.mouseMoveTimeout = -1;
@@ -556,6 +562,15 @@ export async function initialize(componentRef, canvasId) {
   window.addEventListener("blur", onBlur, { passive: false });
   state.windowEventHandlers.push(new WindowEventHandler("blur", onBlur));
 
+  // While fullscreen, ask the browser to route OS-level shortcuts (Win, Alt+Tab, etc.)
+  // to the page so the key handlers above can forward them to the remote device.
+  const onFullscreenChange = async () => {
+    await syncKeyboardLock(state);
+  };
+  document.addEventListener("fullscreenchange", onFullscreenChange);
+  state.documentEventHandlers.push(new WindowEventHandler("fullscreenchange", onFullscreenChange));
+  await syncKeyboardLock(state);
+
   console.log("Initialized with state: ", state);
 }
 
@@ -640,7 +655,57 @@ async function dispose(canvasId) {
     console.log("Removing event handler: ", x);
     window.removeEventListener(x.type, x.handler, { passive: false });
   })
+
+  state.documentEventHandlers.forEach(x => {
+    document.removeEventListener(x.type, x.handler);
+  });
+
+  if (state.isKeyboardLocked) {
+    try { navigator.keyboard.unlock(); } catch (e) { }
+    state.isKeyboardLocked = false;
+  }
   delete window[`controlr-canvas-${canvasId}`];
+}
+
+/**
+ * Locks the keyboard while the document is fullscreen and unlocks it when fullscreen ends.
+ * Uses the Keyboard Lock API, which only Chromium-based browsers implement. Elsewhere this is a no-op.
+ * While locked, a single Escape press goes to the remote device, and holding Escape exits fullscreen.
+ * @param {State} state
+ */
+async function syncKeyboardLock(state) {
+  const keyboard = navigator.keyboard;
+  if (!keyboard || typeof keyboard.lock !== "function") {
+    return;
+  }
+
+  if (document.fullscreenElement) {
+    if (state.isKeyboardLocked) {
+      return;
+    }
+
+    state.isKeyboardLocked = true;
+    try {
+      await keyboard.lock();
+    } catch (e) {
+      state.isKeyboardLocked = false;
+      console.warn("Failed to lock the keyboard.", e);
+    }
+    return;
+  }
+
+  if (!state.isKeyboardLocked) {
+    return;
+  }
+
+  state.isKeyboardLocked = false;
+  try {
+    keyboard.unlock();
+    // A key held while leaving fullscreen (such as a long Escape press) may never send its keyup.
+    await state.invokeDotNet("SendKeyboardStateReset");
+  } catch (e) {
+    console.warn("Failed to unlock the keyboard.", e);
+  }
 }
 
 /**
